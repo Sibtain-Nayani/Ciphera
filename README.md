@@ -38,21 +38,24 @@ To run this application on your local machine, follow these steps.
 * pip (Python package installer)
 
 2\. Clone/Download:  
-Get the app.py file and any sample text files (sample1.txt, sample2.txt) and place them in a project directory.  
+Get the latest Prototype-V.py file and any sample text files (sample1.txt, sample2.txt) and place them in a project directory.  
 3\. Install Dependencies:  
 You will need to install Streamlit, Presidio, and SpaCy. Presidio requires a SpaCy NLP model to function.  
+```bash
 \# Install required Python libraries  
 pip install streamlit pandas presidio-analyzer presidio-anonymizer "spacy\>=3.0.0,\<4.0.0"
 
 \# Download the SpaCy model required by Presidio  
 python \-m spacy download en\_core\_web\_lg
+```
 
 *(Note: en\_core\_web\_lg is a large model; en\_core\_web\_trf is more accurate but larger, and en\_core\_web\_md is a smaller alternative if space is a concern, though it may be less accurate.)*
 
 4\. Run the Application:  
 Open your terminal in the project directory and run:  
+```bash
 streamlit run app.py
-
+```
 Streamlit will start a local web server, and the application will open in your default web browser.
 
 ## **How to Use**
