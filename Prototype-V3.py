@@ -62,16 +62,28 @@ def highlight_diff(original: str, anonymized: str, entities: List[dict]) -> str:
     anon_html = anonymized_esc.replace("\n", "<br/>")
     
     html_block = f"""
-    <div style="display:flex; gap:16px;">
-      <div style="flex:1; border:1px solid #eee; padding:12px; border-radius:8px; background:#fafafa;">
-        <h4 style="margin:4px 0;">Original</h4>
-        <div style="font-family:monospace; font-size:14px; line-height:1.4;">{orig_html}</div>
+    <div style="display:flex; gap:16px; width:100%;">
+      <div style="flex:1; border:1px solid #2d2f36; padding:12px; border-radius:8px; background-color:#0E1117 !important; color:#E6E9FF; box-shadow:0 1px 6px rgba(0,0,0,0.4);">
+        <h4 style="margin:4px 0; color:inherit;">Original</h4>
+        <div style="font-family:monospace; font-size:14px; line-height:1.4; color:inherit;">{orig_html}</div>
       </div>
-      <div style="flex:1; border:1px solid #eee; padding:12px; border-radius:8px; background:#fff;">
-        <h4 style="margin:4px 0;">Anonymized</h4>
-        <div style="font-family:monospace; font-size:14px; line-height:1.4;">{anon_html}</div>
+      <div style="flex:1; border:1px solid #2d2f36; padding:12px; border-radius:8px; background-color:#0E1117 !important; color:#E6E9FF; box-shadow:0 1px 6px rgba(0,0,0,0.4);">
+        <h4 style="margin:4px 0; color:inherit;">Anonymized</h4>
+        <div style="font-family:monospace; font-size:14px; line-height:1.4; color:inherit;">{anon_html}</div>
       </div>
     </div>
+    <style>
+      mark {{
+        background: rgba(92,106,196,0.25) !important;
+        color: inherit !important;
+        padding: 0 3px;
+        border-radius: 3px;
+      }}
+      /* ensure the container backgrounds take precedence */
+      div[style*="#0E1117"] {{
+        background-color: #0E1117 !important;
+      }}
+    </style>
     """
     return html_block
 
