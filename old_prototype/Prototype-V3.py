@@ -10,6 +10,7 @@ import io
 import html
 from typing import List, Dict, Any, Union
 import os
+import PyPDF2
 
 # -----------------------
 # GLOBAL THEME OVERRIDE (Figma-like)
@@ -102,8 +103,22 @@ def normalize_uploaded(uploaded: Union[None, Any, List[Any]]) -> List[Any]:
 def read_uploaded_text(f) -> str:
     """
     Read a stream or UploadedFile safely and return decoded string (utf-8 fallback).
+    Supports .txt and .pdf files.
     """
     try:
+        # Check if it's a PDF file
+        if hasattr(f, 'name') and f.name.lower().endswith('.pdf'):
+            try:
+                pdf_reader = PyPDF2.PdfReader(f)
+                text = ""
+                for page in pdf_reader.pages:
+                    text += page.extract_text()
+                return text
+            except Exception as e:
+                st.error(f"Error reading PDF: {str(e)}")
+                return ""
+        
+        # Handle text files
         data = f.read()
         if isinstance(data, bytes):
             return data.decode("utf-8", errors="replace")
@@ -213,7 +228,7 @@ with col_s3:
 pasted_text = st.text_area("Or paste text here (single document)", height=160, value=st.session_state.get("pasted_text", ""))
 
 batch_mode = st.session_state.get("batch_mode", False)
-uploaded_raw = st.file_uploader("Upload text file(s) (.txt)", type=["txt"], accept_multiple_files=batch_mode)
+uploaded_raw = st.file_uploader("Upload text file(s) (.txt, .pdf)", type=["txt", "pdf"], accept_multiple_files=batch_mode)
 uploaded_files = normalize_uploaded(uploaded_raw)
 
 # display uploaded file info (fixed len issue)
