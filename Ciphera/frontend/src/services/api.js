@@ -1,37 +1,37 @@
-export async function anonymize({ text, file, entities, technique }) {
-  const url = "/api/anonymize";
-  const form = new FormData();
-  if (file) {
-    form.append("file", file);
-  } else {
-    form.append("text", text || "");
-  }
+import axios from "axios";
 
-  if (entities) {
-    form.append("entities", JSON.stringify(entities));
-  }
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE || "/api",
+  timeout: 30000,
+});
 
-  if (technique) {
-    form.append("technique", technique);
-  }
-
-  const res = await fetch(url, {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || "API error");
-  }
-  return res.json();
+async function handleError(err) {
+  // normalize axios error
+  if (err?.response?.data) throw err.response.data;
+  if (err?.message) throw { error: err.message };
+  throw err;
 }
 
-export async function getSupportedEntities() {
-  const url = "/api/entities";
-  const res = await fetch(url);
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || "API error");
+export async function anonymize({ text, file, technique = "mask", onUploadProgress } = {}) {
+  try {
+    if (file) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("technique", technique);
+      const res = await API.post("/anonymize/file", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress,
+      });
+      return res.data;
+    } else if (text) {
+      const res = await API.post("/anonymize/text", { text, technique });
+      return res.data;
+    } else {
+      throw { error: "No input provided" };
+    }
+  } catch (err) {
+    await handleError(err);
   }
-  return res.json();
 }
+
+export default API;

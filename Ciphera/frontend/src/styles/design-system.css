@@ -1,0 +1,62 @@
+:root{
+  --bg: #121217;
+  --surface: #1e1e1e;
+  --muted: #71727a;
+  --accent: #ffa500;
+  --text: #ffffff;
+  --border: #333;
+  --radius: 12px;
+  --container-width: 920px;
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0;
+  font-family:var(--font-sans);
+  background:var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.container{
+  max-width:var(--container-width);
+  margin:0 auto;
+  padding:24px;
+}
+
+.button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:10px 16px;
+  border-radius:10px;
+  border:0;
+  cursor:pointer;
+  font-weight:600;
+  background:var(--accent);
+  color:#fff;
+}
+.button.secondary {
+  background:transparent;
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.input {
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--text);
+}
+.card {
+  background:var(--surface);
+  border-radius:var(--radius);
+  padding:16px;
+  border:1px solid rgba(255,255,255,0.03);
+}
+.small-muted { color:var(--muted); font-size:13px; }

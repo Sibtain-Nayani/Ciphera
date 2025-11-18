@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { anonymize } from "../../services/api";
 import "./design01.css";
 
@@ -9,10 +9,23 @@ export default function Design01() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [technique, setTechnique] = useState("mask");
+  const fileInputRef = useRef(null);
+
+  function onChooseFileClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFile(e) {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    // clear text when file chosen (keeps behavior simple)
+    if (f) setText("");
+  }
 
   async function handleRun() {
     setError("");
     setLoading(true);
+    setResult(null);
     try {
       const res = await anonymize({ text, file, technique });
       setResult(res);
@@ -23,102 +36,115 @@ export default function Design01() {
     }
   }
 
+  function formatEntity(e) {
+    return `${e.type}: ${e.text} (confidence: ${(e.score * 100).toFixed(0)}%)`;
+  }
+
   return (
     <div className="design01-page">
-      <div className="design01-header">
-        <h1>Anonymize Text</h1>
-        <p>Upload a file or paste text to detect and anonymize PII</p>
+      <div className="design01-hero">
+        <h1 className="design01-title">Anonymize Text</h1>
+        <p className="design01-sub">Upload a file or paste text to detect and anonymize PII</p>
       </div>
 
-      <div className="design01-container">
-        <div className="design01-input-section">
-          <div className="design01-card">
-            <h2>Input</h2>
-            <div className="design01-file-upload">
-              <label htmlFor="file-input" className="design01-file-label">
-                <span className="design01-icon">📎</span>
-                <span>Upload .txt or .pdf</span>
-              </label>
+      <div className="design01-grid">
+        <section className="design01-col">
+          <div className="card input-card">
+            <h2 className="card-title">Input</h2>
+
+            <div
+              className="upload-area"
+              onClick={onChooseFileClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={() => onChooseFileClick()}
+            >
+              <div className="upload-icon">📎</div>
+              <div className="upload-text">Upload .txt or .pdf</div>
               <input
-                id="file-input"
+                ref={fileInputRef}
                 type="file"
                 accept=".txt,.pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="design01-file-input"
+                onChange={handleFile}
+                className="hidden-file"
               />
-              {file && <p className="design01-file-name">✓ {file.name}</p>}
+              {file && <div className="upload-filename">✓ <span className="file-link">{file.name}</span></div>}
             </div>
-            <div className="design01-divider">or</div>
+
+            <div className="or-sep">or</div>
+
             <textarea
+              className="input-textarea"
+              placeholder="Paste text here..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Paste text here..."
-              className="design01-textarea"
               rows={10}
             />
-            
-            <div className="design01-technique">
-              <label>Anonymization Technique</label>
-              <select value={technique} onChange={(e) => setTechnique(e.target.value)}>
-                <option value="mask">Mask (X characters)</option>
-                <option value="replace">Replace ([PLACEHOLDER])</option>
-                <option value="hash">Hash</option>
-              </select>
+
+            <div className="controls-row">
+              <div className="tech-group">
+                <label className="tech-label">Anonymization Technique</label>
+                <select className="tech-select" value={technique} onChange={(e) => setTechnique(e.target.value)}>
+                  <option value="mask">Mask (XXXX)</option>
+                  <option value="replace">Replace ([REDACTED])</option>
+                  <option value="hash">Hash</option>
+                </select>
+              </div>
+
+              <button className="run-btn" onClick={handleRun} disabled={loading}>
+                {loading ? "Processing…" : "Run Anonymization"}
+              </button>
             </div>
 
-            {error && <p className="design01-error">{error}</p>}
-            <button onClick={handleRun} disabled={loading} className="design01-btn-primary">
-              {loading ? "Processing..." : "Run Anonymization"}
-            </button>
+            {error && <div className="card-error">{error}</div>}
           </div>
-        </div>
+        </section>
 
-        <div className="design01-result-section">
-          <div className="design01-card">
-            <h2>Result</h2>
-            {result ? (
-              <div className="design01-result">
-                {result.status === "error" ? (
-                  <p className="design01-error">{result.error}</p>
-                ) : (
-                  <>
-                    <div className="design01-result-item">
-                      <label>Detected Entities ({result.entity_count})</label>
-                      {result.detected_entities && result.detected_entities.length > 0 ? (
-                        <div className="design01-entities-list">
-                          {result.detected_entities.map((entity, idx) => (
-                            <div key={idx} className="design01-entity-badge">
-                              <strong>{entity.type}</strong>: {entity.text} (confidence: {(entity.score * 100).toFixed(0)}%)
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="design01-placeholder">No entities detected</p>
-                      )}
-                    </div>
+        <section className="design01-col">
+          <div className="card result-card">
+            <h2 className="card-title">Result</h2>
 
-                    <div className="design01-result-item">
-                      <label>Original Text</label>
-                      <pre className="design01-text-box">{result.original}</pre>
-                    </div>
+            {!result && <div className="result-placeholder">Results will appear here</div>}
 
-                    <div className="design01-result-item">
-                      <label>Anonymized Text</label>
-                      <pre className="design01-text-box design01-anonymized">{result.anonymized}</pre>
-                    </div>
+            {result && result.status === "error" && (
+              <div className="card-error">{result.error || "An error occurred"}</div>
+            )}
 
-                    <div className="design01-result-meta">
-                      <span>Technique: {result.technique}</span>
-                      <span>Entities Found: {result.entity_count}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <p className="design01-placeholder">Results will appear here</p>
+            {result && result.status === "success" && (
+              <>
+                <div className="entities">
+                  <div className="entities-header">Detected Entities <span className="entities-count">({result.entity_count})</span></div>
+                  {result.detected_entities && result.detected_entities.length ? (
+                    <ul className="entities-list">
+                      {result.detected_entities.map((e, i) => (
+                        <li key={i} className="entity-item">{formatEntity(e)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="no-entities">No entities detected</div>
+                  )}
+                </div>
+
+                <div className="text-blocks">
+                  <div className="text-block">
+                    <div className="text-block-title">Original</div>
+                    <pre className="text-pre">{result.original}</pre>
+                  </div>
+
+                  <div className="text-block">
+                    <div className="text-block-title">Anonymized</div>
+                    <pre className="text-pre anonymized">{result.anonymized}</pre>
+                  </div>
+                </div>
+
+                <div className="meta-row">
+                  <div>Technique: <strong>{result.technique}</strong></div>
+                  <div>Entities: <strong>{result.entity_count}</strong></div>
+                </div>
+              </>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
