@@ -6,8 +6,8 @@ const navLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/upload", label: "Upload" },
   { to: "/anonymize", label: "Anonymize" },
-  { to: "/audit", label: "Audit Log", disabled: true },
-  { to: "/settings", label: "Settings", disabled: true },
+  { to: "/audit", label: "Audit Log" },
+  { to: "/settings", label: "Settings" },
 ];
 
 export default function AppShell() {
@@ -19,7 +19,7 @@ export default function AppShell() {
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-4 lg:hidden">
         <div>
           <p className="font-semibold tracking-[0.25em] uppercase text-xs text-white/70">Ciphera</p>
-          <p className="text-sm text-muted">Secure Data Shield</p>
+          <p className="text-sm text-muted">Data Anonymization Drive</p>
         </div>
         <button
           type="button"
@@ -40,9 +40,8 @@ export default function AppShell() {
 
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-6 lg:py-10">
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col gap-8 border border-border/30 bg-base-700/70 px-6 py-8 shadow-card backdrop-blur-2xl transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:w-80 lg:rounded-3xl ${
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col gap-8 border border-border/30 bg-base-700/70 px-6 py-8 shadow-card backdrop-blur-2xl transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:w-80 lg:rounded-3xl ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <div>
             <div className="flex items-center justify-between text-sm text-white/70">
@@ -58,7 +57,7 @@ export default function AppShell() {
 
           <div className="rounded-2xl border border-white/10 bg-base-800/80 p-4 text-center shadow-card">
             <p className="font-display text-2xl font-semibold">Ciphera</p>
-            <p className="mt-1 text-sm text-muted">Secure Data Shield</p>
+            <p className="mt-1 text-sm text-muted">Data Anonymization Drive</p>
           </div>
 
           <nav className="space-y-2 text-sm font-medium text-white/70">
@@ -68,8 +67,7 @@ export default function AppShell() {
                 to={disabled ? "#" : to}
                 onClick={closeSidebar}
                 className={({ isActive }) =>
-                  `block w-full rounded-xl px-4 py-3 transition ${
-                    isActive ? "bg-accent text-base-900" : "hover:bg-white/5"
+                  `block w-full rounded-xl px-4 py-3 transition ${isActive ? "bg-accent text-base-900" : "hover:bg-white/5"
                   } ${disabled ? "pointer-events-none opacity-50" : ""}`
                 }
               >
@@ -78,13 +76,7 @@ export default function AppShell() {
             ))}
           </nav>
 
-          <div className="mt-auto rounded-2xl border border-white/10 bg-base-600/80 p-4 shadow-card">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">Current task</p>
-            <p className="mt-2 font-semibold text-white">Preparing workspace</p>
-            <div className="mt-4 h-1 rounded-full bg-white/10">
-              <div className="h-full w-1/2 rounded-full bg-white" />
-            </div>
-          </div>
+
 
           <button
             type="button"

@@ -1,7 +1,9 @@
 import { useRef, useState } from "react";
-import { anonymizeFile } from "../../lib/api/presidio";
+import { useNavigate } from "react-router-dom";
+import { extractText } from "../../lib/api/presidio";
 import ProcessingCard from "../anonymization/ProcessingCard";
-import { useAnonymizeLog } from "../../store/AnonymizeContext";
+import { useFile } from "../../store/FileContext";
+import ShieldIcon from "../../components/ShieldIcon";
 
 const ACCEPT = [".pdf", ".doc", ".docx", ".txt"];
 const STEPS = [
@@ -22,13 +24,13 @@ export default function UploadLanding() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
-  const { addJob } = useAnonymizeLog();
+  const { setFileText, setFileName } = useFile();
+  const navigate = useNavigate();
 
   const handleFiles = (files) => {
     if (files?.length) {
       setFile(files[0]);
-      setResult(null);
+      setError(null);
     }
   };
 
@@ -46,15 +48,10 @@ export default function UploadLanding() {
     setIsUploading(true);
     setError(null);
     try {
-      const response = await anonymizeFile({ file });
-      setResult(response);
-      addJob({
-        source: file.name,
-        technique: response.technique,
-        entityCount: response.entity_count,
-        status: response.status,
-        type: "file",
-      });
+      const response = await extractText({ file });
+      setFileText(response.text);
+      setFileName(response.filename);
+      navigate("/anonymize");
     } catch (err) {
       setError(err?.detail || err?.error || String(err));
     } finally {
@@ -65,17 +62,16 @@ export default function UploadLanding() {
   return (
     <div className="flex flex-col gap-8 text-white">
       <section className="rounded-[28px] border border-white/10 bg-gradient-to-b from-base-700/80 to-base-800/80 px-8 pb-10 pt-12 text-center shadow-card">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-full border border-accent/30 bg-base-700/60 text-2xl text-accent">
-          ⛨
+        <div className="mx-auto flex size-20 items-center justify-center rounded-full border border-accent/30 bg-base-700/60 text-accent">
+          <ShieldIcon className="w-10 h-10" />
         </div>
         <h1 className="mt-5 font-display text-4xl font-semibold tracking-wide">Ciphera</h1>
         <p className="mt-1 text-base text-muted">Secure Document Processing</p>
       </section>
 
       <section
-        className={`rounded-[28px] border border-white/15 bg-base-800/80 px-6 py-8 text-center shadow-card transition ${
-          isDragging ? "border-accent bg-base-700" : ""
-        }`}
+        className={`rounded-[28px] border border-white/15 bg-base-800/80 px-6 py-8 text-center shadow-card transition ${isDragging ? "border-accent bg-base-700" : ""
+          }`}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -84,7 +80,7 @@ export default function UploadLanding() {
         onDrop={onDrop}
       >
         <div className="mx-auto flex size-14 items-center justify-center rounded-full border border-white/15 bg-base-700/70 text-2xl text-muted">
-          ⬆️
+          <i className="lni lni-upload"></i>
         </div>
         <h2 className="mt-6 font-display text-2xl font-semibold">Upload Your Document</h2>
         <p className="mt-2 text-sm text-muted">Drop your file here or click to browse</p>
@@ -104,7 +100,7 @@ export default function UploadLanding() {
         <div className="mt-6 flex items-center justify-center gap-3 text-xs text-muted">
           <span className="flex items-center gap-2">
             <span role="img" aria-label="file">
-              📄
+              <i className="lni lni-empty-file"></i>
             </span>
             PDF, DOC, TXT
           </span>
@@ -123,25 +119,16 @@ export default function UploadLanding() {
             onClick={onUpload}
             disabled={isUploading}
           >
-            {isUploading ? "Uploading…" : "Send to Presidio"}
+            {isUploading ? "Uploading…" : "Send to Ciphera"}
           </button>
           {error && <p className="text-sm text-red-400">{error}</p>}
-          {result && (
-            <p className="text-sm text-muted">
-              Masked {result.entity_count} entities using "{result.technique}" technique.
-            </p>
-          )}
         </div>
       </section>
 
-      {(isUploading || result) && (
+      {isUploading && (
         <ProcessingCard
-          status={isUploading ? "Preparing Download..." : "Download ready"}
-          detail={
-            isUploading
-              ? "Applying masks and securing document"
-              : `Masked ${result?.entity_count ?? 0} entities using "${result?.technique ?? "mask"}".`
-          }
+          status="Processing..."
+          detail="Extracting text from document"
         />
       )}
 
@@ -165,9 +152,8 @@ export default function UploadLanding() {
           {TABS.map((tab) => (
             <button
               key={tab.label}
-              className={`rounded-full px-3 py-2 font-semibold ${
-                tab.active ? "bg-accent text-base-900" : "bg-base-700/40 text-muted"
-              }`}
+              className={`rounded-full px-3 py-2 font-semibold ${tab.active ? "bg-accent text-base-900" : "bg-base-700/40 text-muted"
+                }`}
             >
               {tab.label}
             </button>

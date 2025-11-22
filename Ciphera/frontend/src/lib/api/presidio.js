@@ -53,3 +53,18 @@ export async function batchAnonymize(files = [], { technique = "mask" } = {}) {
   });
   return data?.results ?? [];
 }
+
+export async function extractText({ file }) {
+  if (!file) throw new Error("File is required");
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await API.post("/extract-text", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function getJobs() {
+  const { data } = await API.get("/jobs");
+  return data ?? [];
+}

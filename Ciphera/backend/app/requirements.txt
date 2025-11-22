@@ -4,4 +4,13 @@ python-multipart
 presidio-analyzer
 presidio-anonymizer
 PyPDF2
+python-docx
 pandas
+
+# Authentication & Security
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.1.3  # Pin to 4.1.3 for compatibility with passlib
+
+# Database
+sqlalchemy

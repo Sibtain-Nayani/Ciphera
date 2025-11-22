@@ -91,7 +91,9 @@ def build_operators(technique: str) -> Dict[str, OperatorConfig]:
 
     if technique == "mask":
         # create a separate OperatorConfig per entity
-        return {ent: OperatorConfig("mask", {"masking_char": "X", "chars_to_mask": -1, "from_end": False}) for ent in common_entities}
+        operators = {ent: OperatorConfig("mask", {"masking_char": "*", "chars_to_mask": 1000, "from_end": False}) for ent in common_entities}
+        operators["DEFAULT"] = OperatorConfig("mask", {"masking_char": "*", "chars_to_mask": 1000, "from_end": False})
+        return operators
 
     if technique == "replace":
         return {
@@ -108,7 +110,7 @@ def build_operators(technique: str) -> Dict[str, OperatorConfig]:
         return {ent: OperatorConfig("hash") for ent in common_entities}
 
     # fallback => mask
-    return {ent: OperatorConfig("mask", {"masking_char": "X", "chars_to_mask": -1, "from_end": False}) for ent in common_entities}
+    return {ent: OperatorConfig("mask", {"masking_char": "*", "chars_to_mask": 1000, "from_end": False}) for ent in common_entities}
 
 def get_supported_entities() -> List[str]:
     """Return list of supported entity types Presidio can detect."""

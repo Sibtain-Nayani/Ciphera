@@ -7,50 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: {
-          900: "#121212",
-          800: "#1e1e1e",
-          700: "#3b3b3b",
-          600: "#212121",
-        },
-        overlay: "#141414",
-        border: "#c5c6cc",
-        muted: "#71727a",
-        placeholder: "#8f9098",
-        accent: {
-          DEFAULT: "#ffa500",
-          strong: "#ffb13c",
-        },
-        info: "#006FFD",
-        white: "#ffffff",
+        'brand-900': '#121212', // Dark page background
+        'brand-600': '#212121', // Lighter container background
+        'gold-500': '#FFD700', // Gold color for icons/accents
+        // Add other colors from your Figma design here, using semantic names
+        'ui-border': '#c5c6cc',
+        'text-muted': '#71727a',
+        'accent': '#FFA500', // Updated to Golden Orange from Figma
       },
       fontFamily: {
-        display: ["Poppins", "Inter", "sans-serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
-      },
-      borderRadius: {
-        none: "0px",
-        xs: "4px",
-        sm: "8px",
-        md: "12px",
-        lg: "16px",
-        xl: "24px",
-        pill: "999px",
-        full: "9999px",
-      },
-      spacing: {
-        3.5: "0.875rem",
-        4.5: "1.125rem",
-        7: "1.75rem",
-        8.5: "2.125rem",
-        10.5: "2.625rem",
-        15: "3.75rem",
-      },
-      boxShadow: {
-        card: "0 16px 40px rgba(0, 0, 0, 0.35)",
-        inset: "inset 0 1px 0 rgba(255, 255, 255, 0.04)",
+        display: ["Poppins", "sans-serif"],
+        body: ["Inter", "sans-serif"],
       },
     },
   },
   plugins: [],
-};
+}

@@ -1,25 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap");
-@config "../../tailwind.config.js";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
-  :root {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: #ffffff;
-    background-color: #212121;
-  }
-
-  body {
-    min-height: 100vh;
-    background-color: #212121;
-    color: #ffffff;
-    -webkit-font-smoothing: antialiased;
-  }
-
+  html,
+  body,
   #root {
-    min-height: 100vh;
+    height: 100%;
+    margin: 0;
+    padding: 0;
   }
 }

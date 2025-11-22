@@ -1,12 +1,11 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import App from "./app/App";
-import "./styles/tailwind.css";
-import { AnonymizeProvider } from "./store/AnonymizeContext";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './app/App';
+import './styles/tailwind.css';
+import 'lineicons/dist/lineicons.css';
 
-const root = createRoot(document.getElementById("root"));
-root.render(
-  <AnonymizeProvider>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <App />
-  </AnonymizeProvider>
+  </React.StrictMode>,
 );
