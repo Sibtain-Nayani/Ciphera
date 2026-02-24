@@ -1,23 +1,19 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft } from 'lucide-react';
+import { useDocumentStore, RuleType } from '@/store/documentStore';
+import { redactionEngine } from '@/lib/redactionEngine';
 
 export default function WorkspacePage() {
-    const [previewMode, setPreviewMode] = useState<'original' | 'redacted'>('redacted');
+    const { rawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
 
-    // Rule Toggle States
-    const [rules, setRules] = useState({
-        email: true,
-        phone: true,
-        creditCard: true,
-        ssn: false,
-        names: false,
-    });
+    // Dynamically tokenize the text whenever rules or raw text changes.
+    const tokens = useMemo(() => {
+        return redactionEngine.tokenize(rawText, rules);
+    }, [rawText, rules]);
 
-    const toggleRule = (rule: keyof typeof rules) => {
-        setRules(prev => ({ ...prev, [rule]: !prev[rule] }));
-    };
+    const activeRulesCount = Object.values(rules).filter(Boolean).length;
 
     return (
         <div className="w-full font-sans flex flex-col md:flex-row h-[calc(100vh-64px)] md:h-screen selection:bg-[#FFA500] selection:text-black">
@@ -48,72 +44,28 @@ export default function WorkspacePage() {
 
                 {/* Editor / Text Area */}
                 <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-[#212121]">
-                    <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed text-gray-400 break-words whitespace-pre-wrap">
-                        {`[SYSTEM LOG: INITIALIZING DATA PARSER...]
-[TIMESTAMP: 2026-02-25T09:30:14Z]
-BEGIN RECORD BATCH:
+                    <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap text-gray-400">
+                        {tokens.map((token) => {
+                            if (token.type === 'text') {
+                                return <span key={token.id}>{token.value}</span>;
+                            }
 
-Employee_ID, First_Name, Last_Name, Email, Phone, Department, Salary, CC_OnFile
-EMP-001, Sarah, Jenkins, `}
+                            // This is a matched entity token!
+                            const isRedacted = previewMode === 'redacted';
+                            const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value);
 
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.email && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.email && previewMode === 'redacted' ? '[REDACTED_EMAIL]' : 's.jenkins@corp-domain.com'}
-                        </span>
-
-                        {`, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.phone && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.phone && previewMode === 'redacted' ? '[REDACTED_PHONE]' : '555-0198-442'}
-                        </span>
-
-                        {`, Engineering, $145,000, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.creditCard && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.creditCard && previewMode === 'redacted' ? '[REDACTED_CC]' : '4532-XXXX-XXXX-8912'}
-                        </span>
-
-                        {`
-EMP-002, Marcus, Chen, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.email && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.email && previewMode === 'redacted' ? '[REDACTED_EMAIL]' : 'm.chen@corp-domain.com'}
-                        </span>
-
-                        {`, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.phone && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.phone && previewMode === 'redacted' ? '[REDACTED_PHONE]' : '555-0122-991'}
-                        </span>
-
-                        {`, Marketing, $92,500, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.creditCard && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.creditCard && previewMode === 'redacted' ? '[REDACTED_CC]' : '3782-XXXX-XXXX-1004'}
-                        </span>
-
-                        {`
-EMP-003, Elena, Rodriguez, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.email && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.email && previewMode === 'redacted' ? '[REDACTED_EMAIL]' : 'e.rodriguez@corp-domain.com'}
-                        </span>
-
-                        {`, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.phone && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.phone && previewMode === 'redacted' ? '[REDACTED_PHONE]' : '555-0177-334'}
-                        </span>
-
-                        {`, Legal, $178,000, `}
-
-                        <span className={`px-1 rounded mx-0.5 transition-colors duration-300 ${rules.creditCard && previewMode === 'redacted' ? 'bg-[#FFA500] text-black font-medium' : 'bg-transparent text-gray-300'}`}>
-                            {rules.creditCard && previewMode === 'redacted' ? '[REDACTED_CC]' : '5103-XXXX-XXXX-6671'}
-                        </span>
-
-                        {`
-
-[END OF BATCH PREVIEW]
-[AWAITING REDACTION CONFIRMATION...]`}
+                            return (
+                                <span
+                                    key={token.id}
+                                    className={`px-1 rounded mx-0.5 transition-colors duration-300 ${isRedacted
+                                            ? 'bg-[#FFA500] text-black font-semibold shadow-[0_0_5px_rgba(255,165,0,0.4)]'
+                                            : 'bg-white/10 text-white border border-[#3B3B3B]'
+                                        }`}
+                                >
+                                    {isRedacted ? replacementToken : token.value}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
             </section>
@@ -152,19 +104,23 @@ EMP-003, Elena, Rodriguez, `}
                         <div className="space-y-3">
 
                             {[
-                                { id: 'email', label: 'Email Addresses', desc: 'Matches standard RFC 5322 formats', count: 142 },
-                                { id: 'phone', label: 'Phone Numbers', desc: 'Matches international & local formats', count: 87 },
-                                { id: 'creditCard', label: 'Credit Cards', desc: 'Matches Visa, MC, Amex patterns', count: 24 },
-                                { id: 'ssn', label: 'Social Security (SSN)', desc: 'Matches XXX-XX-XXXX patterns', count: 0 },
-                                { id: 'names', label: 'Proper Names (NLP)', desc: 'Uses local NER model to find names', count: 312 },
+                                { id: 'email', label: 'Email Addresses', desc: 'Matches standard RFC 5322 formats' },
+                                { id: 'phone', label: 'Phone Numbers', desc: 'Matches international & local formats' },
+                                { id: 'creditCard', label: 'Credit Cards', desc: 'Matches Visa, MC, Amex patterns' },
+                                { id: 'ssn', label: 'Social Security (SSN)', desc: 'Matches XXX-XX-XXXX patterns' },
+                                { id: 'names', label: 'Proper Names (NLP)', desc: 'Uses local NER model to find names' },
                             ].map((rule) => {
-                                const isRuleActive = rules[rule.id as keyof typeof rules];
+                                const isRuleActive = rules[rule.id as RuleType];
+
+                                // Calculate dynamic matches on the fly from the current AST
+                                const matchCount = tokens.filter(t => t.type === rule.id).length;
+
                                 return (
                                     <div
                                         key={rule.id}
-                                        onClick={() => toggleRule(rule.id as keyof typeof rules)}
+                                        onClick={() => toggleRule(rule.id as RuleType)}
                                         className={`group flex items-start justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer select-none
-                    ${isRuleActive
+                                    ${isRuleActive
                                                 ? 'bg-[#FFA500]/5 border-[#FFA500]/30 hover:border-[#FFA500]/60'
                                                 : 'bg-[#212121] border-[#3B3B3B] hover:border-gray-500'}`}
                                     >
@@ -173,9 +129,9 @@ EMP-003, Elena, Rodriguez, `}
                                                 <span className={`text-sm font-medium ${isRuleActive ? 'text-white' : 'text-gray-400'}`}>
                                                     {rule.label}
                                                 </span>
-                                                {isRuleActive && rule.count > 0 && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-[#FFA500]/20 text-[#FFA500] text-[10px] font-mono border border-[#FFA500]/30">
-                                                        {rule.count} MATCHES
+                                                {isRuleActive && matchCount > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-[#FFA500]/20 text-[#FFA500] text-[10px] font-mono border border-[#FFA500]/30 transition-all">
+                                                        {matchCount} MATCHES
                                                     </span>
                                                 )}
                                             </div>
@@ -197,9 +153,13 @@ EMP-003, Elena, Rodriguez, `}
                     <div className="mt-8 p-4 rounded-xl border border-[#3B3B3B] bg-[#212121] flex items-start gap-3">
                         <EyeOff className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-gray-300">Local NLP Engine Active</h4>
+                            <h4 className="text-sm font-medium text-gray-300">
+                                {activeRulesCount > 0 ? "Local NLP Engine Active" : "Scanning Halted"}
+                            </h4>
                             <p className="text-xs text-gray-500 leading-relaxed">
-                                Entity recognition is running locally on this machine. No data is transmitted to external servers during this preview.
+                                {activeRulesCount > 0
+                                    ? "Entity recognition is running locally on this machine. No data is transmitted to external servers during this preview."
+                                    : "Enable rules to begin local protocol data discovery and parsing."}
                             </p>
                         </div>
                     </div>
