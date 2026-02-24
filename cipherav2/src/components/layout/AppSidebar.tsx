@@ -2,8 +2,12 @@
 
 import { useUiStore } from "@/store/uiStore";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export function AppSidebar() {
     const { isSidebarCollapsed } = useUiStore();
+    const pathname = usePathname();
 
     return (
         <aside
@@ -20,15 +24,38 @@ export function AppSidebar() {
             </div>
 
             <nav className="flex-1 p-4 flex flex-col gap-2">
-                <div className="flex items-center px-4 py-3 rounded-xl bg-primary text-black font-medium relative group cursor-pointer">
-                    <span className="w-5 h-5 bg-black/20 rounded shrink-0" />
+                <Link
+                    href="/dashboard"
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-colors cursor-pointer ${pathname === "/dashboard"
+                            ? "bg-primary text-black"
+                            : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                        }`}
+                >
+                    <span className={`w-5 h-5 rounded shrink-0 ${pathname === "/dashboard" ? "bg-black/20" : "bg-white/10"}`} />
                     {!isSidebarCollapsed && <span className="ml-3">Dashboard</span>}
-                </div>
+                </Link>
 
-                <div className="flex items-center px-4 py-3 rounded-xl bg-transparent text-secondary-foreground hover:bg-[#1E1E1E] font-medium transition-colors cursor-pointer">
-                    <span className="w-5 h-5 bg-white/10 rounded shrink-0" />
+                <Link
+                    href="/redact"
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-colors cursor-pointer ${pathname === "/redact"
+                            ? "bg-primary text-black"
+                            : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                        }`}
+                >
+                    <span className={`w-5 h-5 rounded shrink-0 ${pathname === "/redact" ? "bg-black/20" : "bg-white/10"}`} />
                     {!isSidebarCollapsed && <span className="ml-3">Redact Documents</span>}
-                </div>
+                </Link>
+
+                <Link
+                    href="/settings"
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-colors cursor-pointer ${pathname === "/settings"
+                            ? "bg-primary text-black"
+                            : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                        }`}
+                >
+                    <span className={`w-5 h-5 rounded shrink-0 ${pathname === "/settings" ? "bg-black/20" : "bg-white/10"}`} />
+                    {!isSidebarCollapsed && <span className="ml-3">Settings</span>}
+                </Link>
             </nav>
         </aside>
     );

@@ -4,8 +4,12 @@ import { useUiStore } from "@/store/uiStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { designTokens } from "@/lib/designTokens";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export function MobileDrawer() {
     const { isMobileMenuOpen, setMobileMenu } = useUiStore();
+    const pathname = usePathname();
 
     return (
         <AnimatePresence>
@@ -39,15 +43,36 @@ export function MobileDrawer() {
                         </div>
 
                         <nav className="flex flex-col gap-2">
-                            <div className="px-4 py-3 rounded-xl bg-primary text-black font-medium">
+                            <Link
+                                href="/dashboard"
+                                onClick={() => setMobileMenu(false)}
+                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/dashboard"
+                                        ? "bg-primary text-black"
+                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                    }`}
+                            >
                                 Dashboard
-                            </div>
-                            <div className="px-4 py-3 rounded-xl bg-transparent text-secondary-foreground hover:bg-[#1E1E1E] cursor-pointer font-medium transition-colors">
+                            </Link>
+                            <Link
+                                href="/redact"
+                                onClick={() => setMobileMenu(false)}
+                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/redact"
+                                        ? "bg-primary text-black"
+                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                    }`}
+                            >
                                 Redact Documents
-                            </div>
-                            <div className="px-4 py-3 rounded-xl bg-transparent text-secondary-foreground hover:bg-[#1E1E1E] cursor-pointer font-medium transition-colors">
+                            </Link>
+                            <Link
+                                href="/settings"
+                                onClick={() => setMobileMenu(false)}
+                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/settings"
+                                        ? "bg-primary text-black"
+                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                    }`}
+                            >
                                 Settings
-                            </div>
+                            </Link>
                         </nav>
 
                     </motion.div>
