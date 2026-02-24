@@ -12,6 +12,8 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+import { AppShell } from "@/components/layout/AppShell";
+
 export const metadata: Metadata = {
   title: "Ciphera | Data Redaction",
   description: "Enterprise-grade local data anonymization workspace.",
@@ -27,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );
