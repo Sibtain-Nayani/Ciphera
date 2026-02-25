@@ -25,7 +25,7 @@ export interface OcrResult {
  */
 export async function extractOcrData(imageUrl: string): Promise<OcrResult> {
     const worker = await createWorker('eng');
-    const ret = await worker.recognize(imageUrl);
+    const ret = await worker.recognize(imageUrl, {}, { blocks: true });
     await worker.terminate();
 
     // Flatten words from the deeply nested structure in v5
