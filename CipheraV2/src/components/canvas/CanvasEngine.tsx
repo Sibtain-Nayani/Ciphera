@@ -25,6 +25,41 @@ export const CanvasEngine: React.FC = () => {
 
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentShapeId, setCurrentShapeId] = useState<string | null>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    const getMinScale = () => {
+        if (!dimensions.width || !imageDimensions) return 0.1;
+        const padding = 60;
+        const scaleX = (dimensions.width - padding) / imageDimensions.width;
+        const scaleY = (dimensions.height - padding) / imageDimensions.height;
+        return Math.min(scaleX, scaleY, 1);
+    };
+
+    const minScale = getMinScale();
+
+    const constrainPosition = (pos: { x: number, y: number }, currentScale: number) => {
+        if (!imageDimensions || dimensions.width === 0) return pos;
+        const imgW = imageDimensions.width * currentScale;
+        const imgH = imageDimensions.height * currentScale;
+        const padding = 30; // Padding from edge
+
+        let x = pos.x;
+        let y = pos.y;
+
+        if (imgW < dimensions.width) {
+            x = (dimensions.width - imgW) / 2;
+        } else {
+            x = Math.max(dimensions.width - imgW - padding, Math.min(padding, x));
+        }
+
+        if (imgH < dimensions.height) {
+            y = (dimensions.height - imgH) / 2;
+        } else {
+            y = Math.max(dimensions.height - imgH - padding, Math.min(padding, y));
+        }
+
+        return { x, y };
+    };
 
     // Zoom Handling
     const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -44,14 +79,18 @@ export const CanvasEngine: React.FC = () => {
 
         const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
 
-        // Limit zoom
-        if (newScale < 0.1 || newScale > 10) return;
+        // Limit zoom to fitScale or max 10x
+        let finalScale = newScale;
+        if (finalScale < minScale) finalScale = minScale;
+        if (finalScale > 10) finalScale = 10;
 
-        setScale(newScale);
-        setPosition({
-            x: pointer.x - mousePointTo.x * newScale,
-            y: pointer.y - mousePointTo.y * newScale,
-        });
+        const newPos = {
+            x: pointer.x - mousePointTo.x * finalScale,
+            y: pointer.y - mousePointTo.y * finalScale,
+        };
+
+        setScale(finalScale);
+        setPosition(constrainPosition(newPos, finalScale));
     };
 
     // Drawing Logic
@@ -125,7 +164,6 @@ export const CanvasEngine: React.FC = () => {
 
     // Automatic resizing of canvas to fit container
     const containerRef = useRef<HTMLDivElement>(null);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
         const checkSize = () => {
@@ -181,9 +219,12 @@ export const CanvasEngine: React.FC = () => {
                 onTouchMove={handleMouseMove}
                 onTouchEnd={handleMouseUp}
                 draggable={activeTool === 'select' && !selectedShapeId}
+                dragBoundFunc={(pos) => constrainPosition(pos, scale)}
                 onDragEnd={(e) => {
                     if (e.target === e.target.getStage()) {
-                        setPosition({ x: e.target.x(), y: e.target.y() });
+                        const finalPos = constrainPosition({ x: e.target.x(), y: e.target.y() }, scale);
+                        setPosition(finalPos);
+                        e.target.position(finalPos);
                     }
                 }}
                 ref={stageRef}
