@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UploadCloud, CheckCircle2, Clock, ShieldCheck, FileText, Activity, Lock } from 'lucide-react';
 import { useDocumentStore } from '@/store/documentStore';
+import { useCanvasStore } from '@/store/canvasStore';
 import { extractTextFromFile } from '@/lib/fileFormat';
+import { convertPdfToImages } from '@/lib/pdfRenderer';
 
 export default function DashboardPage() {
     const [isDragging, setIsDragging] = useState(false);
@@ -23,6 +25,40 @@ export default function DashboardPage() {
     // --- Global File Upload & Routing ---
     const handleFileUploadGlobal = async (file: File) => {
         if (!file) return;
+
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+        // Handle images -> Canvas Store
+        if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+            useDocumentStore.getState().setFileMetadata(file.name, 'image');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result) {
+                    useCanvasStore.getState().setImageSrc(e.target.result as string);
+                    router.push('/redact');
+                }
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        // Handle PDFs -> Canvas Store
+        if (ext === 'pdf') {
+            useDocumentStore.getState().setFileMetadata(file.name, 'pdf');
+            try {
+                const images = await convertPdfToImages(file);
+                if (images.length > 0) {
+                    useCanvasStore.getState().setImageSrc(images[0]);
+                    router.push('/redact');
+                }
+            } catch (error) {
+                console.error("PDF Parsing Error:", error);
+                alert("Failed to render PDF. Ensure it is a valid document.");
+            }
+            return;
+        }
+
+        // Handle texts -> Document Store
         try {
             const { text, type, name } = await extractTextFromFile(file);
             setRawText(text);
@@ -31,7 +67,7 @@ export default function DashboardPage() {
             router.push('/redact');
         } catch (error) {
             console.error("Error parsing document:", error);
-            alert("This format is intended for the Canvas visual engine (in development). Please upload a text, markdown, or docx file.");
+            alert("This format is currently unsupported by the Ciphera engine.");
         }
     };
 
