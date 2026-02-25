@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import Konva from 'konva';
 
 export type ToolType = 'select' | 'draw-blackout' | 'draw-blur' | 'draw-mask';
 export type ShapeType = 'blackout' | 'blur' | 'mask';
@@ -18,6 +19,8 @@ interface CanvasState {
     position: { x: number; y: number };
     shapes: RedactionShape[];
     activeTool: ToolType;
+    stageRef: Konva.Stage | null;
+    selectedShapeId: string | null;
 
     // Actions
     setImageSrc: (src: string | null) => void;
@@ -28,6 +31,8 @@ interface CanvasState {
     updateShape: (id: string, newProps: Partial<RedactionShape>) => void;
     deleteShape: (id: string) => void;
     setActiveTool: (tool: ToolType) => void;
+    setStageRef: (stage: Konva.Stage | null) => void;
+    setSelectedShapeId: (id: string | null) => void;
     resetCanvas: () => void;
 }
 
@@ -37,6 +42,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     position: { x: 0, y: 0 },
     shapes: [],
     activeTool: 'select',
+    stageRef: null,
+    selectedShapeId: null,
 
     setImageSrc: (src) => set({ imageSrc: src }),
     setScale: (scale) => set({ scale }),
@@ -52,11 +59,15 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         shapes: state.shapes.filter(s => s.id !== id)
     })),
     setActiveTool: (tool) => set({ activeTool: tool }),
+    setStageRef: (stage) => set({ stageRef: stage }),
+    setSelectedShapeId: (id) => set({ selectedShapeId: id }),
     resetCanvas: () => set({
         imageSrc: null,
         scale: 1,
         position: { x: 0, y: 0 },
         shapes: [],
         activeTool: 'select',
+        stageRef: null,
+        selectedShapeId: null,
     }),
 }));

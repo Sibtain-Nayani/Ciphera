@@ -9,11 +9,19 @@ import { FloatingToolbar } from './FloatingToolbar';
 export const CanvasEngine: React.FC = () => {
     const {
         imageSrc, scale, position, setScale, setPosition,
-        activeTool, addShape, updateShape
+        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId
     } = useCanvasStore();
 
     const stageRef = useRef<Konva.Stage>(null);
-    const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+    const setStageRef = useCanvasStore(state => state.setStageRef);
+
+    useEffect(() => {
+        if (stageRef.current) {
+            setStageRef(stageRef.current);
+        }
+        return () => setStageRef(null);
+    }, [setStageRef]);
+
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentShapeId, setCurrentShapeId] = useState<string | null>(null);
 

@@ -6,7 +6,7 @@ import { useDocumentStore, RuleType, DocumentState } from '@/store/documentStore
 import { useCanvasStore } from '@/store/canvasStore';
 import { redactionEngine, Token } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
-import { extractTextFromFile, exportRedactedText } from '@/lib/fileFormat';
+import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/lib/fileFormat';
 import { convertPdfToImages } from '@/lib/pdfRenderer';
 import dynamic from 'next/dynamic';
 
@@ -101,8 +101,42 @@ export default function WorkspacePage() {
         }).join('');
 
         const targetFormat = formatOverride || fileType;
+
+        if (fileType === 'image' || fileType === 'pdf') {
+            const canvasState = useCanvasStore.getState();
+            if (!canvasState.stageRef) {
+                alert("Canvas not ready for export.");
+                return;
+            }
+
+            // Deselect any active shapes to remove transformer ring
+            canvasState.setSelectedShapeId(null);
+
+            // Allow React renderer a split-second to prune the Transformer node before image capture
+            setTimeout(async () => {
+                try {
+                    const formatMap: Record<string, string> = {
+                        'pdf': 'pdf',
+                        'image': 'png',
+                        'png': 'png',
+                        'jpg': 'jpg',
+                        'jpeg': 'jpg'
+                    };
+                    const finalExt = formatMap[targetFormat] || 'png';
+
+                    // Capture High-Res snapshot of the stage directly
+                    const dataUrl = canvasState.stageRef!.toDataURL({ pixelRatio: 2.0 });
+                    await exportVisualCanvas(dataUrl, fileName, finalExt);
+                } catch (error) {
+                    console.error("Export visual error", error);
+                    alert("Failed to export image.");
+                }
+            }, 50);
+            return;
+        }
+
         if (targetFormat === 'image') {
-            alert("Exporting image layers is currently in development (Phase 4).");
+            alert("This is a text document. Cannot export to image format natively.");
             return;
         }
 

@@ -10,6 +10,49 @@ export type FileExtractionResult = {
 };
 
 /**
+ * Packages a base64 Data URL (from the Konva Canvas Engine) into a downloadable file.
+ */
+export async function exportVisualCanvas(
+    dataUrl: string,
+    originalFileName: string,
+    targetFormat: 'pdf' | 'png' | 'jpg' | string
+) {
+    const baseName = originalFileName.includes('.')
+        ? originalFileName.slice(0, originalFileName.lastIndexOf('.'))
+        : originalFileName;
+
+    const finalName = `${baseName}_Secure.${targetFormat}`;
+
+    if (targetFormat === 'pdf') {
+        const img = new Image();
+        img.src = dataUrl;
+
+        await new Promise((resolve) => {
+            img.onload = resolve;
+        });
+
+        // Create PDF that matches the image dimensions exactly
+        const pdf = new jsPDF({
+            orientation: img.width > img.height ? 'landscape' : 'portrait',
+            unit: 'px',
+            format: [img.width, img.height]
+        });
+
+        pdf.addImage(dataUrl, 'PNG', 0, 0, img.width, img.height);
+        pdf.save(finalName);
+        return;
+    }
+
+    // Default: Download as Image
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = finalName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+/**
  * Universal file reading utility that extracts raw text from various document formats.
  */
 export async function extractTextFromFile(file: File): Promise<FileExtractionResult> {
