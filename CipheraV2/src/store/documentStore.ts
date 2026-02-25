@@ -1,16 +1,23 @@
 import { create } from 'zustand';
 
 export type RuleType = 'email' | 'phone' | 'creditCard' | 'ssn' | 'names';
+export type RedactionAction = 'mask' | 'blackout' | 'replace';
+
+export interface RuleConfig {
+    isActive: boolean;
+    action: RedactionAction;
+}
 
 interface DocumentState {
     rawText: string;
     previewMode: 'original' | 'redacted';
-    rules: Record<RuleType, boolean>;
+    rules: Record<RuleType, RuleConfig>;
 
     // Actions
     setRawText: (text: string) => void;
     setPreviewMode: (mode: 'original' | 'redacted') => void;
     toggleRule: (rule: RuleType) => void;
+    setRuleAction: (rule: RuleType, action: RedactionAction) => void;
 }
 
 const DEFAULT_DUMMY_TEXT = `[SYSTEM LOG: INITIALIZING DATA PARSER...]
@@ -29,16 +36,25 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     rawText: DEFAULT_DUMMY_TEXT,
     previewMode: 'redacted',
     rules: {
-        email: true,
-        phone: true,
-        creditCard: true,
-        ssn: false,
-        names: false,
+        email: { isActive: true, action: 'replace' },
+        phone: { isActive: true, action: 'replace' },
+        creditCard: { isActive: true, action: 'replace' },
+        ssn: { isActive: false, action: 'replace' },
+        names: { isActive: false, action: 'replace' },
     },
 
     setRawText: (text) => set({ rawText: text }),
     setPreviewMode: (mode) => set({ previewMode: mode }),
     toggleRule: (rule) => set((state) => ({
-        rules: { ...state.rules, [rule]: !state.rules[rule] }
+        rules: {
+            ...state.rules,
+            [rule]: { ...state.rules[rule], isActive: !state.rules[rule].isActive }
+        }
+    })),
+    setRuleAction: (rule, action) => set((state) => ({
+        rules: {
+            ...state.rules,
+            [rule]: { ...state.rules[rule], action }
+        }
     })),
 }));

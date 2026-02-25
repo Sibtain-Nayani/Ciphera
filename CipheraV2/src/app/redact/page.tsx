@@ -20,7 +20,7 @@ export default function WorkspacePage() {
         fetchAST();
     }, [rawText, rules]);
 
-    const activeRulesCount = Object.values(rules).filter(Boolean).length;
+    const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
 
     // --- File Upload & Drag Logic ---
     const handleFileUpload = (file: File) => {
@@ -118,7 +118,8 @@ export default function WorkspacePage() {
 
                                     // This is a matched entity token!
                                     const isRedacted = previewMode === 'redacted';
-                                    const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value);
+                                    const action = rules[token.type as RuleType]?.action || 'replace';
+                                    const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
 
                                     return (
                                         <span
@@ -189,7 +190,7 @@ export default function WorkspacePage() {
                                 { id: 'ssn', label: 'Social Security (SSN)', desc: 'Matches XXX-XX-XXXX patterns' },
                                 { id: 'names', label: 'Proper Names (NLP)', desc: 'Uses local NER model to find names' },
                             ].map((rule) => {
-                                const isRuleActive = rules[rule.id as RuleType];
+                                const isRuleActive = rules[rule.id as RuleType].isActive;
 
                                 // Calculate dynamic matches on the fly from the current AST
                                 const matchCount = tokens.filter(t => t.type === rule.id).length;
