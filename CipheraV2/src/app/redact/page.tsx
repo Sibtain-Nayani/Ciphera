@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/store/canvasStore';
 import { redactionEngine, Token } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
 import { extractTextFromFile, exportRedactedText } from '@/lib/fileFormat';
+import { convertPdfToImages } from '@/lib/pdfRenderer';
 import dynamic from 'next/dynamic';
 
 const CanvasEngine = dynamic(() => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine), { ssr: false });
@@ -46,6 +47,21 @@ export default function WorkspacePage() {
                 }
             };
             reader.readAsDataURL(file);
+            return;
+        }
+
+        // Handle PDFs -> Canvas Store
+        if (ext === 'pdf') {
+            useDocumentStore.getState().setFileMetadata(file.name, 'pdf');
+            try {
+                const images = await convertPdfToImages(file);
+                if (images.length > 0) {
+                    useCanvasStore.getState().setImageSrc(images[0]);
+                }
+            } catch (error) {
+                console.error("PDF Parsing Error:", error);
+                alert("Failed to render PDF. Ensure it is a valid document.");
+            }
             return;
         }
 
