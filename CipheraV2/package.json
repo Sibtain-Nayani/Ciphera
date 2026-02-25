@@ -11,13 +11,20 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "docx": "^9.6.0",
     "framer-motion": "^12.34.3",
+    "jspdf": "^4.2.0",
+    "konva": "^10.2.0",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.11.0",
     "next": "16.1.6",
+    "pdfjs-dist": "^5.4.624",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-konva": "^19.2.2",
     "tailwind-merge": "^3.5.0",
+    "use-image": "^1.1.4",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

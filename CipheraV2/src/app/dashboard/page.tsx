@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UploadCloud, CheckCircle2, Clock, ShieldCheck, FileText, Activity, Lock } from 'lucide-react';
 import { useDocumentStore } from '@/store/documentStore';
+import { extractTextFromFile } from '@/lib/fileFormat';
 
 export default function DashboardPage() {
     const [isDragging, setIsDragging] = useState(false);
@@ -20,17 +21,18 @@ export default function DashboardPage() {
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
 
     // --- Global File Upload & Routing ---
-    const handleFileUploadGlobal = (file: File) => {
+    const handleFileUploadGlobal = async (file: File) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (e.target?.result) {
-                setRawText(e.target.result as string);
-                // Redirect user to the workspace immediately after loading into the buffer
-                router.push('/redact');
-            }
-        };
-        reader.readAsText(file);
+        try {
+            const { text, type, name } = await extractTextFromFile(file);
+            setRawText(text);
+            useDocumentStore.getState().setFileMetadata(name, type);
+            // Redirect user to the workspace immediately after loading into the buffer
+            router.push('/redact');
+        } catch (error) {
+            console.error("Error parsing document:", error);
+            alert("This format is intended for the Canvas visual engine (in development). Please upload a text, markdown, or docx file.");
+        }
     };
 
     return (

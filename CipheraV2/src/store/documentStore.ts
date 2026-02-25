@@ -8,13 +8,18 @@ export interface RuleConfig {
     action: RedactionAction;
 }
 
-interface DocumentState {
+export interface DocumentState {
     rawText: string;
     previewMode: 'original' | 'redacted';
     rules: Record<RuleType, RuleConfig>;
 
+    // File Metadata for multi-format support
+    fileName: string;
+    fileType: 'txt' | 'csv' | 'json' | 'md' | 'docx' | 'pdf' | 'image';
+
     // Actions
     setRawText: (text: string) => void;
+    setFileMetadata: (name: string, type: DocumentState['fileType']) => void;
     setPreviewMode: (mode: 'original' | 'redacted') => void;
     toggleRule: (rule: RuleType) => void;
     setRuleAction: (rule: RuleType, action: RedactionAction) => void;
@@ -34,6 +39,8 @@ EMP-003, Elena, Rodriguez, e.rodriguez@corp-domain.com, 555-0177-334, Legal, $17
 
 export const useDocumentStore = create<DocumentState>((set) => ({
     rawText: DEFAULT_DUMMY_TEXT,
+    fileName: 'Workspace.txt',
+    fileType: 'txt',
     previewMode: 'original',
     rules: {
         email: { isActive: true, action: 'replace' },
@@ -44,6 +51,7 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     },
 
     setRawText: (text) => set({ rawText: text }),
+    setFileMetadata: (name, type) => set({ fileName: name, fileType: type }),
     setPreviewMode: (mode) => set({ previewMode: mode }),
     toggleRule: (rule) => set((state) => ({
         rules: {

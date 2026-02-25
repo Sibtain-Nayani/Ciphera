@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X } from 'lucide-react';
-import { useDocumentStore, RuleType } from '@/store/documentStore';
+import { useDocumentStore, RuleType, DocumentState } from '@/store/documentStore';
 import { redactionEngine, Token } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
+import { extractTextFromFile, exportRedactedText } from '@/lib/fileFormat';
 
 export default function WorkspacePage() {
     const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
@@ -26,15 +27,16 @@ export default function WorkspacePage() {
     const totalMatches = tokens.filter(t => t.type !== 'text').length;
 
     // --- File Upload & Drag Logic ---
-    const handleFileUpload = (file: File) => {
+    const handleFileUpload = async (file: File) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (e.target?.result) {
-                setRawText(e.target.result as string);
-            }
-        };
-        reader.readAsText(file);
+        try {
+            const { text, type, name } = await extractTextFromFile(file);
+            setRawText(text);
+            useDocumentStore.getState().setFileMetadata(name, type);
+        } catch (error) {
+            console.error("Error loading file:", error);
+            alert("This format is intended for the Canvas visual engine. Please upload a supported text format.");
+        }
     };
 
     const onDrop = (e: React.DragEvent) => {
@@ -46,7 +48,9 @@ export default function WorkspacePage() {
     };
 
     // --- Export Logic ---
-    const exportSecureFile = () => {
+    const exportSecureFile = async (formatOverride?: DocumentState['fileType']) => {
+        const { fileType, fileName } = useDocumentStore.getState();
+
         // Construct the final redacted string based on current active rules
         const redactedText = tokens.map(token => {
             if (token.type === 'text') return token.value;
@@ -59,15 +63,13 @@ export default function WorkspacePage() {
             return redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
         }).join('');
 
-        const blob = new Blob([redactedText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Workspace_Redacted.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const targetFormat = formatOverride || fileType;
+        if (targetFormat === 'image') {
+            alert("Exporting image layers is currently in development (Phase 4).");
+            return;
+        }
+
+        await exportRedactedText(redactedText, fileName, targetFormat as any);
     };
 
     // --- Shared Sidebar/Drawer Content ---
@@ -202,13 +204,30 @@ export default function WorkspacePage() {
                             <span className="hidden sm:inline">Load File</span>
                         </button>
 
-                        <button
-                            onClick={exportSecureFile}
-                            className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer"
-                        >
-                            <Download className="w-4 h-4" />
-                            <span className="hidden sm:inline">Export Secure</span>
-                        </button>
+                        <div className="relative group">
+                            <button
+                                onClick={() => exportSecureFile()}
+                                className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer"
+                                title="Export in original format"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Export Secure</span>
+                                <ChevronDown className="w-3 h-3 ml-1 opacity-60" />
+                            </button>
+
+                            {/* Hover Dropdown Menu */}
+                            <div className="absolute top-full right-0 mt-2 w-32 bg-[#212121] border border-[#3B3B3B] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
+                                {(['docx', 'pdf', 'txt', 'md', 'csv', 'json'] as const).map(fmt => (
+                                    <button
+                                        key={fmt}
+                                        onClick={(e) => { e.stopPropagation(); exportSecureFile(fmt); }}
+                                        className="block w-full text-left px-4 py-2 text-xs font-mono text-gray-300 hover:bg-[#3B3B3B] hover:text-white uppercase transition-colors"
+                                    >
+                                        .{fmt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </header>
 
