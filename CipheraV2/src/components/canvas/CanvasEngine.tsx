@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore, RedactionShape, ShapeType } from '@/store/canvasStore';
+import { useDocumentStore } from '@/store/documentStore';
 import { ImageLayer } from './ImageLayer';
 import { ShapeLayer } from './ShapeLayer';
 import { FloatingToolbar } from './FloatingToolbar';
@@ -12,6 +13,8 @@ export const CanvasEngine: React.FC = () => {
         activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId,
         imageDimensions
     } = useCanvasStore();
+
+    const { previewMode } = useDocumentStore();
 
     const stageRef = useRef<Konva.Stage>(null);
     const setStageRef = useCanvasStore(state => state.setStageRef);
@@ -95,6 +98,8 @@ export const CanvasEngine: React.FC = () => {
 
     // Drawing Logic
     const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+        if (previewMode === 'original') return;
+
         // If we are clicking on an existing shape, or using select tool, do not draw.
         const clickedOnEmpty = e.target === e.target.getStage();
         if (!clickedOnEmpty) {
@@ -202,7 +207,7 @@ export const CanvasEngine: React.FC = () => {
 
     return (
         <div ref={containerRef} className="relative w-full h-full bg-[#121212] overflow-hidden">
-            <FloatingToolbar />
+            {previewMode !== 'original' && <FloatingToolbar />}
 
             <Stage
                 width={dimensions.width}
@@ -234,10 +239,12 @@ export const CanvasEngine: React.FC = () => {
                 <Layer>
                     <ImageLayer src={imageSrc} />
                 </Layer>
-                <ShapeLayer
-                    selectedShapeId={selectedShapeId}
-                    onShapeClick={setSelectedShapeId}
-                />
+                {previewMode !== 'original' && (
+                    <ShapeLayer
+                        selectedShapeId={selectedShapeId}
+                        onShapeClick={setSelectedShapeId}
+                    />
+                )}
             </Stage>
         </div>
     );
