@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 >
                     <input
                         type="file"
-                        accept=".txt,.csv,.json"
+                        accept=".txt,.csv,.json,.md,.docx,.pdf,.png,.jpg,.jpeg,.webp"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         onChange={(e) => {
                             if (e.target.files?.length) handleFileUploadGlobal(e.target.files[0]);

@@ -8,6 +8,7 @@ import { redactionEngine, Token } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
 import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/lib/fileFormat';
 import { convertPdfToImages } from '@/lib/pdfRenderer';
+import { extractOcrData, mapOcrToShapes } from '@/lib/ocrEngine';
 import dynamic from 'next/dynamic';
 
 const CanvasEngine = dynamic(() => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine), { ssr: false });
@@ -17,7 +18,10 @@ export default function WorkspacePage() {
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const { ocrResult, setShapes } = useCanvasStore();
 
     // Dynamically tokenize the text whenever rules or raw text changes.
     useEffect(() => {
@@ -31,7 +35,30 @@ export default function WorkspacePage() {
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches = tokens.filter(t => t.type !== 'text').length;
 
+    // React to rule changes to dynamically map OCR bounds
+    useEffect(() => {
+        if ((fileType === 'image' || fileType === 'pdf') && ocrResult) {
+            if (activeRulesCount > 0) {
+                mapOcrToShapes(ocrResult, rules).then(autoShapes => setShapes(autoShapes));
+            } else {
+                setShapes([]);
+            }
+        }
+    }, [ocrResult, rules, fileType, activeRulesCount, setShapes]);
+
     // --- File Upload & Drag Logic ---
+    const processImageForOcr = async (dataUrl: string) => {
+        setIsAnalyzingImage(true);
+        try {
+            const ocrData = await extractOcrData(dataUrl);
+            useCanvasStore.getState().setOcrResult(ocrData);
+        } catch (e) {
+            console.error("OCR Failed", e);
+        } finally {
+            setIsAnalyzingImage(false);
+        }
+    };
+
     const handleFileUpload = async (file: File) => {
         if (!file) return;
 
@@ -43,7 +70,9 @@ export default function WorkspacePage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 if (e.target?.result) {
-                    useCanvasStore.getState().setImageSrc(e.target.result as string);
+                    const dataUrl = e.target.result as string;
+                    useCanvasStore.getState().setImageSrc(dataUrl);
+                    processImageForOcr(dataUrl);
                 }
             };
             reader.readAsDataURL(file);
@@ -57,6 +86,7 @@ export default function WorkspacePage() {
                 const images = await convertPdfToImages(file);
                 if (images.length > 0) {
                     useCanvasStore.getState().setImageSrc(images[0]);
+                    processImageForOcr(images[0]);
                 }
             } catch (error) {
                 console.error("PDF Parsing Error:", error);
@@ -260,7 +290,7 @@ export default function WorkspacePage() {
                         {/* Hidden File Input */}
                         <input
                             type="file"
-                            accept=".txt,.csv,.json"
+                            accept=".txt,.csv,.json,.md,.docx,.pdf,.png,.jpg,.jpeg,.webp"
                             className="hidden"
                             ref={fileInputRef}
                             onChange={(e) => {
@@ -288,15 +318,17 @@ export default function WorkspacePage() {
 
                             {/* Hover Dropdown Menu */}
                             <div className="absolute top-full right-0 mt-2 w-32 bg-[#212121] border border-[#3B3B3B] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
-                                {(['docx', 'pdf', 'txt', 'md', 'csv', 'json'] as const).map(fmt => (
-                                    <button
-                                        key={fmt}
-                                        onClick={(e) => { e.stopPropagation(); exportSecureFile(fmt); }}
-                                        className="block w-full text-left px-4 py-2 text-xs font-mono text-gray-300 hover:bg-[#3B3B3B] hover:text-white uppercase transition-colors"
-                                    >
-                                        .{fmt}
-                                    </button>
-                                ))}
+                                {((fileType === 'image' || fileType === 'pdf')
+                                    ? ['pdf', 'png', 'jpg'] as const
+                                    : ['docx', 'pdf', 'txt', 'md', 'csv', 'json'] as const).map(fmt => (
+                                        <button
+                                            key={fmt}
+                                            onClick={(e) => { e.stopPropagation(); exportSecureFile(fmt as any); }}
+                                            className="block w-full text-left px-4 py-2 text-xs font-mono text-gray-300 hover:bg-[#3B3B3B] hover:text-white uppercase transition-colors"
+                                        >
+                                            .{fmt}
+                                        </button>
+                                    ))}
                             </div>
                         </div>
                     </div>
@@ -315,6 +347,14 @@ export default function WorkspacePage() {
                                 <UploadCloud className="w-8 h-8 animate-bounce" />
                                 Drop File to Parse
                             </h2>
+                        </div>
+                    )}
+
+                    {isAnalyzingImage && (
+                        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+                            <div className="w-12 h-12 border-4 border-[#FFA500]/20 border-t-[#FFA500] rounded-full animate-spin mb-4"></div>
+                            <h2 className="text-xl font-medium text-white tracking-wide">Analyzing Image...</h2>
+                            <p className="text-sm text-gray-400 mt-2 font-mono">Running local WebAssembly OCR pipeline</p>
                         </div>
                     )}
 

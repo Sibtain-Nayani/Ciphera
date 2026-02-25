@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import Konva from 'konva';
+import type { OcrResult } from '@/lib/ocrEngine';
 
 export type ToolType = 'select' | 'draw-blackout' | 'draw-blur' | 'draw-mask';
 export type ShapeType = 'blackout' | 'blur' | 'mask';
@@ -21,6 +22,7 @@ interface CanvasState {
     activeTool: ToolType;
     stageRef: Konva.Stage | null;
     selectedShapeId: string | null;
+    ocrResult: OcrResult | null;
 
     // Actions
     setImageSrc: (src: string | null) => void;
@@ -33,6 +35,7 @@ interface CanvasState {
     setActiveTool: (tool: ToolType) => void;
     setStageRef: (stage: Konva.Stage | null) => void;
     setSelectedShapeId: (id: string | null) => void;
+    setOcrResult: (result: OcrResult | null) => void;
     resetCanvas: () => void;
 }
 
@@ -44,6 +47,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     activeTool: 'select',
     stageRef: null,
     selectedShapeId: null,
+    ocrResult: null,
 
     setImageSrc: (src) => set({ imageSrc: src }),
     setScale: (scale) => set({ scale }),
@@ -61,6 +65,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     setActiveTool: (tool) => set({ activeTool: tool }),
     setStageRef: (stage) => set({ stageRef: stage }),
     setSelectedShapeId: (id) => set({ selectedShapeId: id }),
+    setOcrResult: (result) => set({ ocrResult: result }),
     resetCanvas: () => set({
         imageSrc: null,
         scale: 1,
@@ -69,5 +74,6 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         activeTool: 'select',
         stageRef: null,
         selectedShapeId: null,
+        ocrResult: null,
     }),
 }));
