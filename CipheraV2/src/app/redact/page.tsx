@@ -39,12 +39,17 @@ export default function WorkspacePage() {
     useEffect(() => {
         if ((fileType === 'image' || fileType === 'pdf') && ocrResult) {
             if (activeRulesCount > 0) {
-                mapOcrToShapes(ocrResult, rules).then(autoShapes => setShapes(autoShapes));
+                mapOcrToShapes(ocrResult, rules).then(autoShapes => {
+                    useCanvasStore.getState().setShapes(prev => [
+                        ...prev.filter(s => !s.id.startsWith('auto_')),
+                        ...autoShapes
+                    ]);
+                });
             } else {
-                setShapes([]);
+                useCanvasStore.getState().setShapes(prev => prev.filter(s => !s.id.startsWith('auto_')));
             }
         }
-    }, [ocrResult, rules, fileType, activeRulesCount, setShapes]);
+    }, [ocrResult, rules, fileType, activeRulesCount]);
 
     // --- File Upload & Drag Logic ---
     const processImageForOcr = async (dataUrl: string) => {
@@ -154,8 +159,26 @@ export default function WorkspacePage() {
                     };
                     const finalExt = formatMap[targetFormat] || 'png';
 
-                    // Capture High-Res snapshot of the stage directly
-                    const dataUrl = canvasState.stageRef!.toDataURL({ pixelRatio: 2.0 });
+                    // Capture High-Res snapshot of the stage strictly matching the original image bounds
+                    const stage = canvasState.stageRef!;
+                    const originalScale = stage.scaleX();
+                    const originalPos = stage.position();
+                    const imageDims = canvasState.imageDimensions;
+
+                    stage.scale({ x: 1, y: 1 });
+                    stage.position({ x: 0, y: 0 });
+
+                    const dataUrl = stage.toDataURL({
+                        x: 0,
+                        y: 0,
+                        width: imageDims ? imageDims.width : stage.width(),
+                        height: imageDims ? imageDims.height : stage.height(),
+                        pixelRatio: 1.0 // Render exactly 1:1 without arbitrary scaling
+                    });
+
+                    stage.scale({ x: originalScale, y: originalScale });
+                    stage.position(originalPos);
+
                     await exportVisualCanvas(dataUrl, fileName, finalExt);
                 } catch (error) {
                     console.error("Export visual error", error);

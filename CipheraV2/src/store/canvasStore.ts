@@ -23,6 +23,7 @@ interface CanvasState {
     stageRef: Konva.Stage | null;
     selectedShapeId: string | null;
     ocrResult: OcrResult | null;
+    imageDimensions: { width: number; height: number } | null;
 
     // Actions
     setImageSrc: (src: string | null) => void;
@@ -36,6 +37,7 @@ interface CanvasState {
     setStageRef: (stage: Konva.Stage | null) => void;
     setSelectedShapeId: (id: string | null) => void;
     setOcrResult: (result: OcrResult | null) => void;
+    setImageDimensions: (dims: { width: number; height: number } | null) => void;
     resetCanvas: () => void;
 }
 
@@ -48,8 +50,9 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     stageRef: null,
     selectedShapeId: null,
     ocrResult: null,
+    imageDimensions: null,
 
-    setImageSrc: (src) => set({ imageSrc: src }),
+    setImageSrc: (src) => set({ imageSrc: src, imageDimensions: null, scale: 1, position: { x: 0, y: 0 } }),
     setScale: (scale) => set({ scale }),
     setPosition: (position) => set({ position }),
     setShapes: (shapesOrUpdater) => set((state) => ({
@@ -66,6 +69,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     setStageRef: (stage) => set({ stageRef: stage }),
     setSelectedShapeId: (id) => set({ selectedShapeId: id }),
     setOcrResult: (result) => set({ ocrResult: result }),
+    setImageDimensions: (dims) => set({ imageDimensions: dims }),
     resetCanvas: () => set({
         imageSrc: null,
         scale: 1,
@@ -75,5 +79,6 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         stageRef: null,
         selectedShapeId: null,
         ocrResult: null,
+        imageDimensions: null,
     }),
 }));

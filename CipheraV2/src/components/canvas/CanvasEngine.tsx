@@ -9,7 +9,8 @@ import { FloatingToolbar } from './FloatingToolbar';
 export const CanvasEngine: React.FC = () => {
     const {
         imageSrc, scale, position, setScale, setPosition,
-        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId
+        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId,
+        imageDimensions
     } = useCanvasStore();
 
     const stageRef = useRef<Konva.Stage>(null);
@@ -139,6 +140,22 @@ export const CanvasEngine: React.FC = () => {
         window.addEventListener('resize', checkSize);
         return () => window.removeEventListener('resize', checkSize);
     }, []);
+
+    // Fit-to-screen logic
+    useEffect(() => {
+        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && scale === 1 && position.x === 0 && position.y === 0) {
+            const padding = 60; // Extra padding around the image
+            const scaleX = (dimensions.width - padding) / imageDimensions.width;
+            const scaleY = (dimensions.height - padding) / imageDimensions.height;
+            const fitScale = Math.min(scaleX, scaleY, 1); // Do not scale up past 100%
+
+            setScale(fitScale);
+            setPosition({
+                x: (dimensions.width - (imageDimensions.width * fitScale)) / 2,
+                y: (dimensions.height - (imageDimensions.height * fitScale)) / 2,
+            });
+        }
+    }, [dimensions, imageDimensions, scale, position.x, position.y, setScale, setPosition]);
 
     // Empty state if no image
     if (!imageSrc) {

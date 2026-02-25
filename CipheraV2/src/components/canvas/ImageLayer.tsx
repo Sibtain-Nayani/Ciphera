@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
+import { useCanvasStore } from '@/store/canvasStore';
 
 interface ImageLayerProps {
     src: string;
@@ -9,6 +10,13 @@ interface ImageLayerProps {
 export const ImageLayer: React.FC<ImageLayerProps> = ({ src }) => {
     // useImage handles loading the image source into an HTMLImageElement for Konva
     const [image] = useImage(src);
+    const setImageDimensions = useCanvasStore(state => state.setImageDimensions);
+
+    useEffect(() => {
+        if (image) {
+            setImageDimensions({ width: image.width, height: image.height });
+        }
+    }, [image, setImageDimensions]);
 
     if (!image) {
         return null;
