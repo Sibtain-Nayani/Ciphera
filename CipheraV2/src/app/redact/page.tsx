@@ -14,7 +14,7 @@ import dynamic from 'next/dynamic';
 const CanvasEngine = dynamic(() => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine), { ssr: false });
 
 export default function WorkspacePage() {
-    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule, fileType } = useDocumentStore();
+    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule, fileType, fileName } = useDocumentStore();
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -57,6 +57,8 @@ export default function WorkspacePage() {
         try {
             const ocrData = await extractOcrData(dataUrl);
             useCanvasStore.getState().setOcrResult(ocrData);
+            // Sync text to document store so the sidebar match counts update accurately
+            useDocumentStore.getState().setRawText(ocrData.rawText);
         } catch (e) {
             console.error("OCR Failed", e);
         } finally {
@@ -303,9 +305,11 @@ export default function WorkspacePage() {
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4 text-[#FFA500]" />
-                                <h1 className="text-sm font-medium text-white">Workspace.txt</h1>
+                                <h1 className="text-sm font-medium text-white">{fileName || 'Workspace.txt'}</h1>
                             </div>
-                            <span className="text-xs font-mono text-gray-500 mt-0.5 hidden md:block">Live Editable Buffer</span>
+                            <span className="text-xs font-mono text-gray-500 mt-0.5 hidden md:block">
+                                {fileType === 'pdf' || fileType === 'image' ? 'Canvas Redaction Layer' : 'Live Editable Buffer'}
+                            </span>
                         </div>
                     </div>
 
