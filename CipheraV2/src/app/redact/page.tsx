@@ -45,6 +45,31 @@ export default function WorkspacePage() {
         }
     };
 
+    // --- Export Logic ---
+    const exportSecureFile = () => {
+        // Construct the final redacted string based on current active rules
+        const redactedText = tokens.map(token => {
+            if (token.type === 'text') return token.value;
+
+            // Only redact if the rule is active, else return original
+            const isRuleActive = rules[token.type as RuleType]?.isActive;
+            if (!isRuleActive) return token.value;
+
+            const action = rules[token.type as RuleType]?.action || 'replace';
+            return redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
+        }).join('');
+
+        const blob = new Blob([redactedText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Workspace_Redacted.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     // --- Shared Sidebar/Drawer Content ---
     const ConfigPanelContent = () => (
         <>
@@ -177,7 +202,10 @@ export default function WorkspacePage() {
                             <span className="hidden sm:inline">Load File</span>
                         </button>
 
-                        <button className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer">
+                        <button
+                            onClick={exportSecureFile}
+                            className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer"
+                        >
                             <Download className="w-4 h-4" />
                             <span className="hidden sm:inline">Export Secure</span>
                         </button>

@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { UploadCloud, CheckCircle2, Clock, ShieldCheck, FileText, Activity, Lock } from 'lucide-react';
+import { useDocumentStore } from '@/store/documentStore';
 
 export default function DashboardPage() {
     const [isDragging, setIsDragging] = useState(false);
+    const router = useRouter();
+    const { rules, setRawText } = useDocumentStore();
 
     // Mock Data for the Audit Ledger
     const recentFiles = [
@@ -13,6 +17,21 @@ export default function DashboardPage() {
         { id: 'DOC-9484', name: 'Legal_Discovery_Batch_A.zip', date: '2026-02-24 16:45', status: 'Completed', size: '1.2 GB' },
         { id: 'DOC-9485', name: 'Client_Onboarding_Draft.docx', date: '2026-02-24 11:12', status: 'Completed', size: '845 KB' },
     ];
+    const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
+
+    // --- Global File Upload & Routing ---
+    const handleFileUploadGlobal = (file: File) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (e.target?.result) {
+                setRawText(e.target.result as string);
+                // Redirect user to the workspace immediately after loading into the buffer
+                router.push('/redact');
+            }
+        };
+        reader.readAsText(file);
+    };
 
     return (
         <div className="w-full p-6 md:p-12 font-sans selection:bg-[#FFA500] selection:text-black">
@@ -51,7 +70,7 @@ export default function DashboardPage() {
                             <h3 className="text-sm font-medium text-gray-400">Rules Active</h3>
                             <ShieldCheck className="w-5 h-5 text-[#FFA500]" />
                         </div>
-                        <p className="text-3xl font-mono text-white">14</p>
+                        <p className="text-3xl font-mono text-white">{activeRulesCount}</p>
                         <p className="text-xs text-gray-500 mt-2 font-mono">Custom RegEx + NLP loaded</p>
                     </div>
 
@@ -71,8 +90,22 @@ export default function DashboardPage() {
                         ? 'border-[#FFA500] bg-[#FFA500]/5' : 'border-[#3B3B3B] hover:border-[#FFA500]/70 hover:bg-[#252525]'}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                            handleFileUploadGlobal(e.dataTransfer.files[0]);
+                        }
+                    }}
                 >
+                    <input
+                        type="file"
+                        accept=".txt,.csv,.json"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onChange={(e) => {
+                            if (e.target.files?.length) handleFileUploadGlobal(e.target.files[0]);
+                        }}
+                    />
                     <div className="absolute inset-0 bg-[#FFA500] opacity-0 group-hover:opacity-5 blur-[100px] transition-opacity duration-700 pointer-events-none rounded-3xl"></div>
 
                     <div className={`p-5 rounded-full mb-6 transition-all duration-300 ${isDragging
