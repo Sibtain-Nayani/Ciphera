@@ -216,10 +216,11 @@ export default function WorkspacePage() {
                         </div>
                     )}
 
-                    <div className="relative min-h-full w-full p-4 md:p-10 pb-20 md:pb-10">
-                        {/* The Render Layer (Highlights / Redactions) */}
-                        <div className="absolute inset-x-4 md:inset-x-10 top-4 md:top-10 bottom-4 md:bottom-10 z-0 pointer-events-none">
-                            <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                    <div className="relative w-full max-w-3xl mx-auto min-h-full">
+                        <div className="relative w-full p-4 md:p-10 pb-32 md:pb-24">
+                            {/* The Render Layer (Highlights / Redactions) */}
+                            {/* Provides the natural height of the document so the scrollbar works properly. */}
+                            <div className="font-mono text-[14px] leading-[1.75] break-words whitespace-pre-wrap pointer-events-none w-full min-h-[500px]">
                                 {tokens.map((token) => {
                                     if (token.type === 'text') {
                                         return <PlainTextToken key={token.id} token={token} isRedacted={previewMode === 'redacted'} />;
@@ -237,21 +238,44 @@ export default function WorkspacePage() {
                                         />
                                     );
                                 })}
+                                {/* Buffer for typing new lines */}
+                                {'\n\n\n'}
                             </div>
-                        </div>
 
-                        {/* The Interactivity Layer (Only inputtable in 'original' mode) */}
-                        {previewMode === 'original' && (
-                            <textarea
-                                value={rawText}
-                                onChange={(e) => setRawText(e.target.value)}
-                                className="relative z-10 w-full min-h-[800px] h-full max-w-3xl mx-auto block bg-transparent text-gray-400 font-mono text-[13px] leading-relaxed resize-none outline-none border-none focus:ring-0 whitespace-pre-wrap break-words"
-                                spellCheck="false"
-                                placeholder="Paste raw text here or drop a file..."
-                            />
-                        )}
+                            {/* The Interactivity Layer (Only inputtable in 'original' mode) */}
+                            {/* Absolutely positioned over the exact padding box of the parent to ensure 1:1 overlap */}
+                            {previewMode === 'original' && (
+                                <textarea
+                                    value={rawText}
+                                    onChange={(e) => setRawText(e.target.value)}
+                                    className="absolute inset-4 md:inset-10 bottom-32 md:bottom-24 z-10 block bg-transparent text-gray-400 font-mono text-[14px] leading-[1.75] resize-none outline-none border-0 p-0 m-0 focus:ring-0 whitespace-pre-wrap break-words overflow-hidden"
+                                    spellCheck="false"
+                                    placeholder="Paste raw text here or drop a file..."
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
+
+                {/* Floating Preview Toggle Button (FAB) */}
+                <button
+                    onClick={() => setPreviewMode(previewMode === 'original' ? 'redacted' : 'original')}
+                    className="absolute bottom-[4.5rem] md:bottom-8 right-4 md:right-8 z-30 flex items-center gap-2 bg-[#212121] hover:bg-[#2A2A2A] text-white px-5 py-3.5 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.6)] border border-[#3B3B3B] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group"
+                >
+                    {previewMode === 'original' ? (
+                        <>
+                            <div className="relative">
+                                <Shield className="w-5 h-5 text-[#FFA500] group-hover:scale-110 transition-transform" />
+                            </div>
+                            <span className="text-sm font-medium pr-1">Lock Document</span>
+                        </>
+                    ) : (
+                        <>
+                            <Eye className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                            <span className="text-sm font-medium pr-1">Edit Original</span>
+                        </>
+                    )}
+                </button>
             </section>
 
             {/* ========================== */}

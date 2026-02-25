@@ -65,9 +65,9 @@ export function AnimatedToken({ token, isRedacted, action }: AnimatedTokenProps)
     return (
         <motion.span
             layout
-            className={`inline px-1 rounded mx-0.5 font-mono ${isRedacted
-                ? 'bg-[#FFA500] text-black font-semibold shadow-[0_0_5px_rgba(255,165,0,0.4)]'
-                : 'bg-white/10 text-transparent border border-[#3B3B3B]'
+            className={`inline font-mono ${isRedacted
+                ? 'bg-[#FFA500] text-[#1E1E1E] font-medium shadow-[0_0_5px_rgba(255,165,0,0.4)] rounded-sm'
+                : 'bg-[#FFA500]/25 text-transparent rounded-sm'
                 }`}
             initial={false}
             animate={{
