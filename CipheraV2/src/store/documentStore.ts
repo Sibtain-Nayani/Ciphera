@@ -34,7 +34,7 @@ EMP-003, Elena, Rodriguez, e.rodriguez@corp-domain.com, 555-0177-334, Legal, $17
 
 export const useDocumentStore = create<DocumentState>((set) => ({
     rawText: DEFAULT_DUMMY_TEXT,
-    previewMode: 'redacted',
+    previewMode: 'original',
     rules: {
         email: { isActive: true, action: 'replace' },
         phone: { isActive: true, action: 'replace' },
