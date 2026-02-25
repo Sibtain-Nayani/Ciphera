@@ -49,7 +49,7 @@ export default function WorkspacePage() {
     const ConfigPanelContent = () => (
         <>
             {/* Header & Preview Toggle */}
-            <div className="p-5 md:p-6 border-b border-[#3B3B3B] shrink-0 space-y-4 md:space-y-6">
+            <div className="p-5 md:p-6 border-b border-[#3B3B3B] shrink-0">
                 {/* Mobile Drawer Handle */}
                 <div className="flex items-center justify-between md:justify-start gap-3">
                     <div className="flex items-center gap-3">
@@ -63,22 +63,6 @@ export default function WorkspacePage() {
                         aria-label="Close drawer"
                     >
                         <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Segmented Control for Preview */}
-                <div className="flex p-1 bg-[#212121] rounded-lg border border-[#3B3B3B]">
-                    <button
-                        onClick={() => setPreviewMode('original')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-300 cursor-pointer ${previewMode === 'original' ? 'bg-[#3B3B3B] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Eye className="w-4 h-4" /> Original (Edit)
-                    </button>
-                    <button
-                        onClick={() => setPreviewMode('redacted')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-300 cursor-pointer ${previewMode === 'redacted' ? 'bg-[#FFA500] text-black shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Shield className="w-4 h-4" /> Redacted
                     </button>
                 </div>
             </div>
