@@ -3,12 +3,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useDocumentStore, RuleType, DocumentState } from '@/store/documentStore';
+import { useCanvasStore } from '@/store/canvasStore';
 import { redactionEngine, Token } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
 import { extractTextFromFile, exportRedactedText } from '@/lib/fileFormat';
+import dynamic from 'next/dynamic';
+
+const CanvasEngine = dynamic(() => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine), { ssr: false });
 
 export default function WorkspacePage() {
-    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
+    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule, fileType } = useDocumentStore();
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -29,13 +33,30 @@ export default function WorkspacePage() {
     // --- File Upload & Drag Logic ---
     const handleFileUpload = async (file: File) => {
         if (!file) return;
+
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+        // Handle images -> Canvas Store
+        if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+            useDocumentStore.getState().setFileMetadata(file.name, 'image');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result) {
+                    useCanvasStore.getState().setImageSrc(e.target.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        // Handle texts -> Document Store
         try {
             const { text, type, name } = await extractTextFromFile(file);
             setRawText(text);
             useDocumentStore.getState().setFileMetadata(name, type);
         } catch (error) {
             console.error("Error loading file:", error);
-            alert("This format is intended for the Canvas visual engine. Please upload a supported text format.");
+            alert("File format not supported by the current text or canvas engines.");
         }
     };
 
@@ -231,9 +252,9 @@ export default function WorkspacePage() {
                     </div>
                 </header>
 
-                {/* Editor / Text Area */}
+                {/* Editor / Text Area OR Canvas */}
                 <div
-                    className={`flex-1 relative bg-[#212121] transition-colors duration-300 overflow-y-auto ${isDragging ? 'bg-[#2A2A2A]' : ''}`}
+                    className={`flex-1 relative bg-[#212121] transition-colors duration-300 ${fileType === 'image' || fileType === 'pdf' ? 'overflow-hidden' : 'overflow-y-auto'} ${isDragging ? 'bg-[#2A2A2A]' : ''}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
@@ -247,45 +268,49 @@ export default function WorkspacePage() {
                         </div>
                     )}
 
-                    <div className="relative w-full max-w-3xl mx-auto min-h-full">
-                        <div className="relative w-full p-4 md:p-10 pb-32 md:pb-24">
-                            {/* The Render Layer (Highlights / Redactions) */}
-                            {/* Provides the natural height of the document so the scrollbar works properly. */}
-                            <div className="font-mono text-[14px] leading-[1.75] break-words whitespace-pre-wrap pointer-events-none w-full min-h-[500px]">
-                                {tokens.map((token) => {
-                                    if (token.type === 'text') {
-                                        return <PlainTextToken key={token.id} token={token} isRedacted={previewMode === 'redacted'} />;
-                                    }
+                    {fileType === 'image' || fileType === 'pdf' ? (
+                        <CanvasEngine />
+                    ) : (
+                        <div className="relative w-full max-w-3xl mx-auto min-h-full">
+                            <div className="relative w-full p-4 md:p-10 pb-32 md:pb-24">
+                                {/* The Render Layer (Highlights / Redactions) */}
+                                {/* Provides the natural height of the document so the scrollbar works properly. */}
+                                <div className="font-mono text-[14px] leading-[1.75] break-words whitespace-pre-wrap pointer-events-none w-full min-h-[500px]">
+                                    {tokens.map((token) => {
+                                        if (token.type === 'text') {
+                                            return <PlainTextToken key={token.id} token={token} isRedacted={previewMode === 'redacted'} />;
+                                        }
 
-                                    const isRedacted = previewMode === 'redacted';
-                                    const action = rules[token.type as RuleType]?.action || 'replace';
+                                        const isRedacted = previewMode === 'redacted';
+                                        const action = rules[token.type as RuleType]?.action || 'replace';
 
-                                    return (
-                                        <AnimatedToken
-                                            key={token.id}
-                                            token={token}
-                                            isRedacted={isRedacted}
-                                            action={action}
-                                        />
-                                    );
-                                })}
-                                {/* Buffer for typing new lines */}
-                                {'\n\n\n'}
+                                        return (
+                                            <AnimatedToken
+                                                key={token.id}
+                                                token={token}
+                                                isRedacted={isRedacted}
+                                                action={action}
+                                            />
+                                        );
+                                    })}
+                                    {/* Buffer for typing new lines */}
+                                    {'\n\n\n'}
+                                </div>
+
+                                {/* The Interactivity Layer (Only inputtable in 'original' mode) */}
+                                {/* Absolutely positioned over the exact padding box of the parent to ensure 1:1 overlap */}
+                                {previewMode === 'original' && (
+                                    <textarea
+                                        value={rawText}
+                                        onChange={(e) => setRawText(e.target.value)}
+                                        className="absolute inset-4 md:inset-10 bottom-32 md:bottom-24 z-10 block bg-transparent text-gray-400 font-mono text-[14px] leading-[1.75] resize-none outline-none border-0 p-0 m-0 focus:ring-0 whitespace-pre-wrap break-words overflow-hidden"
+                                        spellCheck="false"
+                                        placeholder="Paste raw text here or drop a file..."
+                                    />
+                                )}
                             </div>
-
-                            {/* The Interactivity Layer (Only inputtable in 'original' mode) */}
-                            {/* Absolutely positioned over the exact padding box of the parent to ensure 1:1 overlap */}
-                            {previewMode === 'original' && (
-                                <textarea
-                                    value={rawText}
-                                    onChange={(e) => setRawText(e.target.value)}
-                                    className="absolute inset-4 md:inset-10 bottom-32 md:bottom-24 z-10 block bg-transparent text-gray-400 font-mono text-[14px] leading-[1.75] resize-none outline-none border-0 p-0 m-0 focus:ring-0 whitespace-pre-wrap break-words overflow-hidden"
-                                    spellCheck="false"
-                                    placeholder="Paste raw text here or drop a file..."
-                                />
-                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Floating Preview Toggle Button (FAB) */}
