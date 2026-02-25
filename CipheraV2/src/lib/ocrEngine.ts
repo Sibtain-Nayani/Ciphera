@@ -28,7 +28,24 @@ export async function extractOcrData(imageUrl: string): Promise<OcrResult> {
     const ret = await worker.recognize(imageUrl);
     await worker.terminate();
 
-    const wordsData = (ret.data as any).words || [];
+    // Flatten words from the deeply nested structure in v5
+    const wordsData: any[] = [];
+    if (ret.data.blocks) {
+        ret.data.blocks.forEach(block => {
+            if (block.paragraphs) {
+                block.paragraphs.forEach(paragraph => {
+                    if (paragraph.lines) {
+                        paragraph.lines.forEach(line => {
+                            if (line.words) {
+                                wordsData.push(...line.words);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     const words: OcrWord[] = [];
     let currentString = "";
 
