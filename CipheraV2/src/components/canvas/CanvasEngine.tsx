@@ -10,7 +10,7 @@ import { FloatingToolbar } from './FloatingToolbar';
 export const CanvasEngine: React.FC = () => {
     const {
         imageSrc, scale, position, setScale, setPosition,
-        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId,
+        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId, deleteShape,
         imageDimensions
     } = useCanvasStore();
 
@@ -25,6 +25,23 @@ export const CanvasEngine: React.FC = () => {
         }
         return () => setStageRef(null);
     }, [setStageRef]);
+
+    // Keyboard controls for deleting shapes
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only trigger if we aren't typing in an input field
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedShapeId) {
+                deleteShape(selectedShapeId);
+                setSelectedShapeId(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedShapeId, deleteShape, setSelectedShapeId]);
 
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentShapeId, setCurrentShapeId] = useState<string | null>(null);
