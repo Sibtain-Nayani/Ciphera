@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
 import { redactionEngine, Token } from '@/lib/redactionEngine';
+import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
 
 export default function WorkspacePage() {
     const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
@@ -221,23 +222,19 @@ export default function WorkspacePage() {
                             <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
                                 {tokens.map((token) => {
                                     if (token.type === 'text') {
-                                        return <span key={token.id} className={previewMode === 'redacted' ? "text-gray-400" : "text-transparent"}>{token.value}</span>;
+                                        return <PlainTextToken key={token.id} token={token} isRedacted={previewMode === 'redacted'} />;
                                     }
 
                                     const isRedacted = previewMode === 'redacted';
                                     const action = rules[token.type as RuleType]?.action || 'replace';
-                                    const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
 
                                     return (
-                                        <span
+                                        <AnimatedToken
                                             key={token.id}
-                                            className={`px-1 rounded mx-0.5 transition-colors duration-300 ${isRedacted
-                                                ? 'bg-[#FFA500] text-black font-semibold shadow-[0_0_5px_rgba(255,165,0,0.4)]'
-                                                : 'bg-white/10 text-transparent border border-[#3B3B3B]'
-                                                }`}
-                                        >
-                                            {isRedacted ? replacementToken : token.value}
-                                        </span>
+                                            token={token}
+                                            isRedacted={isRedacted}
+                                            action={action}
+                                        />
                                     );
                                 })}
                             </div>
