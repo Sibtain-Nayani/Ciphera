@@ -1,19 +1,46 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
-import { redactionEngine } from '@/lib/redactionEngine';
+import { redactionEngine, Token } from '@/lib/redactionEngine';
 
 export default function WorkspacePage() {
-    const { rawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
+    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule } = useDocumentStore();
+    const [tokens, setTokens] = useState<Token[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Dynamically tokenize the text whenever rules or raw text changes.
-    const tokens = useMemo(() => {
-        return redactionEngine.tokenize(rawText, rules);
+    useEffect(() => {
+        const fetchAST = async () => {
+            const result = await redactionEngine.tokenize(rawText, rules);
+            setTokens(result);
+        };
+        fetchAST();
     }, [rawText, rules]);
 
     const activeRulesCount = Object.values(rules).filter(Boolean).length;
+
+    // --- File Upload & Drag Logic ---
+    const handleFileUpload = (file: File) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (e.target?.result) {
+                setRawText(e.target.result as string);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const onDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files[0]);
+        }
+    };
 
     return (
         <div className="w-full font-sans flex flex-col md:flex-row h-[calc(100vh-64px)] md:h-screen selection:bg-[#FFA500] selection:text-black">
@@ -29,43 +56,95 @@ export default function WorkspacePage() {
                         </button>
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-gray-500" />
-                                <h1 className="text-sm font-medium text-white">Employee_Census_Data_v2.csv</h1>
+                                <FileText className="w-4 h-4 text-[#FFA500]" />
+                                <h1 className="text-sm font-medium text-white">Workspace.txt</h1>
                             </div>
-                            <span className="text-xs font-mono text-gray-500 mt-0.5">ID: DOC-9483 • 14.1 MB</span>
+                            <span className="text-xs font-mono text-gray-500 mt-0.5">Live Editable Buffer</span>
                         </div>
                     </div>
 
-                    <button className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer">
-                        <Download className="w-4 h-4" />
-                        Export Secure
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {/* Hidden File Input */}
+                        <input
+                            type="file"
+                            accept=".txt,.csv,.json"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={(e) => {
+                                if (e.target.files?.length) handleFileUpload(e.target.files[0]);
+                            }}
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-2 text-gray-300 hover:text-white bg-[#2A2A2A] hover:bg-[#3B3B3B] px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 cursor-pointer"
+                        >
+                            <UploadCloud className="w-4 h-4" />
+                            Load File
+                        </button>
+
+                        <button className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer">
+                            <Download className="w-4 h-4" />
+                            Export Secure
+                        </button>
+                    </div>
                 </header>
 
                 {/* Editor / Text Area */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-[#212121]">
-                    <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap text-gray-400">
-                        {tokens.map((token) => {
-                            if (token.type === 'text') {
-                                return <span key={token.id}>{token.value}</span>;
-                            }
+                <div
+                    className={`flex-1 relative bg-[#212121] transition-colors duration-300 overflow-y-auto ${isDragging ? 'bg-[#2A2A2A]' : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={onDrop}
+                >
+                    {isDragging && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#FFA500]/10 backdrop-blur-sm border-2 border-[#FFA500] border-dashed">
+                            <h2 className="text-xl font-medium text-[#FFA500] flex items-center gap-3">
+                                <UploadCloud className="w-8 h-8 animate-bounce" />
+                                Drop File to Parse
+                            </h2>
+                        </div>
+                    )}
 
-                            // This is a matched entity token!
-                            const isRedacted = previewMode === 'redacted';
-                            const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value);
+                    <div className="relative min-h-full w-full p-6 md:p-10">
+                        {/* The Render Layer (Highlights / Redactions) */}
+                        {/* It sits absolutely positioned so it perfectly aligns with the textarea text. */}
+                        <div className="absolute inset-x-6 md:inset-x-10 top-6 md:top-10 bottom-6 md:bottom-10 z-0 pointer-events-none">
+                            <div className="max-w-3xl mx-auto font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                                {tokens.map((token) => {
+                                    if (token.type === 'text') {
+                                        // In redact mode, show plain text. In original mode, hide it (textarea shows it).
+                                        return <span key={token.id} className={previewMode === 'redacted' ? "text-gray-400" : "text-transparent"}>{token.value}</span>;
+                                    }
 
-                            return (
-                                <span
-                                    key={token.id}
-                                    className={`px-1 rounded mx-0.5 transition-colors duration-300 ${isRedacted
-                                            ? 'bg-[#FFA500] text-black font-semibold shadow-[0_0_5px_rgba(255,165,0,0.4)]'
-                                            : 'bg-white/10 text-white border border-[#3B3B3B]'
-                                        }`}
-                                >
-                                    {isRedacted ? replacementToken : token.value}
-                                </span>
-                            );
-                        })}
+                                    // This is a matched entity token!
+                                    const isRedacted = previewMode === 'redacted';
+                                    const replacementToken = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value);
+
+                                    return (
+                                        <span
+                                            key={token.id}
+                                            className={`px-1 rounded mx-0.5 transition-colors duration-300 ${isRedacted
+                                                ? 'bg-[#FFA500] text-black font-semibold shadow-[0_0_5px_rgba(255,165,0,0.4)]'
+                                                : 'bg-white/10 text-transparent border border-[#3B3B3B]'
+                                                }`}
+                                        >
+                                            {isRedacted ? replacementToken : token.value}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* The Interactivity Layer (Only inputtable in 'original' mode) */}
+                        {previewMode === 'original' && (
+                            <textarea
+                                value={rawText}
+                                onChange={(e) => setRawText(e.target.value)}
+                                className="relative z-10 w-full min-h-[800px] h-full max-w-3xl mx-auto block bg-transparent text-gray-400 font-mono text-[13px] leading-relaxed resize-none outline-none border-none focus:ring-0 whitespace-pre-wrap break-words"
+                                spellCheck="false"
+                                placeholder="Paste raw text here or drop a file..."
+                            />
+                        )}
                     </div>
                 </div>
             </section>
@@ -86,7 +165,7 @@ export default function WorkspacePage() {
                             onClick={() => setPreviewMode('original')}
                             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-300 cursor-pointer ${previewMode === 'original' ? 'bg-[#3B3B3B] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
                         >
-                            <Eye className="w-4 h-4" /> Original
+                            <Eye className="w-4 h-4" /> Original (Edit)
                         </button>
                         <button
                             onClick={() => setPreviewMode('redacted')}
@@ -154,11 +233,11 @@ export default function WorkspacePage() {
                         <EyeOff className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
                         <div className="space-y-1">
                             <h4 className="text-sm font-medium text-gray-300">
-                                {activeRulesCount > 0 ? "Local NLP Engine Active" : "Scanning Halted"}
+                                {activeRulesCount > 0 ? "Local Presidio Engine Active" : "Scanning Halted"}
                             </h4>
                             <p className="text-xs text-gray-500 leading-relaxed">
                                 {activeRulesCount > 0
-                                    ? "Entity recognition is running locally on this machine. No data is transmitted to external servers during this preview."
+                                    ? "FastAPI Presidio local server is scanning raw inputs and feeding AST arrays to React."
                                     : "Enable rules to begin local protocol data discovery and parsing."}
                             </p>
                         </div>
