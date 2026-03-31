@@ -1,266 +1,39 @@
 "use client";
 
 import React from 'react';
-import { ShieldCheck, Mail, Phone, CreditCard, Fingerprint, User, Eye, Lock, FileDown, Zap } from 'lucide-react';
-import { useDocumentStore, RuleType, RedactionAction } from '@/store/documentStore';
-
-/**
- * Metadata for each parser rule card.
- * Defines icon, color scheme, regex pattern, and action options.
- */
-interface ParserMeta {
-    label: string;
-    icon: React.ReactNode;
-    iconBgClass: string;
-    iconBorderClass: string;
-    iconTextClass: string;
-    regex: string;
-    regexLabel: string;
-    actions: { value: RedactionAction | string; label: string }[];
-}
-
-const PARSER_META: Record<RuleType, ParserMeta> = {
-    email: {
-        label: 'Email Addresses',
-        icon: <Mail className="w-5 h-5" />,
-        iconBgClass: 'bg-blue-500/10',
-        iconBorderClass: 'border-blue-500/20',
-        iconTextClass: 'text-blue-400',
-        regex: '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/i',
-        regexLabel: 'RegEx',
-        actions: [
-            { value: 'replace', label: 'Replace ([REDACTED])' },
-            { value: 'mask', label: 'Mask (j***@***.com)' },
-            { value: 'blackout', label: 'Remove Completely' },
-        ],
-    },
-    phone: {
-        label: 'Phone Numbers',
-        icon: <Phone className="w-5 h-5" />,
-        iconBgClass: 'bg-emerald-500/10',
-        iconBorderClass: 'border-emerald-500/20',
-        iconTextClass: 'text-emerald-400',
-        regex: '/(\\(\\d{3}\\)|[-\\s.]?\\d{3})[-\\s.]?\\d{3}[-\\s.]?\\d{4}/',
-        regexLabel: 'RegEx',
-        actions: [
-            { value: 'replace', label: 'Replace ([REDACTED])' },
-            { value: 'mask', label: 'Mask ((XXX)-XXX-XXXX)' },
-        ],
-    },
-    creditCard: {
-        label: 'Credit Cards',
-        icon: <CreditCard className="w-5 h-5" />,
-        iconBgClass: 'bg-purple-500/10',
-        iconBorderClass: 'border-purple-500/20',
-        iconTextClass: 'text-purple-400',
-        regex: '/(?:\\d{4}[-\\s]?){3}\\d{4}|\\d{4}[-\\s]?\\d{6}[-\\s]?\\d{5}/',
-        regexLabel: 'RegEx',
-        actions: [
-            { value: 'mask', label: 'Mask (****-1234)' },
-            { value: 'replace', label: 'Replace ([PCI DATA])' },
-            { value: 'blackout', label: 'Blackout (██████)' },
-        ],
-    },
-    ssn: {
-        label: 'Social Security (SSN)',
-        icon: <Fingerprint className="w-5 h-5" />,
-        iconBgClass: 'bg-gray-500/10',
-        iconBorderClass: 'border-gray-500/20',
-        iconTextClass: 'text-gray-400',
-        regex: '/\\d{3}[-\\s]?\\d{2}[-\\s]?\\d{4}/',
-        regexLabel: 'RegEx',
-        actions: [
-            { value: 'mask', label: 'Mask (XXX-XX-XXXX)' },
-            { value: 'replace', label: 'Replace ([REDACTED])' },
-        ],
-    },
-    names: {
-        label: 'Proper Names (NLP)',
-        icon: <User className="w-5 h-5" />,
-        iconBgClass: 'bg-[#FFA500]/10',
-        iconBorderClass: 'border-[#FFA500]/20',
-        iconTextClass: 'text-[#FFA500]',
-        regex: 'en_core_web_trf (Transformer)',
-        regexLabel: 'Spacy',
-        actions: [
-            { value: 'replace', label: 'Replace ([PERSON])' },
-        ],
-    },
-};
-
-/**
- * ToggleSwitch — iOS-style toggle bound to a boolean state.
- */
-function ToggleSwitch({
-    checked,
-    onChange,
-    disabled,
-    id,
-}: {
-    checked: boolean;
-    onChange: () => void;
-    disabled?: boolean;
-    id: string;
-}) {
-    return (
-        <button
-            id={id}
-            role="switch"
-            aria-checked={checked}
-            aria-label="Toggle parser"
-            onClick={disabled ? undefined : onChange}
-            className={`
-                relative w-12 h-6 rounded-full transition-colors duration-300 shrink-0
-                ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
-                ${checked ? 'bg-[#FFA500]' : 'bg-[#3B3B3B]'}
-            `}
-        >
-            <span
-                className={`
-                    absolute top-[2px] left-[2px] w-5 h-5 bg-white rounded-full
-                    transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-                    ${checked ? 'translate-x-6 shadow-sm' : 'translate-x-0'}
-                `}
-            />
-        </button>
-    );
-}
-
-/**
- * ParserCard — Individual rule configuration card.
- */
-function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
-    const { rules, toggleRule, setRuleAction } = useDocumentStore();
-    const config = rules[ruleKey];
-    const meta = PARSER_META[ruleKey];
-    const isActive = config.isActive;
-
-    return (
-        <article
-            id={`parser-card-${ruleKey}`}
-            className={`
-                bg-card rounded-xl border border-border p-6 shadow-lg
-                transition-opacity duration-300
-                ${!isActive ? 'opacity-50' : ''}
-            `}
-        >
-            {/* Card Header: Icon + Label + Toggle */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${meta.iconBgClass} flex items-center justify-center border ${meta.iconBorderClass} ${meta.iconTextClass}`}>
-                        {meta.icon}
-                    </div>
-                    <h3 className={`font-semibold ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                        {meta.label}
-                    </h3>
-                </div>
-                <ToggleSwitch
-                    id={`toggle-${ruleKey}`}
-                    checked={isActive}
-                    onChange={() => toggleRule(ruleKey)}
-                />
-            </div>
-
-            {/* Card Body: Regex + Action + Preview */}
-            <div className="space-y-5">
-                {/* Regex / Model Field */}
-                <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                        {ruleKey === 'names' ? 'Model' : 'Regex Pattern'}
-                    </label>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            readOnly
-                            disabled={!isActive}
-                            value={meta.regex}
-                            spellCheck={false}
-                            className={`
-                                w-full rounded-lg px-4 py-2.5 text-sm font-mono
-                                border border-border transition-all
-                                focus:outline-none focus:border-[#FFA500] focus:ring-1 focus:ring-[#FFA500]
-                                ${isActive
-                                    ? 'bg-input text-emerald-400'
-                                    : 'bg-background text-gray-500 cursor-not-allowed opacity-60'
-                                }
-                            `}
-                            style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
-                        />
-                        <span className={`
-                            absolute right-3 top-2.5 text-xs px-1
-                            ${isActive
-                                ? 'text-muted-foreground bg-input'
-                                : 'text-muted-foreground bg-background opacity-60'
-                            }
-                        `}>
-                            {meta.regexLabel}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Action Select + Preview Button Row */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                            Action
-                        </label>
-                        <select
-                            id={`action-${ruleKey}`}
-                            disabled={!isActive}
-                            value={config.action}
-                            onChange={(e) => setRuleAction(ruleKey, e.target.value as RedactionAction)}
-                            className={`
-                                w-full rounded-lg px-4 py-2.5 text-sm
-                                border border-border appearance-none transition-all
-                                focus:outline-none focus:border-[#FFA500] focus:ring-1 focus:ring-[#FFA500]
-                                ${isActive
-                                    ? 'bg-input text-white cursor-pointer'
-                                    : 'bg-background text-gray-500 cursor-not-allowed opacity-60'
-                                }
-                            `}
-                        >
-                            {meta.actions.map((a) => (
-                                <option key={a.value} value={a.value}>{a.label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex items-end">
-                        <button
-                            id={`preview-${ruleKey}`}
-                            disabled={!isActive}
-                            className={`
-                                w-full h-[42px] flex items-center justify-center gap-2
-                                rounded-lg text-sm font-medium transition-all
-                                ${isActive
-                                    ? 'border border-[#FFA500] text-[#FFA500] hover:bg-[#FFA500] hover:text-black cursor-pointer'
-                                    : 'border border-border text-gray-500 cursor-not-allowed opacity-60'
-                                }
-                            `}
-                        >
-                            <Eye className="w-4 h-4" />
-                            Preview Redaction
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </article>
-    );
-}
+import { ShieldCheck, Lock, FileDown, Zap, Code2 } from 'lucide-react';
+import { useDocumentStore, RuleType } from '@/store/documentStore';
+import { ToggleSwitch } from '@/components/settings/ToggleSwitch';
+import { ParserCard } from '@/components/settings/ParserCard';
+import { CustomRuleCard } from '@/components/settings/CustomRuleCard';
+import { AddRuleDialog } from '@/components/settings/AddRuleDialog';
 
 /**
  * SettingsPage — Security & Rule Configuration dashboard.
- * Matches the Stitch "Security Settings Dashboard" design using Ciphera's own theme.
+ *
+ * Three sections:
+ * 1. Active Parsers (built-in Presidio rules)
+ * 2. Custom Regex Rules (user-defined, persisted to localStorage)
+ * 3. System Preferences (strict mode, auto-export, hardware accel)
  */
 export default function SettingsPage() {
+    const { customRules } = useDocumentStore();
+
     const [preferences, setPreferences] = React.useState({
         strictMode: true,
         autoExport: false,
         hardwareAccel: true,
     });
 
+    const [saveToast, setSaveToast] = React.useState(false);
+
     const togglePref = (key: keyof typeof preferences) => {
-        setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
+        setPreferences((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleSave = () => {
+        setSaveToast(true);
+        setTimeout(() => setSaveToast(false), 2500);
     };
 
     const parserOrder: RuleType[] = ['email', 'phone', 'creditCard', 'ssn', 'names'];
@@ -290,7 +63,7 @@ export default function SettingsPage() {
             <div className="flex-1 overflow-y-auto p-6 md:p-8 pb-32">
                 <div className="max-w-7xl mx-auto w-full space-y-10">
 
-                    {/* Active Parsers Section */}
+                    {/* ── Section 1: Active Parsers ── */}
                     <section>
                         <h2 className="text-xs text-muted-foreground uppercase tracking-wider mb-6 font-medium">
                             Active Parsers
@@ -302,7 +75,47 @@ export default function SettingsPage() {
                         </div>
                     </section>
 
-                    {/* System Preferences Section */}
+                    {/* ── Section 2: Custom Regex Rules ── */}
+                    <section>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-[#FFA500]/10 rounded-lg border border-[#FFA500]/20">
+                                <Code2 className="w-5 h-5 text-[#FFA500]" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-white">Custom Regex Rules</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Define your own regex patterns for domain-specific redaction — API keys, employee IDs, custom formats, and more.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Existing custom rules */}
+                            {customRules.length > 0 && (
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                    {customRules.map((rule) => (
+                                        <CustomRuleCard key={rule.id} rule={rule} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Empty state */}
+                            {customRules.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border-2 border-dashed border-border text-center">
+                                    <Code2 className="w-10 h-10 text-gray-600 mb-3" />
+                                    <p className="text-sm text-gray-500 font-medium">No custom rules yet</p>
+                                    <p className="text-xs text-gray-600 mt-1 max-w-xs">
+                                        Create regex patterns tailored to your data — match API keys, internal IDs, or any custom format.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Add rule button / dialog */}
+                            <AddRuleDialog />
+                        </div>
+                    </section>
+
+                    {/* ── Section 3: System Preferences ── */}
                     <section className="bg-card border border-border rounded-xl p-6 shadow-lg">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-[#FFA500]/10 rounded-lg border border-[#FFA500]/20">
@@ -384,19 +197,30 @@ export default function SettingsPage() {
 
             {/* ── Sticky Footer ── */}
             <footer className="sticky bottom-0 z-10 bg-secondary border-t border-border p-4 md:p-6 shadow-2xl">
-                <div className="max-w-7xl mx-auto w-full flex items-center justify-end gap-4">
-                    <button
-                        id="btn-discard"
-                        className="px-6 py-2.5 border border-border text-muted-foreground rounded-lg hover:bg-card hover:text-white transition-colors font-medium text-sm cursor-pointer"
-                    >
-                        Discard
-                    </button>
-                    <button
-                        id="btn-save"
-                        className="px-6 py-2.5 bg-[#FFA500] text-black rounded-lg shadow-[0_0_15px_rgba(255,165,0,0.3)] hover:bg-[#E69500] transition-all font-medium text-sm cursor-pointer"
-                    >
-                        Save Changes
-                    </button>
+                <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+                    {/* Toast */}
+                    <div className={`transition-all duration-300 ${saveToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+                        <span className="text-sm text-emerald-400 font-medium flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            Settings saved successfully
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-4 ml-auto">
+                        <button
+                            id="btn-discard"
+                            className="px-6 py-2.5 border border-border text-muted-foreground rounded-lg hover:bg-card hover:text-white transition-colors font-medium text-sm cursor-pointer"
+                        >
+                            Discard
+                        </button>
+                        <button
+                            id="btn-save"
+                            onClick={handleSave}
+                            className="px-6 py-2.5 bg-[#FFA500] text-black rounded-lg shadow-[0_0_15px_rgba(255,165,0,0.3)] hover:bg-[#E69500] transition-all font-medium text-sm cursor-pointer"
+                        >
+                            Save Changes
+                        </button>
+                    </div>
                 </div>
             </footer>
         </div>

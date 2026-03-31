@@ -2,6 +2,7 @@ import * as mammoth from 'mammoth';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import jsPDF from 'jspdf';
 import { DocumentState } from '@/store/documentStore';
+import { RedactionShape } from '@/store/canvasStore';
 
 export type FileExtractionResult = {
     text: string;
@@ -15,7 +16,10 @@ export type FileExtractionResult = {
 export async function exportVisualCanvas(
     dataUrl: string,
     originalFileName: string,
-    targetFormat: 'pdf' | 'png' | 'jpg' | string
+    targetFormat: 'pdf' | 'png' | 'jpg' | string,
+    originalFile?: File | null,
+    shapes?: RedactionShape[],
+    canvasDims?: { width: number, height: number }
 ) {
     const baseName = originalFileName.includes('.')
         ? originalFileName.slice(0, originalFileName.lastIndexOf('.'))
@@ -24,6 +28,32 @@ export async function exportVisualCanvas(
     const finalName = `${baseName}_Secure.${targetFormat}`;
 
     if (targetFormat === 'pdf') {
+        if (originalFile && shapes && canvasDims) {
+            // ── TRUE STREAM SANITIZATION MODE ──
+            // Send the exact shapes and original PDF to the PyMuPDF backend for structural text/image wiping.
+            const formData = new FormData();
+            formData.append('file', originalFile);
+            formData.append('shapes_json', JSON.stringify(shapes));
+            formData.append('canvas_width', canvasDims.width.toString());
+            formData.append('canvas_height', canvasDims.height.toString());
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/redact_pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error("Backend PDF redaction failed");
+                const blob = await response.blob();
+                triggerDownload(blob, finalName);
+                return;
+            } catch (err) {
+                console.error("Redaction backend failed, falling back to visual flattening", err);
+            }
+        }
+        
+        // ── VISUAL FLATTENING FALLBACK ──
+        // (Used if backend fails or originalFile is missing)
         const img = new Image();
         img.src = dataUrl;
 
@@ -31,11 +61,18 @@ export async function exportVisualCanvas(
             img.onload = resolve;
         });
 
-        // Create PDF that matches the image dimensions exactly
         const pdf = new jsPDF({
             orientation: img.width > img.height ? 'landscape' : 'portrait',
             unit: 'px',
             format: [img.width, img.height]
+        });
+
+        pdf.setDocumentProperties({
+            title: 'Redacted Document',
+            subject: 'Sanitized by Ciphera',
+            author: '',
+            keywords: '',
+            creator: 'Ciphera',
         });
 
         pdf.addImage(dataUrl, 'PNG', 0, 0, img.width, img.height);
@@ -131,6 +168,15 @@ export async function exportRedactedText(
             orientation: 'portrait',
             unit: 'pt',
             format: 'letter'
+        });
+
+        // ── Metadata scrubbing: prevent author/tool info leaks ──
+        pdf.setDocumentProperties({
+            title: 'Redacted Document',
+            subject: 'Sanitized by Ciphera',
+            author: '',
+            keywords: '',
+            creator: 'Ciphera',
         });
 
         // Add text with wrapping. Standard letter width is 612pt. Margin 40pt each side = 532pt

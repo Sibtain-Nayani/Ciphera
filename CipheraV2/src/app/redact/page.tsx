@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Download, FileText, Settings2, Eye, EyeOff, Shield, ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
 import { useDocumentStore, RuleType, DocumentState } from '@/store/documentStore';
 import { useCanvasStore } from '@/store/canvasStore';
-import { redactionEngine, Token } from '@/lib/redactionEngine';
+import { redactionEngine, Token, sessionMapper } from '@/lib/redactionEngine';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
 import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/lib/fileFormat';
 import { convertPdfToImages } from '@/lib/pdfRenderer';
@@ -14,23 +14,38 @@ import dynamic from 'next/dynamic';
 const CanvasEngine = dynamic(() => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine), { ssr: false });
 
 export default function WorkspacePage() {
-    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule, fileType, fileName } = useDocumentStore();
+    const { rawText, setRawText, previewMode, rules, setPreviewMode, toggleRule, fileType, fileName, customRules, clearWorkspace } = useDocumentStore();
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+    const [redactionFailed, setRedactionFailed] = useState(false);
+    const [hasReviewed, setHasReviewed] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { ocrResult, setShapes } = useCanvasStore();
 
-    // Dynamically tokenize the text whenever rules or raw text changes.
+    // Reset session mappings on file change
     useEffect(() => {
-        const fetchAST = async () => {
-            const result = await redactionEngine.tokenize(rawText, rules);
-            setTokens(result);
-        };
-        fetchAST();
-    }, [rawText, rules]);
+        sessionMapper.clear();
+        setHasReviewed(false);
+    }, [rawText, fileType]);
+
+    // Debounced tokenization — prevents per-keystroke API calls.
+    // 500ms delay ensures the user has paused typing before firing NLP.
+    useEffect(() => {
+        const debounceTimer = setTimeout(async () => {
+            const result = await redactionEngine.tokenize(rawText, rules, customRules);
+            if (result.failed) {
+                setRedactionFailed(true);
+                setTokens([]);
+            } else {
+                setRedactionFailed(false);
+                setTokens(result.tokens);
+            }
+        }, 500);
+        return () => clearTimeout(debounceTimer);
+    }, [rawText, rules, customRules]);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches = tokens.filter(t => t.type !== 'text').length;
@@ -73,7 +88,7 @@ export default function WorkspacePage() {
 
         // Handle images -> Canvas Store
         if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-            useDocumentStore.getState().setFileMetadata(file.name, 'image');
+            useDocumentStore.getState().setFileMetadata(file.name, 'image', file);
             const reader = new FileReader();
             reader.onload = (e) => {
                 if (e.target?.result) {
@@ -88,7 +103,7 @@ export default function WorkspacePage() {
 
         // Handle PDFs -> Canvas Store
         if (ext === 'pdf') {
-            useDocumentStore.getState().setFileMetadata(file.name, 'pdf');
+            useDocumentStore.getState().setFileMetadata(file.name, 'pdf', file);
             try {
                 const images = await convertPdfToImages(file);
                 if (images.length > 0) {
@@ -106,7 +121,7 @@ export default function WorkspacePage() {
         try {
             const { text, type, name } = await extractTextFromFile(file);
             setRawText(text);
-            useDocumentStore.getState().setFileMetadata(name, type);
+            useDocumentStore.getState().setFileMetadata(name, type, file);
         } catch (error) {
             console.error("Error loading file:", error);
             alert("File format not supported by the current text or canvas engines.");
@@ -123,18 +138,25 @@ export default function WorkspacePage() {
 
     // --- Export Logic ---
     const exportSecureFile = async (formatOverride?: DocumentState['fileType']) => {
+        // ── FAIL-SECURE GATE: Block export if the redaction engine is down ──
+        if (redactionFailed) {
+            alert('Redaction engine is offline. Export is blocked to prevent unredacted data from leaking. Please ensure the Presidio backend is running.');
+            return;
+        }
         const { fileType, fileName } = useDocumentStore.getState();
 
         // Construct the final redacted string based on current active rules
         const redactedText = tokens.map(token => {
             if (token.type === 'text') return token.value;
 
-            // Only redact if the rule is active, else return original
-            const isRuleActive = rules[token.type as RuleType]?.isActive;
+            // Check built-in rules first, then custom rules
+            const isBuiltIn = token.type in rules;
+            const customRule = customRules.find(r => `custom_${r.id}` === token.type || r.id === token.type);
+            const isRuleActive = isBuiltIn ? rules[token.type as RuleType]?.isActive : customRule?.isActive;
             if (!isRuleActive) return token.value;
 
-            const action = rules[token.type as RuleType]?.action || 'replace';
-            return redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
+            const action = isBuiltIn ? (rules[token.type as RuleType]?.action || 'replace') : (customRule?.action || 'replace');
+            return redactionEngine.getRedactionReplacement(token.type, token.value, action, customRules);
         }).join('');
 
         const targetFormat = formatOverride || fileType;
@@ -179,9 +201,11 @@ export default function WorkspacePage() {
                     });
 
                     stage.scale({ x: originalScale, y: originalScale });
-                    stage.position(originalPos);
-
-                    await exportVisualCanvas(dataUrl, fileName, finalExt);
+                    const originalFile = useDocumentStore.getState().originalFile;
+                    const shapes = useCanvasStore.getState().shapes;
+                    const finalDims = imageDims || { width: stage.width(), height: stage.height() };
+                    
+                    await exportVisualCanvas(dataUrl, fileName, finalExt, originalFile, shapes, finalDims);
                 } catch (error) {
                     console.error("Export visual error", error);
                     alert("Failed to export image.");
@@ -324,6 +348,21 @@ export default function WorkspacePage() {
                                 if (e.target.files?.length) handleFileUpload(e.target.files[0]);
                             }}
                         />
+                        
+                        <button
+                            onClick={() => {
+                                clearWorkspace();
+                                useCanvasStore.getState().setImageSrc(null);
+                                useCanvasStore.getState().setShapes([]);
+                                useCanvasStore.getState().setOcrResult(null);
+                            }}
+                            className="flex items-center gap-2 text-gray-400 hover:text-red-400 bg-transparent hover:bg-red-500/10 px-3 py-2 rounded-md font-medium text-sm transition-all duration-200 cursor-pointer border border-transparent hover:border-red-500/30"
+                            title="Secure Wipe (Clear Workspace)"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            <span className="hidden lg:inline text-xs">Clear</span>
+                        </button>
+
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             className="flex items-center gap-2 text-gray-300 hover:text-white bg-[#2A2A2A] hover:bg-[#3B3B3B] px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 cursor-pointer"
@@ -332,11 +371,34 @@ export default function WorkspacePage() {
                             <span className="hidden sm:inline">Load File</span>
                         </button>
 
+                        <div className="h-6 w-px bg-[#3B3B3B] mx-2 hidden md:block"></div>
+
+                        {/* HIL Review Checkbox */}
+                        <button
+                            onClick={() => setHasReviewed(!hasReviewed)}
+                            className={`hidden md:flex items-center gap-2 px-3 py-2 rounded-md transition-all cursor-pointer ${
+                                hasReviewed ? 'text-green-400 bg-green-400/10 border-green-400/50' : 'text-gray-400 bg-[#2A2A2A] hover:text-gray-200'
+                            } border border-transparent`}
+                            title="Acknowledge Human-in-the-Loop review"
+                        >
+                            <CheckCircle2 className={`w-4 h-4 ${hasReviewed ? 'fill-green-400/20' : ''}`} />
+                            <span className="text-xs font-medium">Reviewed</span>
+                        </button>
+
                         <div className="relative group">
                             <button
                                 onClick={() => exportSecureFile()}
-                                className="flex items-center gap-2 bg-[#FFA500] hover:bg-[#ffb733] text-black px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer"
-                                title="Export in original format"
+                                disabled={redactionFailed || !hasReviewed}
+                                className={`flex items-center gap-2 px-3 py-2 md:px-4 rounded-md font-medium text-sm transition-all duration-200 ${
+                                    redactionFailed || !hasReviewed
+                                        ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed border border-gray-600/30'
+                                        : 'bg-[#FFA500] hover:bg-[#ffb733] text-black shadow-[0_0_15px_rgba(255,165,0,0.2)] hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:-translate-y-0.5 cursor-pointer'
+                                }`}
+                                title={
+                                    redactionFailed ? 'Export blocked — Presidio engine offline' :
+                                    !hasReviewed ? 'You must visually review the document before exporting' :
+                                    'Export in original format'
+                                }
                             >
                                 <Download className="w-4 h-4" />
                                 <span className="hidden sm:inline">Export Secure</span>
@@ -350,8 +412,9 @@ export default function WorkspacePage() {
                                     : ['docx', 'pdf', 'txt', 'md', 'csv', 'json'] as const).map(fmt => (
                                         <button
                                             key={fmt}
+                                            disabled={redactionFailed || !hasReviewed}
                                             onClick={(e) => { e.stopPropagation(); exportSecureFile(fmt as any); }}
-                                            className="block w-full text-left px-4 py-2 text-xs font-mono text-gray-300 hover:bg-[#3B3B3B] hover:text-white uppercase transition-colors"
+                                            className="block w-full text-left px-4 py-2 text-xs font-mono text-gray-300 hover:bg-[#3B3B3B] hover:text-white uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             .{fmt}
                                         </button>
@@ -377,6 +440,17 @@ export default function WorkspacePage() {
                         </div>
                     )}
 
+                    {/* ── FAIL-SECURE WARNING BANNER ── */}
+                    {redactionFailed && (
+                        <div className="absolute top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3 bg-red-500/15 border-b border-red-500/30 backdrop-blur-sm">
+                            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-red-400">Redaction Engine Offline</p>
+                                <p className="text-xs text-red-400/70">The Presidio backend is unreachable. Export is blocked to prevent data leaks. Ensure the API server is running at localhost:8000.</p>
+                            </div>
+                        </div>
+                    )}
+
                     {isAnalyzingImage && (
                         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
                             <div className="w-12 h-12 border-4 border-[#FFA500]/20 border-t-[#FFA500] rounded-full animate-spin mb-4"></div>
@@ -399,7 +473,8 @@ export default function WorkspacePage() {
                                         }
 
                                         const isRedacted = previewMode === 'redacted';
-                                        const action = rules[token.type as RuleType]?.action || 'replace';
+                                        const customRule = customRules.find(r => `custom_${r.id}` === token.type || r.id === token.type);
+                                        const action = rules[token.type as RuleType]?.action || customRule?.action || 'replace';
 
                                         return (
                                             <AnimatedToken
@@ -407,6 +482,7 @@ export default function WorkspacePage() {
                                                 token={token}
                                                 isRedacted={isRedacted}
                                                 action={action}
+                                                accentColor={customRule?.color}
                                             />
                                         );
                                     })}

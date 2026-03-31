@@ -85,7 +85,9 @@ export async function mapOcrToShapes(
 
     // 2. Ping FastAPI Presidio
     // We reuse our existing tokenization pipeline
-    const tokens = await redactionEngine.tokenize(ocrResult.rawText, activeRules);
+    // Custom rules are not passed here—OCR only uses built-in rules for spatial mapping.
+    const result = await redactionEngine.tokenize(ocrResult.rawText, activeRules, []);
+    const tokens = result.tokens;
 
     // 3. Map Sensitive Tokens back to Bounding Boxes
     const shapes: RedactionShape[] = [];
@@ -102,23 +104,49 @@ export async function mapOcrToShapes(
             );
 
             if (intersectingWords.length > 0) {
-                // Combine bounding boxes of all intersecting words to form one large box
-                const minX = Math.min(...intersectingWords.map(w => w.bbox.x0));
-                const minY = Math.min(...intersectingWords.map(w => w.bbox.y0));
-                const maxX = Math.max(...intersectingWords.map(w => w.bbox.x1));
-                const maxY = Math.max(...intersectingWords.map(w => w.bbox.y1));
+                // ── Row-grouping via vertical overlap detection ──
+                // Words on the same visual line share significant Y overlap.
+                // Grouping prevents a single giant box when an entity wraps across lines.
+                const rows: OcrWord[][] = [];
 
-                // Add padding
+                for (const word of intersectingWords) {
+                    let placed = false;
+                    for (const row of rows) {
+                        const ref = row[0];
+                        const overlapTop = Math.max(word.bbox.y0, ref.bbox.y0);
+                        const overlapBottom = Math.min(word.bbox.y1, ref.bbox.y1);
+                        const overlap = Math.max(0, overlapBottom - overlapTop);
+                        const minHeight = Math.min(
+                            word.bbox.y1 - word.bbox.y0,
+                            ref.bbox.y1 - ref.bbox.y0
+                        );
+                        // >50% vertical overlap means same visual row
+                        if (minHeight > 0 && overlap > minHeight * 0.5) {
+                            row.push(word);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) rows.push([word]);
+                }
+
+                // Emit one tight bounding box per row
                 const padding = 4;
+                for (const row of rows) {
+                    const rMinX = Math.min(...row.map(w => w.bbox.x0));
+                    const rMinY = Math.min(...row.map(w => w.bbox.y0));
+                    const rMaxX = Math.max(...row.map(w => w.bbox.x1));
+                    const rMaxY = Math.max(...row.map(w => w.bbox.y1));
 
-                shapes.push({
-                    id: `auto_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-                    type: 'blackout',
-                    x: minX - padding,
-                    y: minY - padding,
-                    width: (maxX - minX) + (padding * 2),
-                    height: (maxY - minY) + (padding * 2)
-                });
+                    shapes.push({
+                        id: `auto_${Date.now()}_${Math.random().toString(36).substring(7)}_${rows.indexOf(row)}`,
+                        type: 'blackout',
+                        x: rMinX - padding,
+                        y: rMinY - padding,
+                        width: (rMaxX - rMinX) + (padding * 2),
+                        height: (rMaxY - rMinY) + (padding * 2),
+                    });
+                }
             }
         }
         currentTextOffset += token.value.length;

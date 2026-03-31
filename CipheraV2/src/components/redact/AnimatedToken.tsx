@@ -12,18 +12,24 @@ interface AnimatedTokenProps {
     token: Token;
     isRedacted: boolean;
     action: RedactionAction;
+    /** Optional accent color for custom rules (hex). Falls back to amber #FFA500. */
+    accentColor?: string;
 }
 
 /**
  * AnimatedToken renders a single entity token with a matrix-style scramble
  * effect when transitioning between original and redacted states.
+ * Supports per-rule color coding via the accentColor prop.
  */
-export function AnimatedToken({ token, isRedacted, action }: AnimatedTokenProps) {
+export function AnimatedToken({ token, isRedacted, action, accentColor }: AnimatedTokenProps) {
     const replacementText = redactionEngine.getRedactionReplacement(token.type as RuleType, token.value, action);
     const targetText = isRedacted ? replacementText : token.value;
 
     const [displayText, setDisplayText] = useState(targetText);
     const [isScrambling, setIsScrambling] = useState(false);
+
+    // Resolve accent color: custom rule color or default amber
+    const color = accentColor || '#FFA500';
 
     useEffect(() => {
         // When the mode changes, begin the scramble animation
@@ -65,10 +71,20 @@ export function AnimatedToken({ token, isRedacted, action }: AnimatedTokenProps)
     return (
         <motion.span
             layout
-            className={`inline font-mono ${isRedacted
-                ? 'bg-[#FFA500] text-[#1E1E1E] font-medium shadow-[0_0_5px_rgba(255,165,0,0.4)] rounded-sm'
-                : 'bg-[#FFA500]/25 text-transparent rounded-sm'
-                }`}
+            className="inline font-mono rounded-sm"
+            style={
+                isRedacted
+                    ? {
+                        backgroundColor: color,
+                        color: '#1E1E1E',
+                        fontWeight: 500,
+                        boxShadow: `0 0 5px ${color}66`,
+                    }
+                    : {
+                        backgroundColor: `${color}40`,
+                        color: 'transparent',
+                    }
+            }
             initial={false}
             animate={{
                 opacity: 1,
@@ -80,7 +96,8 @@ export function AnimatedToken({ token, isRedacted, action }: AnimatedTokenProps)
             <AnimatePresence>
                 {isScrambling && isRedacted && (
                     <motion.span
-                        className="absolute inset-0 rounded bg-[#FFA500]/30"
+                        className="absolute inset-0 rounded"
+                        style={{ backgroundColor: `${color}4D` }}
                         initial={{ opacity: 0.8 }}
                         animate={{ opacity: 0 }}
                         exit={{ opacity: 0 }}
