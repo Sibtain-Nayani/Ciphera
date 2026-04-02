@@ -6,6 +6,7 @@ import { designTokens } from "@/lib/designTokens";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, ShieldCheck, Settings } from "lucide-react";
 
 export function MobileDrawer() {
     const { isMobileMenuOpen, setMobileMenu } = useUiStore();
@@ -36,7 +37,7 @@ export function MobileDrawer() {
                             <span className="font-semibold text-xl text-white">Navigation</span>
                             <button
                                 onClick={() => setMobileMenu(false)}
-                                className="w-8 h-8 rounded-full bg-[#1E1E1E] flex items-center justify-center text-muted-foreground hover:text-white"
+                                className="w-8 h-8 rounded-full bg-[#1E1E1E] flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
                             >
                                 ✕
                             </button>
@@ -46,32 +47,35 @@ export function MobileDrawer() {
                             <Link
                                 href="/dashboard"
                                 onClick={() => setMobileMenu(false)}
-                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/dashboard"
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/dashboard"
                                         ? "bg-primary text-black"
-                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                        : "bg-transparent text-gray-400 hover:text-white hover:bg-[#1E1E1E]"
                                     }`}
                             >
-                                Dashboard
+                                <LayoutDashboard className="w-5 h-5 shrink-0" />
+                                <span>Dashboard</span>
                             </Link>
                             <Link
                                 href="/redact"
                                 onClick={() => setMobileMenu(false)}
-                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/redact"
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/redact"
                                         ? "bg-primary text-black"
-                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                        : "bg-transparent text-gray-400 hover:text-white hover:bg-[#1E1E1E]"
                                     }`}
                             >
-                                Redact Documents
+                                <ShieldCheck className="w-5 h-5 shrink-0" />
+                                <span>Redact Documents</span>
                             </Link>
                             <Link
                                 href="/settings"
                                 onClick={() => setMobileMenu(false)}
-                                className={`px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/settings"
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${pathname === "/settings"
                                         ? "bg-primary text-black"
-                                        : "bg-transparent text-secondary-foreground hover:bg-[#1E1E1E]"
+                                        : "bg-transparent text-gray-400 hover:text-white hover:bg-[#1E1E1E]"
                                     }`}
                             >
-                                Settings
+                                <Settings className="w-5 h-5 shrink-0" />
+                                <span>Settings</span>
                             </Link>
                         </nav>
 

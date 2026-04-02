@@ -1,132 +1,100 @@
-# **Ciphera — PII Anonymization Suite**
+# **CipheraV2 — Enterprise Data Sanitization Pipeline**
 
-This repository contains two distinct versions of the Ciphera project for data anonymization using Microsoft's Presidio SDK:
-1. **Ciphera (V1)**: A React/Vite and FastAPI full-stack application.
-2. **CipheraV2**: A modern Next.js and FastAPI application with enhanced document handling and a richer UI.
+Ciphera is a robust, fail-secure anonymization engine and Security Operations platform designed to detect and redact Personally Identifiable Information (PII) entirely offline. 
 
----
-
-## **Part 1: Ciphera (V1)**
-
-**Ciphera (V1)** is a web-based, interactive tool designed for data anonymization. It features a decoupled architecture with a React frontend and a FastAPI backend, utilizing Microsoft's Presidio SDK to detect and anonymize Personally Identifiable Information (PII).
-
-### **Distinctive Features**
-* **Standalone Frontend & Backend:** A lightweight React SPA paired with a robust Python API.
-* **Authentication & Database:** Includes user authentication and stores data in a local SQLite database using SQLAlchemy.
-* **Anonymization Support:** Text-based PII analysis and scrubbing.
-
-### **Tech Stack**
-* **Frontend:** React, Vite, Tailwind CSS, Framer Motion
-* **Backend:** FastAPI, Microsoft Presidio Analyzer & Anonymizer, SQLAlchemy, SQLite
-* **Language:** JavaScript (Frontend), Python (Backend)
-
-### **Setup and Configuration Guide**
-
-#### **Step 1: Backend (FastAPI)**
-1. **Navigate to the Backend Directory:**
-   ```bash
-   cd Ciphera/backend
-   ```
-2. **Create and Activate a Virtual Environment:**
-   ```bash
-   python -m venv venv
-   # Windows:
-   venv\Scripts\activate
-   # Mac/Linux:
-   source venv/bin/activate
-   ```
-3. **Install Dependencies:**
-   ```bash
-   pip install -r app/requirements.txt
-   python -m spacy download en_core_web_lg
-   ```
-4. **Run the API Server:**
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-   The backend will be available at `http://localhost:8000`.
-
-#### **Step 2: Frontend (React + Vite)**
-1. **Navigate to the Frontend Directory:**
-   Open a new terminal window and run:
-   ```bash
-   cd Ciphera/frontend
-   ```
-2. **Install Node Dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Run the Development Server:**
-   ```bash
-   npm run dev
-   ```
-4. **Access the App:**
-   Open the URL provided by Vite (usually `http://localhost:5173`) in your browser.
+> [!NOTE]
+> **Project History**: The original **Ciphera (V1)** was a functional prototype meant to test the feasibility of Microsoft's Presidio SDK. That prototype has been sunset. The project has fully shifted to **CipheraV2**, which introduces an Enterprise-grade Next.js (App Router) interface, stream-level PDF bytes destruction, and true Zero-Trust local inference.
 
 ---
 
-## **Part 2: CipheraV2**
+## **Distinctive Features of CipheraV2**
 
-**CipheraV2** is the evolution of Ciphera into a more robust, modern web application. It transitions the frontend to Next.js (App Router) and features an advanced, interactive UI with support for complex document visual redactions.
+- **Zero-Trust Local Inference:** All NLP entity recognition and RegEx matching runs purely on your local hardware using FastAPI and SpaCy RoBERTa. No API egress. No leaks.
+- **Fail-Secure Architecture:** The UI gates any data export. If the backend Presidio engine goes offline, exporting is immediately blocked to prevent accidental unredacted data leakage.
+- **Compliance Audit Ledger:** Generates structured JSON logging for GDPR/SOC2 transparency natively stored in a Zustand session log, accessible via the Dashboard.
+- **Stream-Level PDF Sanitization:** Utilizes PyMuPDF (`fitz`) and `python-multipart` to directly manipulate PDF streams. It applies vector blackouts or masks at the byte level rather than destructively rasterizing the file into an image.
+- **Multi-Modal Target Parsing:** 
+  - **Images (.png, .jpg):** Client-side WebAssembly OCR combined with HTML5 Canvas (`react-konva`).
+  - **Raw Text/CSVs:** Real-time Abstract Syntax Tree (AST) overlay in a secure React editor buffer.
+  - **PDFs:** High-fidelity conversion for inference and secure vector write-back.
+- **SOC-Style Dashboard:** Features live telemetry metrics, an active threat-vector log, and a quick-action dropzone for drag-and-drop document sanitization.
+- **Human-in-the-Loop (HIL):** Mandatory visual review gates ensure no document is blind-exported.
+- **Global Command Palette:** Hit `Ctrl+K` from anywhere in the app to jump between workspaces, clear your memory buffer, or access parser settings.
 
-### **Distinctive Features**
-* **Advanced Document Support:** Handle plain text along with PDFs (`pdfjs-dist`), Word documents (`.docx`), and scanned text images (via `tesseract.js` OCR).
-* **Rich User Interface:** Polished UI built with Next.js App Router, Tailwind CSS, Framer Motion, and shadcn/ui.
-* **Interactive Canvas:** Built-in document and image viewing/manipulation using Konva (`react-konva`), allowing for non-destructive redaction overlays.
-* **Real-time Redaction AST:** The FastAPI backend returns an Abstract Syntax Tree (AST) of tokens, allowing the Next.js frontend to render precise redaction overlays line-by-line.
+---
 
-### **Tech Stack**
-* **Frontend:** Next.js (React), Tailwind CSS, Framer Motion, Zustand, Tesseract.js, PDF.js, Konva
-* **Backend:** FastAPI, Microsoft Presidio Analyzer, SpaCy
-* **Language:** TypeScript (Frontend), Python (Backend)
+## **Tech Stack**
 
-### **Setup and Configuration Guide**
+* **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, Framer Motion, Zustand (State Management), React-Konva, Lucide Icons.
+* **Backend:** FastAPI, Uvicorn, Microsoft Presidio Analyzer (`presidio-analyzer`), SpaCy (`en_core_web_trf`), PyMuPDF (`fitz`), Pydantic.
+* **Language:** TypeScript & Python.
 
-#### **Step 1: Backend (FastAPI)**
-1. **Navigate to the API Directory:**
+---
+
+## **Setup and Configuration Guide**
+
+### **Step 1: Backend Inference Engine (FastAPI)**
+
+The backend runs the Presidio Analyzer and the PDF byte-manipulator. It must be active to allow data exports.
+
+1. **Navigate to the Backend API Directory:**
    ```bash
    cd CipheraV2/ciphera_api
    ```
+
 2. **Create and Activate a Virtual Environment:**
    ```bash
    python -m venv venv
+   
    # Windows:
    venv\Scripts\activate
+   
    # Mac/Linux:
    source venv/bin/activate
    ```
-3. **Install Dependencies:**
+
+3. **Install Core Requirements & NLP Models:**
    ```bash
-   pip install fastapi uvicorn presidio-analyzer pydantic "spacy>=3.0.0,<4.0.0"
-   python -m spacy download en_core_web_lg
+   pip install -r requirements.txt
+   
+   # You must download the SpaCy transformer model used by Presidio:
+   python -m spacy download en_core_web_trf
    ```
+
 4. **Run the API Server:**
    ```bash
    uvicorn main:app --reload --port 8000
    ```
-   The backend will be available at `http://localhost:8000`.
+   *The backend will be available at `http://localhost:8000`.*
 
-#### **Step 2: Frontend (Next.js)**
+---
+
+### **Step 2: Frontend Dashboard (Next.js)**
+
 1. **Navigate to the V2 Root Directory:**
    Open a new terminal window and run:
    ```bash
    cd CipheraV2
    ```
+
 2. **Install Node Dependencies:**
    ```bash
    npm install
    ```
-3. **Run the Development Server:**
+
+3. **Run the Development Workspace:**
    ```bash
    npm run dev
    ```
+
 4. **Access the App:**
-   Open [http://localhost:3000](http://localhost:3000) in your browser. The frontend will automatically route requests to the FastAPI server.
+   Open [http://localhost:3000](http://localhost:3000) in your browser. The frontend will automatically route API requests to your local Python server.
 
 ---
 
-## **Security & Privacy Note**
+## **Security & Privacy Best Practices**
 
-These tools are designed to assist with data anonymization. When handling real, sensitive data:
-* **Audit Logs:** Ensure any generated logs linking original PII to anonymized values are stored securely.
-* **Local Processing:** Keep your processing restricted to local instances or strictly isolated environments to maintain a Zero-Trust architecture when handling critical PII.
+These tools are designed to assist with data anonymization in enterprise environments. When handling real, sensitive data:
+* **Audit Logs:** Ensure any logs generated during the session are reviewed before clearing the workspace.
+* **Local Sandboxing:** Keep your backend running on isolated hardware instances or VMs to maintain strict Zero-Trust architecture.
+* **Offline Execution:** Once dependencies and the SpaCy model are downloaded via pip, the entire pipeline operates fully disconnected from the internet.

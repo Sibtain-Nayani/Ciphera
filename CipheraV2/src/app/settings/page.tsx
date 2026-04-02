@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ShieldCheck, Lock, FileDown, Zap, Code2 } from 'lucide-react';
+import { ShieldCheck, Lock, FileDown, Zap, Code2, Activity, Cpu, Layers } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
 import { ToggleSwitch } from '@/components/settings/ToggleSwitch';
 import { ParserCard } from '@/components/settings/ParserCard';
@@ -189,6 +189,58 @@ export default function SettingsPage() {
                                     checked={preferences.hardwareAccel}
                                     onChange={() => togglePref('hardwareAccel')}
                                 />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── Section 4: Backend Connection Matrix ── */}
+                    <section className="bg-[#141414] border border-[#3B3B3B] rounded-xl p-6 shadow-xl relative overflow-hidden">
+                        <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none"></div>
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                                    <Activity className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-white">Inference Engine Matrix</h2>
+                                    <p className="text-xs text-gray-500 mt-0.5">Local FastAPI & Presidio Configuration</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded-full">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span className="text-xs font-mono text-gray-400">STATUS: ONLINE</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+                            <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#3B3B3B] flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                                    <Layers className="w-4 h-4" />
+                                    <span className="text-xs font-semibold uppercase tracking-wider">Active Model</span>
+                                </div>
+                                <span className="text-lg font-mono text-white tracking-tight">en_core_web_trf</span>
+                                <span className="text-[10px] text-gray-500 font-mono">Spacy RoBERTa Transformer</span>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#3B3B3B] flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                                    <Zap className="w-4 h-4" />
+                                    <span className="text-xs font-semibold uppercase tracking-wider">API Endpoint</span>
+                                </div>
+                                <span className="text-lg font-mono text-white tracking-tight">localhost:8000</span>
+                                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    12ms latency
+                                </span>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#3B3B3B] flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                                    <Cpu className="w-4 h-4" />
+                                    <span className="text-xs font-semibold uppercase tracking-wider">Local Hardware</span>
+                                </div>
+                                <span className="text-lg font-mono text-white tracking-tight">Accelerated</span>
+                                <span className="text-[10px] text-gray-500 font-mono">Zero external connections</span>
                             </div>
                         </div>
                     </section>

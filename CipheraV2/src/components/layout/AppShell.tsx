@@ -4,6 +4,8 @@ import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { MobileHeader } from "./MobileHeader";
 import { MobileDrawer } from "./MobileDrawer";
+import { CommandPalette } from "./CommandPalette";
+import { Toaster } from "./Toaster";
 
 export function AppShell({ children }: { children: ReactNode }) {
     return (
@@ -18,6 +20,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                     {children}
                 </main>
             </div>
+            
+            <CommandPalette />
+            <Toaster />
         </div>
     );
 }

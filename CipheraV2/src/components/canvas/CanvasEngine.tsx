@@ -188,22 +188,34 @@ export const CanvasEngine: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const checkSize = () => {
-            if (containerRef.current) {
-                setDimensions({
-                    width: containerRef.current.offsetWidth,
-                    height: containerRef.current.offsetHeight,
-                });
+        const target = containerRef.current;
+        if (!target) return;
+
+        const observer = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                if (entry.contentBoxSize) {
+                    setDimensions({
+                        width: entry.contentRect.width,
+                        height: entry.contentRect.height,
+                    });
+                }
             }
-        };
-        checkSize();
-        window.addEventListener('resize', checkSize);
-        return () => window.removeEventListener('resize', checkSize);
+        });
+
+        observer.observe(target);
+        
+        // Initial set
+        setDimensions({
+            width: target.offsetWidth,
+            height: target.offsetHeight,
+        });
+
+        return () => observer.disconnect();
     }, []);
 
-    // Fit-to-screen logic
+    // Fit-to-screen logic using a sentinel hook (scale === 0 triggers auto-fit)
     useEffect(() => {
-        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && scale === 1 && position.x === 0 && position.y === 0) {
+        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && (scale === 0 || scale === 1 && position.x === 0 && position.y === 0)) {
             const padding = 60; // Extra padding around the image
             const scaleX = (dimensions.width - padding) / imageDimensions.width;
             const scaleY = (dimensions.height - padding) / imageDimensions.height;

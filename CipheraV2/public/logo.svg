@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+    <defs>
+        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFA500" />
+            <stop offset="100%" stop-color="#FF5500" />
+        </linearGradient>
+        <glow id="glow" x="0" y="0" width="100" height="100">
+             <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+             <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </glow>
+    </defs>
+    
+    <!-- Outer Shield -->
+    <path d="M50 5 L10 22.5 V45 C10 70 30 85 50 95 C70 85 90 70 90 45 V22.5 L50 5 Z" 
+          stroke="url(#shieldGrad)" 
+          stroke-width="8" 
+          stroke-linejoin="round" />
+          
+    <!-- Inner Hollow Accent -->
+    <path d="M50 22 L25 32 V45 C25 62 38 75 50 80 C62 75 75 62 75 45 V32 L50 22 Z" 
+          stroke="#FFA500" 
+          stroke-width="3" 
+          stroke-linecap="round"
+          stroke-linejoin="round" 
+          stroke-opacity="0.6" />
+          
+</svg>

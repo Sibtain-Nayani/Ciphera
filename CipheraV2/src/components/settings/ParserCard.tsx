@@ -1,9 +1,10 @@
 "use client";
 
-import React from 'react';
-import { Mail, Phone, CreditCard, Fingerprint, User, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Phone, CreditCard, Fingerprint, User, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useDocumentStore, RuleType, RedactionAction } from '@/store/documentStore';
 import { ToggleSwitch } from './ToggleSwitch';
+import { redactionEngine } from '@/lib/redactionEngine';
 
 /**
  * Visual metadata for each built-in parser rule.
@@ -102,6 +103,40 @@ export function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
     const meta = PARSER_META[ruleKey];
     const isActive = config.isActive;
 
+    const [testInput, setTestInput] = useState('');
+    const [testOutput, setTestOutput] = useState('');
+    const [isTesting, setIsTesting] = useState(false);
+
+    useEffect(() => {
+        if (!testInput.trim() || !isActive) {
+            setTestOutput('');
+            return;
+        }
+
+        setIsTesting(true);
+        const debounceTimer = setTimeout(async () => {
+            // Test strictly against this single rule
+            const singleRuleDict = { [ruleKey]: config } as Record<RuleType, import('@/store/documentStore').RuleConfig>;
+            
+            const result = await redactionEngine.tokenize(testInput, singleRuleDict, []);
+            if (!result.failed) {
+                const redacted = result.tokens.map(token => {
+                    if (token.type === 'text') return token.value;
+                    if (token.type === ruleKey) {
+                        return redactionEngine.getRedactionReplacement(token.type, token.value, config.action, []);
+                    }
+                    return token.value;
+                }).join('');
+                setTestOutput(redacted);
+            } else {
+                setTestOutput('Engine unreachable');
+            }
+            setIsTesting(false);
+        }, 300);
+
+        return () => clearTimeout(debounceTimer);
+    }, [testInput, config.action, isActive, ruleKey, config]);
+
     return (
         <article
             id={`parser-card-${ruleKey}`}
@@ -166,11 +201,11 @@ export function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
                     </div>
                 </div>
 
-                {/* Action + Preview */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
+                {/* Action + Live Test Area */}
+                <div className="pt-4 border-t border-[#3B3B3B]/50">
+                    <div className="mb-4">
                         <label className="block text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                            Action
+                            Redaction Action
                         </label>
                         <select
                             id={`action-${ruleKey}`}
@@ -182,7 +217,7 @@ export function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
                                 border border-border appearance-none transition-all
                                 focus:outline-none focus:border-[#FFA500] focus:ring-1 focus:ring-[#FFA500]
                                 ${isActive
-                                    ? 'bg-input text-white cursor-pointer'
+                                    ? 'bg-input text-white cursor-pointer hover:border-[#FFA500]/50'
                                     : 'bg-background text-gray-500 cursor-not-allowed opacity-60'
                                 }
                             `}
@@ -193,22 +228,33 @@ export function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
                         </select>
                     </div>
 
-                    <div className="flex items-end">
-                        <button
-                            id={`preview-${ruleKey}`}
+                    {/* Live Test Field */}
+                    <div className="bg-[#1A1A1A] rounded-xl border border-[#3B3B3B] p-3 transition-colors focus-within:border-[#FFA500]/50">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
+                            Live Output Sandbox
+                        </label>
+                        <input
+                            type="text"
+                            placeholder={isActive ? "Type a test string here..." : "Rule disabled"}
                             disabled={!isActive}
-                            className={`
-                                w-full h-[42px] flex items-center justify-center gap-2
-                                rounded-lg text-sm font-medium transition-all
-                                ${isActive
-                                    ? 'border border-[#FFA500] text-[#FFA500] hover:bg-[#FFA500] hover:text-black cursor-pointer'
-                                    : 'border border-border text-gray-500 cursor-not-allowed opacity-60'
-                                }
-                            `}
-                        >
-                            <Eye className="w-4 h-4" />
-                            Preview
-                        </button>
+                            value={testInput}
+                            onChange={(e) => setTestInput(e.target.value)}
+                            className="w-full bg-transparent border-none text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-0 px-1 mb-2"
+                        />
+                        {testInput && (
+                            <div className="px-2 py-1.5 bg-[#252525] rounded-md border border-[#3B3B3B]/50 flex items-center gap-2 min-h-[32px]">
+                                {isTesting ? (
+                                    <div className="w-3 h-3 border-2 border-[#FFA500] border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                ) : testOutput !== testInput ? (
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                ) : (
+                                    <AlertCircle className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                                )}
+                                <span className={`text-sm font-mono break-all ${testOutput !== testInput ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                    {testOutput || testInput}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

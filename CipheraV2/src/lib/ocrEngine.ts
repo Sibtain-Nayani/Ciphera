@@ -77,16 +77,16 @@ export async function extractOcrData(imageUrl: string): Promise<OcrResult> {
  */
 export async function mapOcrToShapes(
     ocrResult: OcrResult,
-    activeRules: Record<RuleType, any>
+    activeRules: Record<RuleType, any>,
+    customRules: import('@/store/documentStore').CustomRule[] = []
 ): Promise<RedactionShape[]> {
     if (!ocrResult.rawText.trim()) {
         return [];
     }
 
     // 2. Ping FastAPI Presidio
-    // We reuse our existing tokenization pipeline
-    // Custom rules are not passed here—OCR only uses built-in rules for spatial mapping.
-    const result = await redactionEngine.tokenize(ocrResult.rawText, activeRules, []);
+    // We reuse our existing tokenization pipeline, passing both built-in and custom rules.
+    const result = await redactionEngine.tokenize(ocrResult.rawText, activeRules, customRules);
     const tokens = result.tokens;
 
     // 3. Map Sensitive Tokens back to Bounding Boxes

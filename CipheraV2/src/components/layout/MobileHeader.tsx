@@ -1,6 +1,7 @@
 "use client";
 
 import { useUiStore } from "@/store/uiStore";
+import { Logo } from "./Logo";
 
 export function MobileHeader() {
     const { toggleMobileMenu } = useUiStore();
@@ -8,9 +9,7 @@ export function MobileHeader() {
     return (
         <header className="md:hidden flex items-center justify-between h-16 px-4 bg-[#1E1E1E] border-b border-[#3B3B3B] z-40 relative">
             <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-black">
-                    C
-                </div>
+                <Logo className="w-8 h-8" />
                 <span className="font-semibold text-lg text-white tracking-tight">Ciphera</span>
             </div>
 

@@ -42,7 +42,7 @@ export const FloatingToolbar: React.FC = () => {
             <div className="w-full h-px bg-[#3B3B3B] my-1" />
             <button
                 onClick={() => {
-                    setScale(1);
+                    setScale(0);
                     setPosition({ x: 0, y: 0 });
                 }}
                 className="p-3 rounded-lg transition-all duration-200 group relative text-gray-400 hover:text-white hover:bg-[#2A2A2A]"
