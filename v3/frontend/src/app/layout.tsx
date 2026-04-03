@@ -1,0 +1,38 @@
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
+
+import { AppShell } from "@/components/layout/AppShell";
+
+export const metadata: Metadata = {
+  title: "Ciphera | Data Redaction",
+  description: "Enterprise-grade local data anonymization workspace.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className="dark">
+      <body
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
+      >
+        <AppShell>
+          {children}
+        </AppShell>
+      </body>
+    </html>
+  );
+}
