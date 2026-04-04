@@ -284,7 +284,7 @@ CONTEXT_BOOSTS = [
 CONTEXT_SUPPRESSION = [
     ("PERSON",         ["order", "invoice", "ref", "id", "number"],       -0.15),
     ("AADHAAR_NUMBER", ["order", "invoice", "ref", "tracking"],           -0.20),
-    ("DATE_TIME",      ["phone", "mobile", "contact", "tel"],             -0.30),
+    ("DATE_TIME",      ["phone", "mobile", "contact", "tel"],             -0.60),
 ]
 
 

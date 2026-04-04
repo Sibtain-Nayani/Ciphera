@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 
 /* ── Built-in rule types ── */
-export type RuleType = 'email' | 'phone' | 'creditCard' | 'ssn' | 'names';
+export type RuleType =
+    | 'email' | 'phone' | 'creditCard' | 'ssn' | 'names'
+    // Indian PII (V3)
+    | 'aadhaar' | 'pan' | 'gst' | 'ifsc' | 'voterId' | 'passport' | 'vehicleReg';
+
 export type RedactionAction = 'mask' | 'blackout' | 'replace';
 
 export interface RuleConfig {
@@ -11,14 +15,8 @@ export interface RuleConfig {
 
 /* ── Custom regex rule ── */
 export const PRESET_COLORS = [
-    '#3B82F6', // blue
-    '#10B981', // emerald
-    '#8B5CF6', // violet
-    '#F43F5E', // rose
-    '#F59E0B', // amber
-    '#06B6D4', // cyan
-    '#EC4899', // pink
-    '#6366F1', // indigo
+    '#3B82F6', '#10B981', '#8B5CF6', '#F43F5E',
+    '#F59E0B', '#06B6D4', '#EC4899', '#6366F1',
 ] as const;
 
 export type PresetColor = (typeof PRESET_COLORS)[number];
@@ -41,22 +39,17 @@ export interface DocumentState {
     rules: Record<RuleType, RuleConfig>;
     customRules: CustomRule[];
 
-    // File Metadata for multi-format support
     fileName: string;
     fileType: 'txt' | 'csv' | 'json' | 'md' | 'docx' | 'pdf' | 'image';
     originalFile: File | null;
 
-    // Built-in rule actions
     setRawText: (text: string) => void;
     setFileMetadata: (name: string, type: DocumentState['fileType'], file?: File) => void;
     setPreviewMode: (mode: 'original' | 'redacted') => void;
     toggleRule: (rule: RuleType) => void;
     setRuleAction: (rule: RuleType, action: RedactionAction) => void;
-    
-    // Secure Wipe
     clearWorkspace: () => void;
 
-    // Custom rule actions
     addCustomRule: (rule: Omit<CustomRule, 'id'>) => void;
     updateCustomRule: (id: string, updates: Partial<Omit<CustomRule, 'id'>>) => void;
     removeCustomRule: (id: string) => void;
@@ -71,18 +64,13 @@ function loadCustomRules(): CustomRule[] {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
+    } catch { return []; }
 }
 
 function saveCustomRules(rules: CustomRule[]) {
     if (typeof window === 'undefined') return;
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
-    } catch {
-        /* quota exceeded — silently fail */
-    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rules)); }
+    catch { /* quota exceeded */ }
 }
 
 /* ── Default dummy text ── */
@@ -99,48 +87,57 @@ EMP-003, Elena, Rodriguez, e.rodriguez@corp-domain.com, 555-0177-334, Legal, $17
 [AWAITING REDACTION CONFIRMATION...]`;
 
 /* ── Store ── */
-export const useDocumentStore = create<DocumentState>((set, get) => ({
+export const useDocumentStore = create<DocumentState>((set) => ({
     rawText: DEFAULT_DUMMY_TEXT,
     fileName: 'Workspace.txt',
     fileType: 'txt',
     originalFile: null,
     previewMode: 'original',
     rules: {
-        email: { isActive: true, action: 'replace' },
-        phone: { isActive: true, action: 'replace' },
-        creditCard: { isActive: true, action: 'replace' },
-        ssn: { isActive: false, action: 'replace' },
-        names: { isActive: false, action: 'replace' },
+        // Standard
+        email:      { isActive: true,  action: 'replace' },
+        phone:      { isActive: true,  action: 'replace' },
+        creditCard: { isActive: true,  action: 'replace' },
+        ssn:        { isActive: false, action: 'replace' },
+        names:      { isActive: false, action: 'replace' },
+        // Indian PII
+        aadhaar:    { isActive: true,  action: 'replace' },
+        pan:        { isActive: true,  action: 'replace' },
+        gst:        { isActive: true,  action: 'replace' },
+        ifsc:       { isActive: true,  action: 'replace' },
+        voterId:    { isActive: false, action: 'replace' },
+        passport:   { isActive: false, action: 'replace' },
+        vehicleReg: { isActive: false, action: 'replace' },
     },
     customRules: loadCustomRules(),
 
     setRawText: (text) => set({ rawText: text }),
-    setFileMetadata: (name, type, file) => set({ fileName: name, fileType: type, originalFile: file || null }),
+    setFileMetadata: (name, type, file) =>
+        set({ fileName: name, fileType: type, originalFile: file || null }),
     setPreviewMode: (mode) => set({ previewMode: mode }),
-    
+
     clearWorkspace: () => set({
         rawText: '',
         fileName: 'Workspace.txt',
         fileType: 'txt',
         originalFile: null,
-        previewMode: 'original'
+        previewMode: 'original',
     }),
 
     toggleRule: (rule) => set((state) => ({
         rules: {
             ...state.rules,
-            [rule]: { ...state.rules[rule], isActive: !state.rules[rule].isActive }
-        }
+            [rule]: { ...state.rules[rule], isActive: !state.rules[rule].isActive },
+        },
     })),
 
     setRuleAction: (rule, action) => set((state) => ({
         rules: {
             ...state.rules,
-            [rule]: { ...state.rules[rule], action }
-        }
+            [rule]: { ...state.rules[rule], action },
+        },
     })),
 
-    /* ── Custom rule CRUD ── */
     addCustomRule: (rule) => set((state) => {
         if (state.customRules.length >= MAX_CUSTOM_RULES) return state;
         const newRule: CustomRule = { ...rule, id: crypto.randomUUID() };
