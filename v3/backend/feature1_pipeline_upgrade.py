@@ -1,17 +1,19 @@
 """
-Ciphera V3 — Detection Pipeline (Step 2)
-=========================================
-Fixes applied over Step 1:
-  BUG-01  "Aadhaar", "PAN" etc. were misclassified as ORGANIZATION
-          → SUPPRESSION_LIST: known PII label words never become entities
-  BUG-02  PAN number ABCDE1234F was elected as LOCATION by voting layer
-          → Regex type-lock: if regex score >= 0.80, its entity_type wins
-  BUG-03  Phone suffix "98765 43210" classified as DATE_TIME
-          → Expanded phone regex + DATE_TIME suppression when span looks like phone
-  BUG-04  Aadhaar Verhoeff checksum validation added
-  NEW     GST number recognizer  (27ABCDE1234F1Z5)
-  NEW     Voter ID recognizer    (ABC1234567)
-  NEW     Context confidence booster/suppressor table
+Ciphera V3 — Feature 1: Accuracy Upgrade
+==========================================
+Changes over previous pipeline:
+  - en_core_web_lg  →  en_core_web_trf  (RoBERTa transformer, much better NER)
+  - Expanded DOB regex: handles DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY,
+    D Month YYYY, Month D YYYY, YYYY-MM-DD (ISO), written forms
+  - Tighter false-positive suppression for CARDINAL / MONEY / QUANTITY
+  - Per-entity confidence floor (entities below type-specific minimum dropped)
+  - OCR pre-processing layer (common Tesseract substitution fixes)
+
+Install BEFORE running:
+    pip install spacy torch
+    python -m spacy download en_core_web_trf
+
+Replace your existing ciphera_v3_pipeline.py with this file entirely.
 """
 
 from __future__ import annotations
@@ -35,13 +37,20 @@ logger = logging.getLogger("ciphera.pipeline")
 
 
 # ---------------------------------------------------------------------------
-# 1.  Constants
+# Constants
 # ---------------------------------------------------------------------------
 
 SUPPRESSION_LIST: set[str] = {
     "aadhaar", "aadhar", "pan", "ifsc", "gst", "gstin",
     "passport", "voter", "voterid", "email", "phone",
     "mobile", "address", "dob", "name", "uid", "uidai",
+    "date", "year", "month", "day", "time",
+}
+
+# spaCy labels to completely ignore (never emit these)
+SPACY_IGNORE_LABELS: set[str] = {
+    "CARDINAL", "ORDINAL", "QUANTITY", "PERCENT",
+    "MONEY", "WORK_OF_ART", "LAW", "LANGUAGE", "EVENT",
 }
 
 PHONE_PATTERN_10D = re.compile(r"^\d{5}\s\d{5}$|^\d{10}$")
@@ -54,32 +63,76 @@ SOURCE_WEIGHTS = {
     "spacy":    0.9,
 }
 
+# Per-type minimum score — entities below this are dropped even if above global threshold
+TYPE_FLOOR: dict[str, float] = {
+    "PERSON":         0.55,
+    "LOCATION":       0.60,
+    "ORGANIZATION":   0.65,
+    "DATE_TIME":      0.60,
+    "AADHAAR_NUMBER": 0.60,
+    "PAN_NUMBER":     0.70,
+    "PHONE_NUMBER":   0.65,
+    "EMAIL_ADDRESS":  0.70,
+    "GST_NUMBER":     0.70,
+    "IFSC_CODE":      0.70,
+}
+
 
 # ---------------------------------------------------------------------------
-# 2.  Verhoeff checksum for Aadhaar validation
+# OCR Pre-processor
 # ---------------------------------------------------------------------------
 
-_VERHOEFF_D = [
-    [0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],
-    [3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],
-    [6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],
-    [9,8,7,6,5,4,3,2,1,0],
-]
-_VERHOEFF_P = [
-    [0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],
-    [8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],
-    [2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8],
-]
+class OCRCleaner:
+    """
+    Fixes common Tesseract OCR substitution errors before NLP processing.
+    Runs in <1ms on typical documents.
+    """
 
-def _verhoeff_validate(number: str) -> bool:
+    # (bad_pattern, replacement)
+    SUBSTITUTIONS = [
+        (re.compile(r'\b0(?=[A-Z])'),          'O'),   # 0BAMA → OBAMA
+        (re.compile(r'(?<=[A-Z])0\b'),          'O'),   # HELL0 → HELLO
+        (re.compile(r'\bl(?=\d)'),              '1'),   # l23 → 123
+        (re.compile(r'(?<=\d)l\b'),             '1'),   # 23l → 231
+        (re.compile(r'\bS(?=\d{3})'),           '5'),   # S234 → 5234 (common in IDs)
+        (re.compile(r'(?<=\d)S\b'),             '5'),
+        (re.compile(r'\bI(?=\d)'),              '1'),   # I23 → 123
+        (re.compile(r'[''`]'),                  "'"),   # smart quotes
+        (re.compile(r'[""„]'),                  '"'),
+        (re.compile(r'\r\n|\r'),                '\n'),  # normalize line endings
+        (re.compile(r'[ \t]{2,}'),              ' '),   # collapse spaces
+    ]
+
+    def clean(self, text: str) -> str:
+        for pattern, replacement in self.SUBSTITUTIONS:
+            text = pattern.sub(replacement, text)
+        return text.strip()
+
+
+ocr_cleaner = OCRCleaner()
+
+
+# ---------------------------------------------------------------------------
+# Verhoeff checksum (Aadhaar)
+# ---------------------------------------------------------------------------
+
+_D = [[0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],
+      [3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],
+      [6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],
+      [9,8,7,6,5,4,3,2,1,0]]
+_P = [[0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],
+      [8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],
+      [2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8]]
+
+def _verhoeff_validate(n: str) -> bool:
     c = 0
-    for i, digit in enumerate(reversed(number)):
-        c = _VERHOEFF_D[c][_VERHOEFF_P[i % 8][int(digit)]]
+    for i, d in enumerate(reversed(n)):
+        c = _D[c][_P[i % 8][int(d)]]
     return c == 0
 
 
 # ---------------------------------------------------------------------------
-# 3.  Data models
+# Data models
 # ---------------------------------------------------------------------------
 
 class DetectionSource(str, Enum):
@@ -115,23 +168,61 @@ class DetectedEntity:
 
 
 # ---------------------------------------------------------------------------
-# 4.  Stage 1 — Regex
+# Stage 1 — Regex (upgraded with comprehensive DOB patterns)
 # ---------------------------------------------------------------------------
+
+# Month names for DOB regex
+_MONTHS = (
+    r"(?:January|February|March|April|May|June|July|August|September|"
+    r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+)
+
+_DOB_PATTERNS = [
+    # DD/MM/YYYY  DD-MM-YYYY  DD.MM.YYYY  DD\MM\YYYY
+    r"\b\d{1,2}[\/\-\.\\ ]\d{1,2}[\/\-\.\\ ]\d{2,4}\b",
+    # YYYY-MM-DD (ISO 8601)
+    r"\b\d{4}-\d{2}-\d{2}\b",
+    # DD Month YYYY  or  Month DD YYYY  or  Month DD, YYYY
+    rf"\b\d{{1,2}}\s+{_MONTHS}\s+\d{{2,4}}\b",
+    rf"\b{_MONTHS}\s+\d{{1,2}},?\s+\d{{2,4}}\b",
+    # Written: "born on the 5th of March 1995"
+    r"\b\d{1,2}(?:st|nd|rd|th)\s+of\s+" + _MONTHS + r"\s+\d{4}\b",
+    # DD MM YYYY (space separated)
+    r"\b\d{2}\s\d{2}\s\d{4}\b",
+]
+
+_DOB_COMBINED = re.compile(
+    "|".join(f"(?:{p})" for p in _DOB_PATTERNS),
+    re.IGNORECASE,
+)
+
 
 class RegexStage:
     PATTERNS: list[tuple[str, str, float]] = [
+        # Aadhaar
         (r"\b(\d{4}[\s\-]?\d{4}[\s\-]?\d{4})\b",               "AADHAAR_NUMBER",  0.85),
+        # PAN
         (r"\b([A-Z]{5}[0-9]{4}[A-Z])\b",                        "PAN_NUMBER",      0.95),
+        # GST
         (r"\b\d{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b",  "GST_NUMBER",      0.93),
+        # IFSC
         (r"\b([A-Z]{4}0[A-Z0-9]{6})\b",                         "IFSC_CODE",       0.92),
+        # Voter ID
         (r"\b([A-Z]{3}[0-9]{7})\b",                             "VOTER_ID",        0.78),
+        # Indian Passport
         (r"\b([A-PR-WY][1-9]\d{7})\b",                          "IN_PASSPORT",     0.75),
+        # Indian mobile (+91 prefix or bare 10-digit)
         (r"(\+91[\s\-]?|0)?[6-9]\d{4}[\s\-]?\d{5}\b",          "PHONE_NUMBER",    0.85),
         (r"\b([6-9]\d{9})\b",                                    "PHONE_NUMBER",    0.80),
-        (r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b", "EMAIL_ADDRESS", 0.98),
+        # Email
+        (r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b",
+                                                                  "EMAIL_ADDRESS",   0.98),
+        # Vehicle reg
         (r"\b[A-Z]{2}[\s\-]?[0-9]{1,2}[\s\-]?[A-Z]{1,3}[\s\-]?[0-9]{4}\b",
-                                                                  "IN_VEHICLE_REG", 0.72),
+                                                                  "IN_VEHICLE_REG",  0.72),
+        # IPv4
         (r"\b(?:\d{1,3}\.){3}\d{1,3}\b",                        "IP_ADDRESS",      0.82),
+        # URL
         (r"https?://[^\s\"'<>]+",                                "URL",             0.90),
     ]
 
@@ -143,6 +234,8 @@ class RegexStage:
 
     def analyze(self, text: str) -> list[DetectedEntity]:
         results: list[DetectedEntity] = []
+
+        # Standard patterns
         for pattern, entity_type, base_score in self._compiled:
             for m in pattern.finditer(text):
                 raw = m.group()
@@ -158,6 +251,20 @@ class RegexStage:
                     context=_get_context(text, m.start(), m.end()),
                     type_locked=(score >= REGEX_TYPE_LOCK_THRESHOLD),
                 ))
+
+        # DOB patterns (separate because combined regex)
+        for m in _DOB_COMBINED.finditer(text):
+            raw = m.group().strip()
+            if not raw:
+                continue
+            results.append(DetectedEntity(
+                start=m.start(), end=m.end(),
+                entity_type="DATE_OF_BIRTH", text=raw, score=0.82,
+                source=DetectionSource.REGEX,
+                context=_get_context(text, m.start(), m.end()),
+                type_locked=True,
+            ))
+
         return results
 
     @staticmethod
@@ -167,6 +274,7 @@ class RegexStage:
             if len(digits) != 12:
                 return 0
             return base_score if _verhoeff_validate(digits) else base_score * 0.75
+
         if entity_type == "IP_ADDRESS":
             parts = value.split(".")
             try:
@@ -176,11 +284,12 @@ class RegexStage:
                 return 0
             if parts[0] in ("127", "10") or (parts[0] == "192" and parts[1] == "168"):
                 return base_score * 0.3
+
         return base_score
 
 
 # ---------------------------------------------------------------------------
-# 5.  Stage 2 — Presidio
+# Stage 2 — Presidio
 # ---------------------------------------------------------------------------
 
 class PresidioStage:
@@ -189,10 +298,10 @@ class PresidioStage:
         "PHONE_NUMBER", "EMAIL_ADDRESS", "CREDIT_CARD", "DATE_TIME", "NRP",
     ]
 
-    def __init__(self):
+    def __init__(self, nlp_model_name: str):
         provider = NlpEngineProvider(nlp_configuration={
             "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "en", "model_name": "en_core_web_lg"}],
+            "models": [{"lang_code": "en", "model_name": nlp_model_name}],
         })
         self.analyzer = AnalyzerEngine(
             nlp_engine=provider.create_engine(), supported_languages=["en"]
@@ -233,15 +342,18 @@ class PresidioStage:
 
 
 # ---------------------------------------------------------------------------
-# 6.  Stage 3 — spaCy NER
+# Stage 3 — spaCy NER (transformer)
 # ---------------------------------------------------------------------------
 
 class SpacyNERStage:
     LABEL_MAP = {
-        "PERSON": "PERSON", "ORG": "ORGANIZATION",
-        "GPE": "LOCATION", "LOC": "LOCATION", "FAC": "LOCATION",
-        "DATE": "DATE_TIME", "TIME": "DATE_TIME",
-        "MONEY": "FINANCIAL", "PRODUCT": "PRODUCT",
+        "PERSON":  "PERSON",
+        "ORG":     "ORGANIZATION",
+        "GPE":     "LOCATION",
+        "LOC":     "LOCATION",
+        "FAC":     "LOCATION",
+        "DATE":    "DATE_TIME",
+        "TIME":    "DATE_TIME",
     }
 
     def __init__(self, nlp: spacy.Language):
@@ -250,6 +362,9 @@ class SpacyNERStage:
     def analyze(self, text: str) -> list[DetectedEntity]:
         results = []
         for ent in self.nlp(text).ents:
+            # Drop noisy labels entirely
+            if ent.label_ in SPACY_IGNORE_LABELS:
+                continue
             mapped = self.LABEL_MAP.get(ent.label_)
             if not mapped:
                 continue
@@ -259,7 +374,7 @@ class SpacyNERStage:
                 continue
             results.append(DetectedEntity(
                 start=ent.start_char, end=ent.end_char,
-                entity_type=mapped, text=ent.text, score=0.70,
+                entity_type=mapped, text=ent.text, score=0.72,
                 source=DetectionSource.SPACY,
                 context=_get_context(text, ent.start_char, ent.end_char),
             ))
@@ -267,28 +382,37 @@ class SpacyNERStage:
 
 
 # ---------------------------------------------------------------------------
-# 7.  Context scoring
+# Context scoring
 # ---------------------------------------------------------------------------
 
 CONTEXT_BOOSTS = [
-    ("AADHAAR_NUMBER", ["aadhaar", "uid", "uidai", "aadhar"],             +0.10),
-    ("PAN_NUMBER",     ["pan", "permanent account", "income tax"],         +0.10),
-    ("PERSON",         ["mr", "mrs", "ms", "dr", "shri", "smt",
-                        "signed", "applicant", "name"],                   +0.08),
-    ("PHONE_NUMBER",   ["phone", "mobile", "cell", "contact", "tel"],     +0.10),
-    ("EMAIL_ADDRESS",  ["email", "mail", "e-mail", "contact"],            +0.05),
-    ("GST_NUMBER",     ["gst", "gstin", "invoice", "tax"],                +0.10),
-    ("IFSC_CODE",      ["ifsc", "bank", "neft", "rtgs"],                  +0.10),
+    ("AADHAAR_NUMBER",  ["aadhaar", "uid", "uidai", "aadhar"],            +0.12),
+    ("PAN_NUMBER",      ["pan", "permanent account", "income tax"],        +0.12),
+    ("DATE_OF_BIRTH",   ["dob", "born", "birth", "date of birth",
+                          "birthdate", "d.o.b"],                           +0.10),
+    ("PERSON",          ["mr", "mrs", "ms", "dr", "shri", "smt",
+                          "name", "applicant", "candidate", "signed"],     +0.08),
+    ("PHONE_NUMBER",    ["phone", "mobile", "cell", "contact", "tel",
+                          "whatsapp"],                                      +0.10),
+    ("EMAIL_ADDRESS",   ["email", "mail", "e-mail"],                       +0.05),
+    ("GST_NUMBER",      ["gst", "gstin", "invoice", "tax"],                +0.10),
+    ("IFSC_CODE",       ["ifsc", "bank", "neft", "rtgs"],                  +0.10),
 ]
 
 CONTEXT_SUPPRESSION = [
-    ("PERSON",         ["order", "invoice", "ref", "id", "number"],       -0.15),
-    ("AADHAAR_NUMBER", ["order", "invoice", "ref", "tracking"],           -0.20),
-    ("DATE_TIME",      ["phone", "mobile", "contact", "tel"],             -0.60),
+    ("PERSON",          ["order", "invoice", "ref", "id", "number",
+                          "product", "item"],                              -0.15),
+    ("AADHAAR_NUMBER",  ["order", "invoice", "ref", "tracking",
+                          "ticket"],                                       -0.20),
+    ("DATE_TIME",       ["phone", "mobile", "contact", "tel"],            -0.60),
+    ("ORGANIZATION",    ["aadhaar", "pan", "gst", "ifsc", "uid"],         -0.40),
+    ("LOCATION",        ["pan", "ifsc", "gst"],                           -0.35),
 ]
 
 
-def apply_context_scoring(entities: list[DetectedEntity], text: str) -> list[DetectedEntity]:
+def apply_context_scoring(
+    entities: list[DetectedEntity], text: str
+) -> list[DetectedEntity]:
     for entity in entities:
         ctx = _get_context(text, entity.start, entity.end, window=60).lower()
         for etype, keywords, boost in CONTEXT_BOOSTS:
@@ -301,7 +425,7 @@ def apply_context_scoring(entities: list[DetectedEntity], text: str) -> list[Det
 
 
 # ---------------------------------------------------------------------------
-# 8.  Voting + merge
+# Voting + merge
 # ---------------------------------------------------------------------------
 
 def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
@@ -332,7 +456,9 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
             type_weights: dict[str, float] = {}
             for e in group:
                 w = SOURCE_WEIGHTS.get(e.source.value, 1.0)
-                type_weights[e.entity_type] = type_weights.get(e.entity_type, 0.0) + e.score * w
+                type_weights[e.entity_type] = (
+                    type_weights.get(e.entity_type, 0.0) + e.score * w
+                )
             elected_type = max(type_weights, key=type_weights.__getitem__)
 
         total_w = sum(SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group)
@@ -341,6 +467,11 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
         ) / total_w
 
         if weighted_score < CONFIDENCE_THRESHOLD:
+            continue
+
+        # Apply per-type floor
+        floor = TYPE_FLOOR.get(elected_type, CONFIDENCE_THRESHOLD)
+        if weighted_score < floor:
             continue
 
         best = max(group, key=lambda e: e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0))
@@ -356,38 +487,61 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
 
 
 # ---------------------------------------------------------------------------
-# 9.  Orchestrator
+# Orchestrator
 # ---------------------------------------------------------------------------
 
 class DetectionPipeline:
-    def __init__(self):
-        logger.info("Loading spaCy model en_core_web_lg …")
-        nlp = spacy.load("en_core_web_lg")
+    def __init__(self, use_transformer: bool = True):
+        model = "en_core_web_trf" if use_transformer else "en_core_web_lg"
+        logger.info("Loading spaCy model %s …", model)
+        try:
+            nlp = spacy.load(model)
+        except OSError:
+            logger.warning("%s not found, falling back to en_core_web_lg", model)
+            nlp = spacy.load("en_core_web_lg")
+            model = "en_core_web_lg"
+
+        # Disable unused pipeline components to save memory + time
+        disabled = [p for p in ["parser", "attribute_ruler", "lemmatizer"]
+                    if p in nlp.pipe_names]
+        if disabled:
+            nlp.disable_pipes(*disabled)
+
         self.regex_stage    = RegexStage()
-        self.presidio_stage = PresidioStage()
+        self.presidio_stage = PresidioStage(model)
         self.spacy_stage    = SpacyNERStage(nlp)
-        logger.info("DetectionPipeline v3.1 ready.")
+        logger.info("DetectionPipeline v3.2 ready (model=%s).", model)
 
-    def run(self, text: str, threshold: float = CONFIDENCE_THRESHOLD,
-            enabled_stages: Optional[list[str]] = None) -> list[DetectedEntity]:
+    def run(
+        self,
+        text: str,
+        threshold: float = CONFIDENCE_THRESHOLD,
+        enabled_stages: Optional[list[str]] = None,
+        clean_ocr: bool = False,
+    ) -> list[DetectedEntity]:
         stages = enabled_stages or ["regex", "presidio", "spacy"]
-        all_candidates: list[DetectedEntity] = []
 
+        # Optional OCR cleaning
+        if clean_ocr:
+            text = ocr_cleaner.clean(text)
+
+        all_candidates: list[DetectedEntity] = []
         if "regex"    in stages: all_candidates.extend(self.regex_stage.analyze(text))
         if "presidio" in stages: all_candidates.extend(self.presidio_stage.analyze(text))
         if "spacy"    in stages: all_candidates.extend(self.spacy_stage.analyze(text))
 
         all_candidates = apply_context_scoring(all_candidates, text)
         merged = merge_and_vote(all_candidates)
-        result = sorted([e for e in merged if e.score >= threshold], key=lambda e: e.start)
-
-        logger.info("Pipeline: %d raw → %d entities (threshold=%.2f)",
-                    len(all_candidates), len(result), threshold)
+        result = sorted(
+            [e for e in merged if e.score >= threshold],
+            key=lambda e: e.start,
+        )
+        logger.info("Pipeline: %d raw → %d entities", len(all_candidates), len(result))
         return result
 
 
 # ---------------------------------------------------------------------------
-# 10. Helpers
+# Helpers
 # ---------------------------------------------------------------------------
 
 def _get_context(text: str, start: int, end: int, window: int = 40) -> str:
@@ -395,7 +549,7 @@ def _get_context(text: str, start: int, end: int, window: int = 40) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 11. FastAPI
+# FastAPI
 # ---------------------------------------------------------------------------
 
 pipeline: Optional[DetectionPipeline] = None
@@ -404,14 +558,16 @@ pipeline: Optional[DetectionPipeline] = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pipeline
-    pipeline = DetectionPipeline()
+    # Set use_transformer=True for best accuracy (needs en_core_web_trf installed)
+    # Set use_transformer=False to fall back to en_core_web_lg (faster, less accurate)
+    pipeline = DetectionPipeline(use_transformer=True)
     yield
 
 
 app = FastAPI(
     title="Ciphera V3 — Detection API",
-    description="Multi-layer PII: Regex → Presidio → spaCy → Context → Voting",
-    version="3.1.0",
+    description="Multi-layer PII: Regex → Presidio → spaCy Transformer → Context → Voting",
+    version="3.2.0",
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -422,6 +578,7 @@ class AnalyzeRequest(BaseModel):
     threshold:       float            = Field(0.50, ge=0.0, le=1.0)
     enabled_stages:  list[str] | None = Field(None)
     include_context: bool             = Field(True)
+    clean_ocr:       bool             = Field(False)
 
 
 class EntityResponse(BaseModel):
@@ -439,7 +596,10 @@ class AnalyzeResponse(BaseModel):
 async def analyze(request: AnalyzeRequest):
     if pipeline is None:
         raise HTTPException(503, "Pipeline not ready")
-    entities = pipeline.run(request.text, request.threshold, request.enabled_stages)
+    entities = pipeline.run(
+        request.text, request.threshold,
+        request.enabled_stages, request.clean_ocr,
+    )
     dicts = [e.to_dict() for e in entities]
     if not request.include_context:
         for d in dicts: d["context"] = ""
@@ -458,7 +618,7 @@ async def analyze(request: AnalyzeRequest):
 
 @app.get("/api/v3/health")
 async def health():
-    return {"status": "ok" if pipeline else "loading", "version": "3.1.0"}
+    return {"status": "ok" if pipeline else "loading", "version": "3.2.0"}
 
 
 @app.get("/api/v3/entities")
@@ -467,10 +627,10 @@ async def list_entity_types():
         "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "AADHAAR_NUMBER",
         "PAN_NUMBER", "GST_NUMBER", "IFSC_CODE", "VOTER_ID",
         "IN_PASSPORT", "IN_VEHICLE_REG", "CREDIT_CARD", "DATE_TIME",
-        "LOCATION", "ORGANIZATION", "URL", "IP_ADDRESS",
+        "DATE_OF_BIRTH", "LOCATION", "ORGANIZATION", "URL", "IP_ADDRESS",
     ]}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("ciphera_v3_pipeline:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("feature1_pipeline_upgrade:app", host="0.0.0.0", port=8000, reload=False)

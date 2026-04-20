@@ -115,8 +115,7 @@ export const CanvasEngine: React.FC = () => {
 
     // Drawing Logic
     const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
-        if (previewMode === 'original') return;
-
+        if (previewMode === 'redacted') return;
         // If we are clicking on an existing shape, or using select tool, do not draw.
         const clickedOnEmpty = e.target === e.target.getStage();
         if (!clickedOnEmpty) {
@@ -213,9 +212,8 @@ export const CanvasEngine: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
-    // Fit-to-screen logic using a sentinel hook (scale === 0 triggers auto-fit)
     useEffect(() => {
-        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && (scale === 0 || scale === 1 && position.x === 0 && position.y === 0)) {
+        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && scale === 1 && position.x === 0 && position.y === 0) {
             const padding = 60; // Extra padding around the image
             const scaleX = (dimensions.width - padding) / imageDimensions.width;
             const scaleY = (dimensions.height - padding) / imageDimensions.height;
@@ -227,7 +225,7 @@ export const CanvasEngine: React.FC = () => {
                 y: (dimensions.height - (imageDimensions.height * fitScale)) / 2,
             });
         }
-    }, [dimensions, imageDimensions, scale, position.x, position.y, setScale, setPosition]);
+    }, [dimensions, imageDimensions, scale, position, setScale, setPosition]);
 
     // Empty state if no image
     if (!imageSrc) {
@@ -236,7 +234,7 @@ export const CanvasEngine: React.FC = () => {
 
     return (
         <div ref={containerRef} className="relative w-full h-full bg-[#121212] overflow-hidden">
-            {previewMode !== 'original' && <FloatingToolbar />}
+            <FloatingToolbar />
 
             <Stage
                 width={dimensions.width}
@@ -252,7 +250,7 @@ export const CanvasEngine: React.FC = () => {
                 onTouchStart={handleMouseDown}
                 onTouchMove={handleMouseMove}
                 onTouchEnd={handleMouseUp}
-                draggable={activeTool === 'select' && !selectedShapeId}
+                draggable={activeTool === 'select' && previewMode === 'original' && !selectedShapeId}
                 dragBoundFunc={(pos) => constrainPosition(pos, scale)}
                 onDragEnd={(e) => {
                     if (e.target === e.target.getStage()) {
@@ -268,12 +266,10 @@ export const CanvasEngine: React.FC = () => {
                 <Layer>
                     <ImageLayer src={imageSrc} />
                 </Layer>
-                {previewMode !== 'original' && (
-                    <ShapeLayer
-                        selectedShapeId={selectedShapeId}
-                        onShapeClick={setSelectedShapeId}
-                    />
-                )}
+                <ShapeLayer
+                    selectedShapeId={selectedShapeId}
+                    onShapeClick={setSelectedShapeId}
+                />
             </Stage>
         </div>
     );

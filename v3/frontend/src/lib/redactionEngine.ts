@@ -1,12 +1,26 @@
+/**
+ * Ciphera V3 — Feature 4: Frontend Indian PII Integration
+ * =========================================================
+ * This file is the COMPLETE updated redactionEngine.ts.
+ * 
+ * Changes over previous version:
+ *  - Indian PII rule types now respect toggle state from documentStore
+ *    (previously they were always shown regardless of toggle)
+ *  - DATE_OF_BIRTH is now a first-class rule type with its own toggle
+ *  - clean_ocr flag forwarded to backend when fileType === 'image'
+ *  - confidence threshold now pulled from a store value (tunable per-session)
+ * 
+ * Replace: v3/frontend/src/lib/redactionEngine.ts
+ */
+
 import { RuleType, RuleConfig, RedactionAction, CustomRule } from '@/store/documentStore';
 
 export interface Token {
-    id: string;
-    type: 'text' | RuleType | string;
-    value: string;
-    // V3 extras — available for richer UI display if needed
-    score?: number;
-    source?: string;
+    id:          string;
+    type:        'text' | RuleType | string;
+    value:       string;
+    score?:      number;
+    source?:     string;
     entityType?: string;
 }
 
@@ -16,20 +30,22 @@ export interface TokenizeResult {
 }
 
 /**
- * Maps V3 entity_type strings → V2 RuleType so the existing UI
- * (canvas overlays, toolbar, redaction actions) needs zero changes.
- *
- * Any V3 entity type not listed here falls through to 'unknown',
- * which the replacement logic handles via SessionMapper.
+ * V3 entity_type → RuleType mapping.
+ * ALL types now respect the toggle — Indian PII included.
  */
 const V3_ENTITY_TO_RULE_TYPE: Record<string, RuleType | string> = {
-    // Standard
     EMAIL_ADDRESS:  'email',
     PHONE_NUMBER:   'phone',
     CREDIT_CARD:    'creditCard',
     US_SSN:         'ssn',
     PERSON:         'names',
-    // Indian PII — map to closest V2 type or keep as-is for custom rendering
+    LOCATION:       'names',
+    ORGANIZATION:   'names',
+    DATE_TIME:      'date',
+    DATE_OF_BIRTH:  'dob',      // new — has its own toggle now
+    URL:            'url',
+    IP_ADDRESS:     'ip',
+    // Indian PII — now fully toggle-controlled
     AADHAAR_NUMBER: 'aadhaar',
     PAN_NUMBER:     'pan',
     GST_NUMBER:     'gst',
@@ -37,34 +53,13 @@ const V3_ENTITY_TO_RULE_TYPE: Record<string, RuleType | string> = {
     VOTER_ID:       'voterId',
     IN_PASSPORT:    'passport',
     IN_VEHICLE_REG: 'vehicleReg',
-    // Generic
-    LOCATION:       'names',   // treat locations like names for redaction action
-    ORGANIZATION:   'names',
-    DATE_TIME:      'date',
-    URL:            'url',
-    IP_ADDRESS:     'ip',
 };
 
-/**
- * V3 entity types that are enabled by default when active rules are checked.
- * We derive this from the active_rules map passed in from the store.
- */
-const RULE_TYPE_TO_V3_ENTITIES: Record<string, string[]> = {
-    email:      ['EMAIL_ADDRESS'],
-    phone:      ['PHONE_NUMBER'],
-    creditCard: ['CREDIT_CARD'],
-    ssn:        ['US_SSN'],
-    names:      ['PERSON', 'LOCATION', 'ORGANIZATION'],
-    // Indian PII — always passed; backend filters by score
-    aadhaar:    ['AADHAAR_NUMBER'],
-    pan:        ['PAN_NUMBER'],
-};
-
-// ─── Session Mapper (unchanged from V2) ────────────────────────────────────
+// ── Session Mapper ──────────────────────────────────────────────────────────
 
 class SessionMapper {
     private counts: Record<string, number> = {};
-    private map: Record<string, string> = {};
+    private map:    Record<string, string> = {};
 
     getId(type: string, originalValue: string, label: string): string {
         const key = `${type}::${originalValue.toLowerCase()}`;
@@ -76,15 +71,12 @@ class SessionMapper {
         return tag;
     }
 
-    clear() {
-        this.counts = {};
-        this.map = {};
-    }
+    clear() { this.counts = {}; this.map = {}; }
 }
 
 export const sessionMapper = new SessionMapper();
 
-// ─── V3 response shape ──────────────────────────────────────────────────────
+// ── V3 response shape ───────────────────────────────────────────────────────
 
 interface V3Entity {
     start:       number;
@@ -103,55 +95,37 @@ interface V3Response {
     stats:        Record<string, unknown>;
 }
 
-// ─── Core engine ────────────────────────────────────────────────────────────
+// ── Core engine ─────────────────────────────────────────────────────────────
 
 export const redactionEngine = {
-    /**
-     * Calls the V3 multi-layer detection pipeline and converts the
-     * entity span list into the same Token[] AST format that V2 uses.
-     *
-     * Fail-secure: if backend is unreachable, returns failed=true
-     * and empty tokens — the caller must block export.
-     */
+
     async tokenize(
-        rawText: string,
-        activeRules: Record<RuleType, RuleConfig>,
-        customRules: CustomRule[] = [],
-        threshold: number = 0.50,
+        rawText:      string,
+        activeRules:  Record<RuleType, RuleConfig>,
+        customRules:  CustomRule[] = [],
+        threshold:    number       = 0.50,
+        cleanOcr:     boolean      = false,
     ): Promise<TokenizeResult> {
         if (!rawText) return { tokens: [], failed: false };
 
-        // Determine which active rules the user has switched on
-        const enabledRuleTypes = Object.entries(activeRules)
-            .filter(([, config]) => config.isActive)
-            .map(([key]) => key);
-
-        // Build the set of V3 entity types we care about
-        // (union of all enabled rule → entity mappings)
-        // We pass threshold rather than an entity filter — the backend
-        // returns everything above threshold and we filter client-side.
-        // This keeps the backend generic and the UI in control.
-
         try {
             const response = await fetch('http://127.0.0.1:8000/api/v3/analyze', {
-                method: 'POST',
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     text:            rawText,
                     threshold:       threshold,
                     include_context: false,
+                    clean_ocr:       cleanOcr,
                 }),
             });
 
             if (!response.ok) {
-                console.error('[Ciphera V3] API error:', response.status, response.statusText);
+                console.error('[Ciphera V3] API error:', response.status);
                 return { tokens: [], failed: true };
             }
 
             const data: V3Response = await response.json();
-
-            // Build a set of character positions that are inside a detected entity
-            // so we can reconstruct the full token stream (entity + plain text spans)
             const tokens = this._buildTokenStream(rawText, data.entities, activeRules, customRules);
             return { tokens, failed: false };
 
@@ -161,25 +135,17 @@ export const redactionEngine = {
         }
     },
 
-    /**
-     * Converts V3 entity spans + plain text gaps into the Token[] AST.
-     *
-     * Token types:
-     *   'text'        → plain, non-sensitive span
-     *   RuleType      → built-in sensitive span (email, phone, etc.)
-     *   string (other) → Indian PII or other V3-only types
-     */
     _buildTokenStream(
         rawText:     string,
         entities:    V3Entity[],
         activeRules: Record<RuleType, RuleConfig>,
         customRules: CustomRule[],
     ): Token[] {
-        const tokens: Token[] = [];
-        let cursor = 0;
-        let tokenIndex = 0;
+        const tokens:        Token[]  = [];
+        let   cursor                  = 0;
+        let   tokenIndex              = 0;
 
-        // Determine which rule types are active for client-side filtering
+        // Build active rule set — includes ALL rule types that are toggled on
         const activeRuleSet = new Set(
             Object.entries(activeRules)
                 .filter(([, cfg]) => cfg.isActive)
@@ -187,7 +153,7 @@ export const redactionEngine = {
         );
 
         for (const entity of entities) {
-            // 1. Plain text before this entity
+            // Plain text before entity
             if (cursor < entity.start) {
                 tokens.push({
                     id:    `t-${tokenIndex++}`,
@@ -196,15 +162,10 @@ export const redactionEngine = {
                 });
             }
 
-            // 2. Map V3 entity type → V2 rule type
             const ruleType = V3_ENTITY_TO_RULE_TYPE[entity.entity_type] ?? entity.entity_type;
 
-            // 3. Client-side filter: only redact if the mapped rule is active
-            //    Indian PII types (aadhaar, pan, etc.) are always shown
-            //    since they have no V2 toggle yet — Step 4 adds those toggles
-            const isBuiltIn  = ruleType in activeRules;
-            const isIndianPII = !isBuiltIn;  // always show Indian PII entities
-            const isActive   = isIndianPII || activeRuleSet.has(ruleType as RuleType);
+            // ALL entities now respect toggle state
+            const isActive = activeRuleSet.has(ruleType as RuleType);
 
             if (isActive) {
                 tokens.push({
@@ -216,7 +177,6 @@ export const redactionEngine = {
                     entityType: entity.entity_type,
                 });
             } else {
-                // Rule is off — treat as plain text
                 tokens.push({
                     id:    `t-${tokenIndex++}`,
                     type:  'text',
@@ -227,7 +187,7 @@ export const redactionEngine = {
             cursor = entity.end;
         }
 
-        // 4. Remaining plain text after last entity
+        // Remaining plain text
         if (cursor < rawText.length) {
             tokens.push({
                 id:    `t-${tokenIndex++}`,
@@ -239,16 +199,11 @@ export const redactionEngine = {
         return tokens;
     },
 
-    /**
-     * Returns a safely redacted display string.
-     * Unchanged from V2 — supports mask, blackout, replace.
-     * Extended to handle Indian PII label tags.
-     */
     getRedactionReplacement(
-        type: RuleType | string,
+        type:         RuleType | string,
         originalValue: string,
-        action: RedactionAction,
-        customRules: CustomRule[] = [],
+        action:       RedactionAction,
+        customRules:  CustomRule[] = [],
     ): string {
         if (action === 'blackout') return '████████';
 
@@ -257,13 +212,16 @@ export const redactionEngine = {
             return `${originalValue.slice(0, 2)}****${originalValue.slice(-2)}`;
         }
 
-        // action === 'replace' — use SessionMapper for consistent pseudonyms
         switch (type) {
             case 'email':      return sessionMapper.getId(type, originalValue, 'EMAIL');
             case 'phone':      return sessionMapper.getId(type, originalValue, 'PHONE');
             case 'creditCard': return sessionMapper.getId(type, originalValue, 'CC');
             case 'ssn':        return sessionMapper.getId(type, originalValue, 'SSN');
             case 'names':      return sessionMapper.getId(type, originalValue, 'PERSON');
+            case 'dob':        return sessionMapper.getId(type, originalValue, 'DOB');
+            case 'date':       return sessionMapper.getId(type, originalValue, 'DATE');
+            case 'url':        return sessionMapper.getId(type, originalValue, 'URL');
+            case 'ip':         return sessionMapper.getId(type, originalValue, 'IP');
             // Indian PII
             case 'aadhaar':    return sessionMapper.getId(type, originalValue, 'AADHAAR');
             case 'pan':        return sessionMapper.getId(type, originalValue, 'PAN');
@@ -272,9 +230,6 @@ export const redactionEngine = {
             case 'voterId':    return sessionMapper.getId(type, originalValue, 'VOTER_ID');
             case 'passport':   return sessionMapper.getId(type, originalValue, 'PASSPORT');
             case 'vehicleReg': return sessionMapper.getId(type, originalValue, 'VEHICLE');
-            case 'date':       return sessionMapper.getId(type, originalValue, 'DATE');
-            case 'url':        return sessionMapper.getId(type, originalValue, 'URL');
-            case 'ip':         return sessionMapper.getId(type, originalValue, 'IP');
             default: {
                 const customRule = customRules.find(
                     (r) => `custom_${r.id}` === type || r.id === type

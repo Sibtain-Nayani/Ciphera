@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layer, Rect, Transformer } from 'react-konva';
 import { useCanvasStore } from '@/store/canvasStore';
+import { useDocumentStore } from '@/store/documentStore';
 import Konva from 'konva';
 
 interface ShapeLayerProps {
@@ -10,12 +11,13 @@ interface ShapeLayerProps {
 
 export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedShapeId }) => {
     const { shapes, updateShape, activeTool } = useCanvasStore();
+    const { previewMode } = useDocumentStore();
     const transformerRef = React.useRef<Konva.Transformer>(null);
     const layerRef = React.useRef<Konva.Layer>(null);
 
     // Sync transformer whenever selected shape changes
     React.useEffect(() => {
-        if (selectedShapeId && transformerRef.current && layerRef.current) {
+        if (selectedShapeId && previewMode === 'original' && transformerRef.current && layerRef.current) {
             const node = layerRef.current.findOne(`#${selectedShapeId}`);
             if (node) {
                 transformerRef.current.nodes([node]);
@@ -24,7 +26,7 @@ export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedSh
         } else if (transformerRef.current) {
             transformerRef.current.nodes([]);
         }
-    }, [selectedShapeId, shapes]);
+    }, [selectedShapeId, shapes, previewMode]);
 
     const getShapeFill = (type: string) => {
         switch (type) {
@@ -46,10 +48,10 @@ export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedSh
                     width={shape.width}
                     height={shape.height}
                     fill={getShapeFill(shape.type)}
-                    draggable={activeTool === 'select'}
+                    draggable={activeTool === 'select' && previewMode === 'original'}
                     onClick={(e) => {
                         e.cancelBubble = true; // prevent event bubbling to stage
-                        if (activeTool === 'select') {
+                        if (activeTool === 'select' && previewMode === 'original') {
                             onShapeClick(shape.id);
                         }
                     }}
