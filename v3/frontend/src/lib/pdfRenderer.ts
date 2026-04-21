@@ -1,55 +1,59 @@
+/**
+ * pdfRenderer.ts — V3
+ * Converts a PDF file into an array of base64 Image Data URIs (one per page).
+ * Returns ALL pages so the UI can navigate between them.
+ */
+
+export interface PdfPageData {
+    dataUri:    string;
+    pageNumber: number;
+    width:      number;
+    height:     number;
+}
 
 /**
- * Converts a PDF file into an array of base64 Image Data URIs (one for each page).
- * This allows us to load the PDF seamlessly into the react-konva CanvasEngine.
+ * Renders every page of a PDF at the given scale and returns them as PNG data URIs.
+ * @param file   - The PDF File object
+ * @param scale  - Render resolution multiplier (2.0 = retina quality)
+ * @returns      - Array of PdfPageData, one entry per page
  */
-export async function convertPdfToImages(file: File): Promise<string[]> {
+export async function convertPdfToImages(
+    file:  File,
+    scale: number = 2.0,
+): Promise<PdfPageData[]> {
     if (typeof window === 'undefined') {
-        throw new Error("convertPdfToImages can only be run in the browser.");
+        throw new Error("convertPdfToImages can only run in the browser.");
     }
 
-    // Dynamically import pdfjs-dist only on the client to prevent SSR DOMMatrix errors
     const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer  = await file.arrayBuffer();
+    const pdfDocument  = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    const numPages     = pdfDocument.numPages;
+    const pages: PdfPageData[] = [];
 
-    // Load the PDF document
-    const pdfDocument = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-
-    const numPages = pdfDocument.numPages;
-    const images: string[] = [];
-
-    // Render each page to an off-screen canvas and extract the Data URI
     for (let i = 1; i <= numPages; i++) {
-        const page = await pdfDocument.getPage(i);
+        const page     = await pdfDocument.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const canvas   = document.createElement('canvas');
+        const context  = canvas.getContext('2d');
 
-        // Use a viewport scale of 2.0 or 3.0 for higher rendering resolution
-        const viewport = page.getViewport({ scale: 2.0 });
+        if (!context) throw new Error("Unable to obtain 2D context for PDF rendering.");
 
-        // Create an off-screen canvas element
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-
-        if (!context) {
-            throw new Error("Unable to obtain 2D context for PDF rendering.");
-        }
-
-        canvas.width = viewport.width;
+        canvas.width  = viewport.width;
         canvas.height = viewport.height;
 
-        // Render PDF page into canvas context
-        const renderContext: any = {
-            canvasContext: context,
-            viewport: viewport,
-        };
+        await page.render({ canvasContext: context as any, viewport }).promise;
 
-        await page.render(renderContext).promise;
-
-        // Extract high-quality image data
-        const dataUri = canvas.toDataURL('image/png', 1.0);
-        images.push(dataUri);
+        pages.push({
+            dataUri:    canvas.toDataURL('image/png', 1.0),
+            pageNumber: i,
+            width:      viewport.width,
+            height:     viewport.height,
+        });
     }
 
-    return images;
+    return pages;
 }
