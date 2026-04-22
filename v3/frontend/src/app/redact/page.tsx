@@ -157,7 +157,7 @@ export default function WorkspacePage() {
     // Debounced tokenization
     useEffect(() => {
         const t = setTimeout(async () => {
-            const result = await redactionEngine.tokenize(rawText, rules, customRules);
+            const result = await redactionEngine.tokenize(rawText, rules, customRules,0.50,false,true,fileName);
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
