@@ -1,4 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
+"use client";
+
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore, RedactionShape, ShapeType } from '@/store/canvasStore';
@@ -8,173 +10,184 @@ import { ShapeLayer } from './ShapeLayer';
 import { FloatingToolbar } from './FloatingToolbar';
 
 export const CanvasEngine: React.FC = () => {
-    const {
-        imageSrc, scale, position, setScale, setPosition,
-        activeTool, addShape, updateShape, selectedShapeId, setSelectedShapeId, deleteShape,
-        imageDimensions
-    } = useCanvasStore();
+    // Select only what we need to minimize re-renders and avoid infinite loops with callback refs
+    const imageSrc           = useCanvasStore(s => s.imageSrc);
+    const scale              = useCanvasStore(s => s.scale);
+    const position           = useCanvasStore(s => s.position);
+    const setScale           = useCanvasStore(s => s.setScale);
+    const setPosition        = useCanvasStore(s => s.setPosition);
+    const activeTool         = useCanvasStore(s => s.activeTool);
+    const addShape           = useCanvasStore(s => s.addShape);
+    const updateShape        = useCanvasStore(s => s.updateShape);
+    const selectedShapeId    = useCanvasStore(s => s.selectedShapeId);
+    const setSelectedShapeId = useCanvasStore(s => s.setSelectedShapeId);
+    const deleteShape        = useCanvasStore(s => s.deleteShape);
+    const imageDimensions    = useCanvasStore(s => s.imageDimensions);
 
     const { previewMode } = useDocumentStore();
 
-    const stageRef = useRef<Konva.Stage>(null);
-    const setStageRef = useCanvasStore(state => state.setStageRef);
+    const containerRef  = useRef<HTMLDivElement>(null);
+    const hasAutoFitted = useRef(false);   // FIX: track whether we've already auto-fitted
+    const setStageRef   = useCanvasStore(s => s.setStageRef);
 
-    useEffect(() => {
-        if (stageRef.current) {
-            setStageRef(stageRef.current);
+    const [isDrawing,       setIsDrawing]       = useState(false);
+    const [currentShapeId,  setCurrentShapeId]  = useState<string | null>(null);
+    const [dimensions,      setDimensions]       = useState({ width: 0, height: 0 });
+
+    // FIX: Using a callback ref is much more reliable for syncing with external stores
+    // than useEffect + useRef, as it triggers whenever the node actually mounts/unmounts.
+    const onStageMount = useCallback((node: Konva.Stage | null) => {
+        // Guard to prevent redundant store updates which can cause infinite loops
+        if (useCanvasStore.getState().stageRef !== node) {
+            setStageRef(node);
         }
-        return () => setStageRef(null);
     }, [setStageRef]);
 
-    // Keyboard controls for deleting shapes
+    // Delete key handler
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Only trigger if we aren't typing in an input field
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
+        const onKey = (e: KeyboardEvent) => {
+            const t = e.target as HTMLElement;
+            if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
             if ((e.key === 'Backspace' || e.key === 'Delete') && selectedShapeId) {
                 deleteShape(selectedShapeId);
                 setSelectedShapeId(null);
             }
         };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
     }, [selectedShapeId, deleteShape, setSelectedShapeId]);
 
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [currentShapeId, setCurrentShapeId] = useState<string | null>(null);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    // Container resize observer
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
 
-    const getMinScale = () => {
+        const measure = () => {
+            if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+                setDimensions({ width: el.offsetWidth, height: el.offsetHeight });
+            }
+        };
+
+        const obs = new ResizeObserver(entries => {
+            for (const e of entries) {
+                if (e.contentRect.width > 0 && e.contentRect.height > 0) {
+                    setDimensions({ width: e.contentRect.width, height: e.contentRect.height });
+                }
+            }
+        });
+        obs.observe(el);
+
+        // Initial measurement
+        measure();
+
+        // Fallback: sometimes layout is delayed in Next.js/dynamic components
+        const timer = setTimeout(measure, 100);
+        const raf   = requestAnimationFrame(measure);
+
+        return () => {
+            obs.disconnect();
+            clearTimeout(timer);
+            cancelAnimationFrame(raf);
+        };
+    }, []);
+
+    // FIX: Auto-fit only runs ONCE per image load (hasAutoFitted ref prevents re-running
+    // when OCR updates cause re-renders, which was causing the preview to blank out)
+    useEffect(() => {
+        hasAutoFitted.current = false;  // Reset when image changes
+    }, [imageSrc]);
+
+    useEffect(() => {
+        if (
+            (!hasAutoFitted.current || scale === 0) &&
+            dimensions.width > 0 && dimensions.height > 0 &&
+            imageDimensions
+        ) {
+            const pad    = 60;
+            const scaleX = (dimensions.width  - pad) / imageDimensions.width;
+            const scaleY = (dimensions.height - pad) / imageDimensions.height;
+            const fit    = Math.min(scaleX, scaleY, 1);
+
+            setScale(fit);
+            setPosition({
+                x: (dimensions.width  - imageDimensions.width  * fit) / 2,
+                y: (dimensions.height - imageDimensions.height * fit) / 2,
+            });
+            hasAutoFitted.current = true;  // Never auto-fit again for this image unless requested
+        }
+    }, [dimensions, imageDimensions, scale]);
+    // NOTE: intentionally NOT including scale/position in deps —
+    // those are user-controlled after the initial fit
+
+    const getMinScale = useCallback(() => {
         if (!dimensions.width || !imageDimensions) return 0.1;
-        const padding = 60;
-        const scaleX = (dimensions.width - padding) / imageDimensions.width;
-        const scaleY = (dimensions.height - padding) / imageDimensions.height;
-        return Math.min(scaleX, scaleY, 1);
-    };
+        const pad = 60;
+        return Math.min(
+            (dimensions.width  - pad) / imageDimensions.width,
+            (dimensions.height - pad) / imageDimensions.height,
+            1,
+        );
+    }, [dimensions, imageDimensions]);
 
-    const minScale = getMinScale();
-
-    const constrainPosition = (pos: { x: number, y: number }, currentScale: number) => {
-        if (!imageDimensions || dimensions.width === 0) return pos;
-        const imgW = imageDimensions.width * currentScale;
-        const imgH = imageDimensions.height * currentScale;
-        const padding = 30; // Padding from edge
-
-        let x = pos.x;
-        let y = pos.y;
-
-        if (imgW < dimensions.width) {
-            x = (dimensions.width - imgW) / 2;
-        } else {
-            x = Math.max(dimensions.width - imgW - padding, Math.min(padding, x));
-        }
-
-        if (imgH < dimensions.height) {
-            y = (dimensions.height - imgH) / 2;
-        } else {
-            y = Math.max(dimensions.height - imgH - padding, Math.min(padding, y));
-        }
-
+    const constrainPos = useCallback((pos: { x: number; y: number }, s: number) => {
+        if (!imageDimensions || !dimensions.width) return pos;
+        const imgW = imageDimensions.width  * s;
+        const imgH = imageDimensions.height * s;
+        const pad  = 30;
+        let { x, y } = pos;
+        x = imgW < dimensions.width  ? (dimensions.width  - imgW) / 2 : Math.max(dimensions.width  - imgW - pad, Math.min(pad, x));
+        y = imgH < dimensions.height ? (dimensions.height - imgH) / 2 : Math.max(dimensions.height - imgH - pad, Math.min(pad, y));
         return { x, y };
-    };
+    }, [dimensions, imageDimensions]);
 
-    // Zoom Handling
+    // Wheel zoom
     const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
         e.evt.preventDefault();
-        const stage = stageRef.current;
+        const stage = useCanvasStore.getState().stageRef;
         if (!stage) return;
-
-        const scaleBy = 1.1;
-        const oldScale = stage.scaleX();
+        const old     = stage.scaleX();
         const pointer = stage.getPointerPosition();
         if (!pointer) return;
-
-        const mousePointTo = {
-            x: (pointer.x - stage.x()) / oldScale,
-            y: (pointer.y - stage.y()) / oldScale,
-        };
-
-        const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-        // Limit zoom to fitScale or max 10x
-        let finalScale = newScale;
-        if (finalScale < minScale) finalScale = minScale;
-        if (finalScale > 10) finalScale = 10;
-
-        const newPos = {
-            x: pointer.x - mousePointTo.x * finalScale,
-            y: pointer.y - mousePointTo.y * finalScale,
-        };
-
-        setScale(finalScale);
-        setPosition(constrainPosition(newPos, finalScale));
+        const origin = { x: (pointer.x - stage.x()) / old, y: (pointer.y - stage.y()) / old };
+        let   next   = e.evt.deltaY < 0 ? old * 1.1 : old / 1.1;
+        next = Math.max(getMinScale(), Math.min(10, next));
+        const newPos  = { x: pointer.x - origin.x * next, y: pointer.y - origin.y * next };
+        setScale(next);
+        setPosition(constrainPos(newPos, next));
     };
 
-    // Drawing Logic
+    // Drawing
     const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+        // FIX: In redacted (locked) mode, disable drawing entirely
         if (previewMode === 'redacted') return;
-        // If we are clicking on an existing shape, or using select tool, do not draw.
-        const clickedOnEmpty = e.target === e.target.getStage();
-        if (!clickedOnEmpty) {
-            return;
-        }
+        if (e.target !== e.target.getStage()) return;
+        if (activeTool === 'select') { setSelectedShapeId(null); return; }
 
-        if (activeTool === 'select') {
-            setSelectedShapeId(null);
-            return;
-        }
-
-        const stage = stageRef.current;
+        const stage = useCanvasStore.getState().stageRef;
         if (!stage) return;
-
         const pointer = stage.getRelativePointerPosition();
         if (!pointer) return;
 
         setIsDrawing(true);
-        const newId = `shape_${Date.now()}`;
-        setCurrentShapeId(newId);
-
-        const newShape: RedactionShape = {
-            id: newId,
-            x: pointer.x,
-            y: pointer.y,
-            width: 0,
-            height: 0,
-            type: activeTool.replace('draw-', '') as ShapeType,
-        };
-
-        addShape(newShape);
+        const id = `shape_${Date.now()}`;
+        setCurrentShapeId(id);
+        addShape({ id, x: pointer.x, y: pointer.y, width: 0, height: 0, type: activeTool.replace('draw-', '') as ShapeType });
     };
 
     const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         if (!isDrawing || !currentShapeId) return;
-
-        const stage = stageRef.current;
+        const stage = useCanvasStore.getState().stageRef;
         if (!stage) return;
-
         const pointer = stage.getRelativePointerPosition();
         if (!pointer) return;
-
-        // Find the shape and update its width/height
-        // We use state accessor from Zustand implicitly by updating it.
-        const state = useCanvasStore.getState();
-        const shape = state.shapes.find(s => s.id === currentShapeId);
+        const shape = useCanvasStore.getState().shapes.find(s => s.id === currentShapeId);
         if (!shape) return;
-
-        updateShape(currentShapeId, {
-            width: pointer.x - shape.x,
-            height: pointer.y - shape.y,
-        });
+        updateShape(currentShapeId, { width: pointer.x - shape.x, height: pointer.y - shape.y });
     };
 
     const handleMouseUp = () => {
         if (isDrawing && currentShapeId) {
-            const state = useCanvasStore.getState();
-            const shape = state.shapes.find(s => s.id === currentShapeId);
-            // Cleanup visually zero-sized rectangles
+            const shape = useCanvasStore.getState().shapes.find(s => s.id === currentShapeId);
             if (shape && Math.abs(shape.width) < 5 && Math.abs(shape.height) < 5) {
                 useCanvasStore.getState().deleteShape(currentShapeId);
             }
@@ -183,94 +196,63 @@ export const CanvasEngine: React.FC = () => {
         setCurrentShapeId(null);
     };
 
-    // Automatic resizing of canvas to fit container
-    const containerRef = useRef<HTMLDivElement>(null);
+    if (!imageSrc) return null;
 
-    useEffect(() => {
-        const target = containerRef.current;
-        if (!target) return;
-
-        const observer = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                if (entry.contentBoxSize) {
-                    setDimensions({
-                        width: entry.contentRect.width,
-                        height: entry.contentRect.height,
-                    });
-                }
-            }
-        });
-
-        observer.observe(target);
-        
-        // Initial set
-        setDimensions({
-            width: target.offsetWidth,
-            height: target.offsetHeight,
-        });
-
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
-        if (dimensions.width > 0 && dimensions.height > 0 && imageDimensions && scale === 1 && position.x === 0 && position.y === 0) {
-            const padding = 60; // Extra padding around the image
-            const scaleX = (dimensions.width - padding) / imageDimensions.width;
-            const scaleY = (dimensions.height - padding) / imageDimensions.height;
-            const fitScale = Math.min(scaleX, scaleY, 1); // Do not scale up past 100%
-
-            setScale(fitScale);
-            setPosition({
-                x: (dimensions.width - (imageDimensions.width * fitScale)) / 2,
-                y: (dimensions.height - (imageDimensions.height * fitScale)) / 2,
-            });
-        }
-    }, [dimensions, imageDimensions, scale, position, setScale, setPosition]);
-
-    // Empty state if no image
-    if (!imageSrc) {
-        return null;
-    }
+    const isLocked = previewMode === 'redacted';
 
     return (
-        <div ref={containerRef} className="relative w-full h-full bg-[#121212] overflow-hidden">
-            <FloatingToolbar />
+        <div ref={containerRef} className="relative w-full h-full bg-[#0D0D0D] overflow-hidden">
+            {/* FIX: Only show toolbar when NOT in locked/preview mode */}
+            {!isLocked && <FloatingToolbar />}
 
-            <Stage
-                width={dimensions.width}
-                height={dimensions.height}
-                scaleX={scale}
-                scaleY={scale}
-                x={position.x}
-                y={position.y}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onTouchStart={handleMouseDown}
-                onTouchMove={handleMouseMove}
-                onTouchEnd={handleMouseUp}
-                draggable={activeTool === 'select' && previewMode === 'original' && !selectedShapeId}
-                dragBoundFunc={(pos) => constrainPosition(pos, scale)}
-                onDragEnd={(e) => {
-                    if (e.target === e.target.getStage()) {
-                        const finalPos = constrainPosition({ x: e.target.x(), y: e.target.y() }, scale);
-                        setPosition(finalPos);
-                        e.target.position(finalPos);
-                    }
-                }}
-                ref={stageRef}
-                className="cursor-crosshair w-full h-full"
-                style={{ cursor: activeTool === 'select' ? 'grab' : 'crosshair' }}
-            >
-                <Layer>
-                    <ImageLayer src={imageSrc} />
-                </Layer>
-                <ShapeLayer
-                    selectedShapeId={selectedShapeId}
-                    onShapeClick={setSelectedShapeId}
-                />
-            </Stage>
+            {/* Locked mode banner */}
+            {isLocked && (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#FFA500]/10 border border-[#FFA500]/30 backdrop-blur-sm pointer-events-none">
+                    <div className="w-2 h-2 rounded-full bg-[#FFA500] animate-pulse" />
+                    <span className="text-xs font-mono text-[#FFA500] font-medium">REDACTED PREVIEW — editing disabled</span>
+                </div>
+            )}
+
+            {/* FIX: prevents Stage from initializing with 0,0 which can cause rendering bugs */}
+            {dimensions.width > 0 && dimensions.height > 0 && (
+                <Stage
+                    width={dimensions.width}
+                    height={dimensions.height}
+                    scaleX={scale}
+                    scaleY={scale}
+                    x={position.x}
+                    y={position.y}
+                    onWheel={handleWheel}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onTouchStart={handleMouseDown}
+                    onTouchMove={handleMouseMove}
+                    onTouchEnd={handleMouseUp}
+                    // FIX: only draggable in edit mode
+                    draggable={activeTool === 'select' && !isLocked && !selectedShapeId}
+                    dragBoundFunc={pos => constrainPos(pos, scale)}
+                    onDragEnd={e => {
+                        if (e.target === e.target.getStage()) {
+                            const p = constrainPos({ x: e.target.x(), y: e.target.y() }, scale);
+                            setPosition(p);
+                            e.target.position(p);
+                        }
+                    }}
+                    ref={onStageMount}
+                    style={{ cursor: isLocked ? 'not-allowed' : activeTool === 'select' ? 'grab' : 'crosshair' }}
+                >
+                    <Layer>
+                        <ImageLayer src={imageSrc} />
+                    </Layer>
+                    <ShapeLayer
+                        selectedShapeId={isLocked ? null : selectedShapeId}
+                        onShapeClick={isLocked ? () => {} : setSelectedShapeId}
+                        // FIX: pass locked state so ShapeLayer can render shapes without selection handles
+                        isLocked={isLocked}
+                    />
+                </Stage>
+            )}
         </div>
     );
 };

@@ -5,19 +5,25 @@ import { useDocumentStore } from '@/store/documentStore';
 import Konva from 'konva';
 
 interface ShapeLayerProps {
-    onShapeClick: (id: string) => void;
+    onShapeClick:    (id: string) => void;
     selectedShapeId: string | null;
+    isLocked?:       boolean;   // when true: no selection handles, no dragging
 }
 
-export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedShapeId }) => {
+export const ShapeLayer: React.FC<ShapeLayerProps> = ({
+    onShapeClick,
+    selectedShapeId,
+    isLocked = false,
+}) => {
     const { shapes, updateShape, activeTool } = useCanvasStore();
     const { previewMode } = useDocumentStore();
-    const transformerRef = React.useRef<Konva.Transformer>(null);
-    const layerRef = React.useRef<Konva.Layer>(null);
 
-    // Sync transformer whenever selected shape changes
+    const transformerRef = React.useRef<Konva.Transformer>(null);
+    const layerRef       = React.useRef<Konva.Layer>(null);
+
+    // Sync transformer — disabled in locked mode
     React.useEffect(() => {
-        if (selectedShapeId && previewMode === 'original' && transformerRef.current && layerRef.current) {
+        if (!isLocked && selectedShapeId && previewMode === 'original' && transformerRef.current && layerRef.current) {
             const node = layerRef.current.findOne(`#${selectedShapeId}`);
             if (node) {
                 transformerRef.current.nodes([node]);
@@ -26,14 +32,14 @@ export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedSh
         } else if (transformerRef.current) {
             transformerRef.current.nodes([]);
         }
-    }, [selectedShapeId, shapes, previewMode]);
+    }, [selectedShapeId, shapes, previewMode, isLocked]);
 
     const getShapeFill = (type: string) => {
         switch (type) {
-            case 'blackout': return '#1E1E1E';         // Solid black/dark grey
-            case 'blur': return 'rgba(255, 165, 0, 0.3)'; // Semi-transparent orange (placeholder for actual blur filter)
-            case 'mask': return '#FFFFFF';             // Solid white mask
-            default: return '#FFA500';
+            case 'blackout': return '#1a1a1a';
+            case 'blur':     return 'rgba(255, 165, 0, 0.3)';
+            case 'mask':     return '#FFFFFF';
+            default:         return '#FFA500';
         }
     };
 
@@ -48,44 +54,46 @@ export const ShapeLayer: React.FC<ShapeLayerProps> = ({ onShapeClick, selectedSh
                     width={shape.width}
                     height={shape.height}
                     fill={getShapeFill(shape.type)}
-                    draggable={activeTool === 'select' && previewMode === 'original'}
+                    // Locked mode: no interaction at all
+                    draggable={!isLocked && activeTool === 'select' && previewMode === 'original'}
+                    listening={!isLocked}
                     onClick={(e) => {
-                        e.cancelBubble = true; // prevent event bubbling to stage
+                        if (isLocked) return;
+                        e.cancelBubble = true;
                         if (activeTool === 'select' && previewMode === 'original') {
                             onShapeClick(shape.id);
                         }
                     }}
                     onDragEnd={(e) => {
-                        updateShape(shape.id, {
-                            x: e.target.x(),
-                            y: e.target.y()
-                        });
+                        if (isLocked) return;
+                        updateShape(shape.id, { x: e.target.x(), y: e.target.y() });
                     }}
                     onTransformEnd={(e) => {
-                        // transformer changes scale of nodes, so we reset scale to 1 and change width/height
-                        const node = e.target;
+                        if (isLocked) return;
+                        const node  = e.target;
                         const scaleX = node.scaleX();
                         const scaleY = node.scaleY();
                         node.scaleX(1);
                         node.scaleY(1);
-
                         updateShape(shape.id, {
-                            x: node.x(),
-                            y: node.y(),
-                            width: Math.max(5, node.width() * scaleX),
+                            x:      node.x(),
+                            y:      node.y(),
+                            width:  Math.max(5, node.width()  * scaleX),
                             height: Math.max(5, node.height() * scaleY),
                         });
                     }}
                 />
             ))}
-            <Transformer
-                ref={transformerRef}
-                boundBoxFunc={(oldBox, newBox) => {
-                    // Limit minimum size
-                    if (newBox.width < 5 || newBox.height < 5) return oldBox;
-                    return newBox;
-                }}
-            />
+            {/* Transformer hidden in locked mode */}
+            {!isLocked && (
+                <Transformer
+                    ref={transformerRef}
+                    boundBoxFunc={(oldBox, newBox) => {
+                        if (newBox.width < 5 || newBox.height < 5) return oldBox;
+                        return newBox;
+                    }}
+                />
+            )}
         </Layer>
     );
 };
