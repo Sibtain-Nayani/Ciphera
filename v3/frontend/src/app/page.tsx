@@ -26,8 +26,8 @@ export default function Home() {
                 {/* Version Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFA500]/10 border border-[#FFA500]/20 mb-8">
                     <span className="flex h-2 w-2 rounded-full bg-[#FFA500] animate-pulse"></span>
-                    <span className="text-xs font-mono text-[#FFA500] font-medium tracking-wide border-r border-[#FFA500]/20 pr-3">V2.0 ENTERPRISE</span>
-                    <span className="text-xs font-medium text-gray-300 pl-1">Zero-Trust Pipeline Enabled</span>
+                    <span className="text-xs font-mono text-[#FFA500] font-medium tracking-wide border-r border-[#FFA500]/20 pr-3">V3.0 QUANTUM ELITE</span>
+                    <span className="text-xs font-medium text-gray-300 pl-1">Neural Sanitization Matrix</span>
                 </div>
 
                 {/* Hero Title */}
@@ -40,7 +40,7 @@ export default function Home() {
 
                 {/* Subtitle */}
                 <p className="text-lg md:text-xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
-                    CipheraV2 is a deterministic, fail-secure anonymization engine. Redact PII from documents, PDFs, and images completely offline using hardware-accelerated NLP and Regex targeting.
+                    CipheraV3 is an autonomous, fail-secure anonymization engine. Redact PII from documents, PDFs, and images with precision-grade NLP and hardware-accelerated targeting.
                 </p>
 
                 {/* CTAs */}
@@ -59,9 +59,9 @@ export default function Home() {
                         <div className="w-12 h-12 rounded-xl bg-[#FFA500]/10 flex items-center justify-center mb-6">
                             <Lock className="w-6 h-6 text-[#FFA500]" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-3">Zero-Trust Architecture</h3>
+                        <h3 className="text-xl font-bold text-white mb-3">Autonomous Data Sovereignty</h3>
                         <p className="text-gray-400 leading-relaxed text-sm">
-                            Every piece of inference runs completely offline on your local hardware. No API calls. No data egress. No external leaks.
+                            Full-stack local inference engine. No data egress, no external dependencies. Pure, uncompromised privacy for sensitive workflows.
                         </p>
                     </div>
 
