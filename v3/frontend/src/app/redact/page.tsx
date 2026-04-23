@@ -309,42 +309,107 @@ export default function WorkspacePage() {
 
     // ── Export ────────────────────────────────────────────────────────────────
     const exportSecureFile = async (formatOverride?: DocumentState['fileType']) => {
-        if (redactionFailed) { useUiStore.getState().addToast('Engine offline. Export blocked.', 'error'); return; }
+        if (redactionFailed) {
+            useUiStore.getState().addToast('Engine offline. Export blocked.', 'error');
+            return;
+        }
+
         const { fileType, fileName } = useDocumentStore.getState();
+
         const redactedText = tokens.map(t => {
             if (t.type === 'text') return t.value;
-            const isBI = t.type in rules;
-            const cr   = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
+            const isBI   = t.type in rules;
+            const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
             const active = isBI ? rules[t.type as RuleType]?.isActive : cr?.isActive;
             if (!active) return t.value;
             const action = isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace');
             return redactionEngine.getRedactionReplacement(t.type, t.value, action, customRules);
         }).join('');
+
         const fmt = formatOverride || fileType;
+
         if (fileType === 'image' || fileType === 'pdf') {
+            // FIX: retry getting stageRef up to 3 times with 100ms delay
+            const getStage = async (): Promise<import('konva/lib/Stage').Stage | null> => {
+                for (let i = 0; i < 3; i++) {
+                    const stage = useCanvasStore.getState().stageRef;
+                    if (stage) return stage;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                return null;
+            };
+
+            const stage = await getStage();
+
+            if (!stage) {
+                useUiStore.getState().addToast("Canvas not ready — please try again.", "warning");
+                return;
+            }
+
             const cs = useCanvasStore.getState();
-            if (!cs.stageRef) { useUiStore.getState().addToast("Canvas not initialized.", "warning"); return; }
             cs.setSelectedShapeId(null);
-            setTimeout(async () => {
-                try {
-                    const fmtMap: Record<string, string> = { pdf: 'pdf', image: 'png', png: 'png', jpg: 'jpg', jpeg: 'jpg' };
-                    const finalExt = fmtMap[fmt] || 'png';
-                    const stage = cs.stageRef!; const origScale = stage.scaleX(); const imgDims = cs.imageDimensions;
-                    stage.scale({ x: 1, y: 1 }); stage.position({ x: 0, y: 0 });
-                    const dataUrl = stage.toDataURL({ x: 0, y: 0, width: imgDims?.width ?? stage.width(), height: imgDims?.height ?? stage.height(), pixelRatio: 1.0 });
-                    stage.scale({ x: origScale, y: origScale });
-                    const origFile = useDocumentStore.getState().originalFile;
-                    const shapes   = useCanvasStore.getState().shapes;
-                    const finalDims = imgDims || { width: stage.width(), height: stage.height() };
-                    await exportVisualCanvas(dataUrl, fileName, finalExt, origFile, shapes, finalDims);
-                    addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: shapes.length, rulesApplied: ['Visual Extractor'] });
-                    incrementMetrics(1, shapes.length);
-                    useUiStore.getState().addToast(`Exported ${shapes.length} masked entities`, 'success');
-                } catch { useUiStore.getState().addToast("Export failed.", "error"); }
-            }, 50); return;
+
+            // Short delay so deselect renders before capture
+            await new Promise(r => setTimeout(r, 80));
+
+            try {
+                const formatMap: Record<string, string> = {
+                    pdf: 'pdf', image: 'png', png: 'png', jpg: 'jpg', jpeg: 'jpg',
+                };
+                const finalExt  = formatMap[fmt] || 'png';
+                const imgDims   = cs.imageDimensions;
+                const origScale = stage.scaleX();
+
+                // Reset scale/position for pixel-perfect export
+                stage.scale({ x: 1, y: 1 });
+                stage.position({ x: 0, y: 0 });
+
+                const dataUrl = stage.toDataURL({
+                    x:          0,
+                    y:          0,
+                    width:      imgDims?.width  ?? stage.width(),
+                    height:     imgDims?.height ?? stage.height(),
+                    pixelRatio: 1.0,
+                });
+
+                // Restore scale/position
+                stage.scale({ x: origScale, y: origScale });
+
+                const origFile  = useDocumentStore.getState().originalFile;
+                const shapes    = useCanvasStore.getState().shapes;
+                const finalDims = imgDims || { width: stage.width(), height: stage.height() };
+
+                await exportVisualCanvas(dataUrl, fileName, finalExt, origFile, shapes, finalDims);
+
+                addAuditLog({
+                    id: 'RUN-' + Math.floor(Math.random() * 10000),
+                    name: fileName,
+                    size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown',
+                    date: new Date().toLocaleString(),
+                    status: 'Completed',
+                    entitiesDiscovered: shapes.length,
+                    rulesApplied: ['Visual Extractor'],
+                });
+                incrementMetrics(1, shapes.length);
+                useUiStore.getState().addToast(`Exported ${shapes.length} redacted entities`, 'success');
+            } catch (err) {
+                console.error("Export error:", err);
+                useUiStore.getState().addToast("Export failed. Try again.", "error");
+            }
+            return;
         }
+
+        // Text-based export
         await exportRedactedText(redactedText, fileName, fmt as any);
-        addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: tokens.filter(t => t.type !== 'text').length, rulesApplied: Array.from(new Set(tokens.filter(t => t.type !== 'text').map(t => t.type))) });
+        addAuditLog({
+            id: 'RUN-' + Math.floor(Math.random() * 10000),
+            name: fileName,
+            size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB',
+            date: new Date().toLocaleString(),
+            status: 'Completed',
+            entitiesDiscovered: tokens.filter(t => t.type !== 'text').length,
+            rulesApplied: Array.from(new Set(tokens.filter(t => t.type !== 'text').map(t => t.type))),
+        });
         incrementMetrics(1, tokens.filter(t => t.type !== 'text').length);
         useUiStore.getState().addToast(`Protected ${tokens.filter(t => t.type !== 'text').length} entities`, 'success');
     };

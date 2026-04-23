@@ -66,7 +66,10 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         shapes: state.shapes.filter(s => s.id !== id)
     })),
     setActiveTool: (tool) => set({ activeTool: tool }),
-    setStageRef: (stage) => set({ stageRef: stage }),
+    setStageRef: (stage) => set((state) => {
+        if (state.stageRef === stage) return state;
+        return { stageRef: stage };
+    }),
     setSelectedShapeId: (id) => set({ selectedShapeId: id }),
     setOcrResult: (result) => set({ ocrResult: result }),
     setImageDimensions: (dims) => set({ imageDimensions: dims }),
