@@ -1,14 +1,18 @@
-# MacOS
+# ── macOS ────────────────────────────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# IDEs
+# ── IDEs ─────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Testing
+# ── Testing ───────────────────────────────────────────────────────────────────
 /coverage/
 
-# Next.js & Node
+# ── Next.js & Node ───────────────────────────────────────────────────────────
 node_modules/
 .pnp
 .pnp.*
@@ -28,14 +32,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Python
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-build/
 develop-eggs/
 dist/
 downloads/
@@ -49,13 +51,43 @@ wheels/
 .installed.cfg
 *.egg
 
-# Python Virtual Environments
+# ── Python Virtual Environments ───────────────────────────────────────────────
 venv/
 .venv/
 env/
+
+# ── Environment / Secrets ─────────────────────────────────────────────────────
+# All .env files — includes GROQ_API_KEY, ANTHROPIC_API_KEY, etc.
 .env
 .env.*
+!.env.example        # allow a template file with no real keys
 
-# Project Specific
+# ── ML Models (large files, not needed in repo) ───────────────────────────────
+v3/backend/models/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# ── spaCy / Tesseract ─────────────────────────────────────────────────────────
+v3/backend/data/
+*.spacy
+
+# ── Database files ────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS / temp ────────────────────────────────────────────────────────────────
+Thumbs.db
+*.tmp
+*.temp
+
+# ── Project Specific ─────────────────────────────────────────────────────────
 assets/
 old_prototype/
