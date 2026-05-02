@@ -1,5 +1,6 @@
 "use client";
-
+import { exportAuditPDF, exportAuditCSV } from '@/lib/complianceReport';
+import { FileDown, ChevronDown } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UploadCloud, CheckCircle2, Clock, ShieldCheck, FileText, Activity, Lock, XCircle } from 'lucide-react';
@@ -68,7 +69,7 @@ export default function DashboardPage() {
             try {
                 const images = await convertPdfToImages(file);
                 if (images.length > 0) {
-                    useCanvasStore.getState().setImageSrc(images[0]);
+                    useCanvasStore.getState().setImageSrc(images[0].dataUri);
                     router.push('/redact');
                 }
             } catch (error) {
@@ -228,7 +229,22 @@ export default function DashboardPage() {
                             <ShieldCheck className="w-4 h-4 text-emerald-500" />
                             Compliance Audit Trail
                         </h3>
-                        <span className="text-xs font-mono text-gray-400 px-2 py-1 bg-[#252525] rounded-md">LIVE READ-ONLY</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => exportAuditCSV(recentLogs)}
+                                disabled={recentLogs.length === 0}
+                                className="text-xs font-mono text-gray-400 px-3 py-1.5 bg-[#252525] hover:bg-[#2A2A2A] hover:text-white border border-[#3B3B3B] rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                Export CSV
+                            </button>
+                            <button
+                                onClick={() => exportAuditPDF(recentLogs, { totalDocs: docsSecured, totalEntities: entitiesMasked, activeRules: activeRulesCount })}
+                                disabled={recentLogs.length === 0}
+                                className="text-xs font-mono text-[#FFA500] px-3 py-1.5 bg-[#FFA500]/10 hover:bg-[#FFA500]/20 border border-[#FFA500]/30 rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                Export PDF
+                            </button>
+                        </div>
                     </div>
 
                     <div className="overflow-x-auto min-h-[250px]">

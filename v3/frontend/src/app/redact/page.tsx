@@ -1,16 +1,17 @@
 "use client";
-
+import { TemplateSelector } from '@/components/redact/TemplateSelector';
 import { ExportModal, ExportPageSelection } from '@/components/redact/ExportModal';
+import { EntityReviewModal } from '@/components/redact/EntityReviewModal';
 import { exportMultiplePages } from '@/lib/multiPageExport';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Download, FileText, Settings2, Eye, EyeOff, Shield,
+    Download, FileText, Eye, Shield,
     ChevronLeft, UploadCloud, ChevronUp, ChevronDown, X,
     AlertTriangle, Trash2, CheckCircle2, ChevronRight,
     ScanFace, Layers, Mail, Phone, CreditCard, Lock,
     User, Calendar, Globe, Network, Fingerprint,
     BookKey, Building2, Landmark, Vote, Car, MapPin,
-    Activity, Hash,
+    Activity, Hash, Columns2,
 } from 'lucide-react';
 import { useDocumentStore, RuleType, DocumentState } from '@/store/documentStore';
 import { useCanvasStore } from '@/store/canvasStore';
@@ -30,16 +31,15 @@ const CanvasEngine = dynamic(
 
 type LoaderStage = 'idle' | 'rendering' | 'ocr' | 'analyzing' | 'mapping' | 'face';
 const LOADER_MSG: Record<LoaderStage, { title: string; sub: string }> = {
-    idle:      { title: '',                       sub: '' },
-    rendering: { title: 'Rendering PDF Pages…',   sub: 'Converting pages to high-res images' },
-    ocr:       { title: 'Running OCR Pipeline…',  sub: 'Extracting text with Tesseract WASM' },
-    analyzing: { title: 'Analyzing Document…',    sub: 'V3 multi-layer detection pipeline' },
-    mapping:   { title: 'Mapping Redactions…',    sub: 'Placing overlays on canvas' },
-    face:      { title: 'Detecting Faces…',       sub: 'Running OpenCV face detection' },
+    idle:      { title: '',                      sub: '' },
+    rendering: { title: 'Rendering PDF Pages…',  sub: 'Converting pages to high-res images' },
+    ocr:       { title: 'Running OCR Pipeline…', sub: 'Extracting text with Tesseract WASM' },
+    analyzing: { title: 'Analyzing Document…',   sub: 'V3 multi-layer detection pipeline' },
+    mapping:   { title: 'Mapping Redactions…',   sub: 'Placing overlays on canvas' },
+    face:      { title: 'Detecting Faces…',      sub: 'Running OpenCV face detection' },
 };
 
 interface RuleMeta { id: RuleType; label: string; icon: React.ReactNode; color: string; }
-
 const RULE_GROUPS: { label: string; accent: string; icon: React.ReactNode; rules: RuleMeta[] }[] = [
     {
         label: 'Identity & Contact', accent: '#3B82F6', icon: <User className="w-3.5 h-3.5" />,
@@ -101,8 +101,15 @@ export default function WorkspacePage() {
     const [pdfPages,        setPdfPages]        = useState<PdfPageData[]>([]);
     const [currentPage,     setCurrentPage]     = useState(1);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showReviewModal, setShowReviewModal] = useState(false);
     const [isExporting,     setIsExporting]     = useState(false);
     const [exportProgress,  setExportProgress]  = useState<{ current: number; total: number; status: string } | null>(null);
+    const [approvedIds,     setApprovedIds]     = useState<Set<string> | null>(null);
+
+    // ── Split view state ──────────────────────────────────────────────────────
+    // splitView is ALWAYS available in toolbar. Only activates for text docs.
+    // For canvas docs (pdf/image), split view shows two canvas instances scaled down.
+    const [splitView, setSplitView] = useState(false);
 
     const [openGroups,     setOpenGroups]     = useState<Record<string, boolean>>(Object.fromEntries(RULE_GROUPS.map(g => [g.label, true])));
     const [customOpen,     setCustomOpen]     = useState(false);
@@ -135,9 +142,11 @@ export default function WorkspacePage() {
         useCanvasStore.getState().setShapes([]);
         useCanvasStore.getState().setOcrResult(null);
         setPdfPages([]); setCurrentPage(1); setLoaderStage('idle');
+        setApprovedIds(null);
+        // Don't reset splitView — keep user preference
     };
 
-    useEffect(() => { sessionMapper.clear(); setHasReviewed(false); }, [rawText, fileType]);
+    useEffect(() => { sessionMapper.clear(); setHasReviewed(false); setApprovedIds(null); }, [rawText, fileType]);
 
     useEffect(() => {
         const t = setTimeout(async () => {
@@ -148,9 +157,13 @@ export default function WorkspacePage() {
         return () => clearTimeout(t);
     }, [rawText, rules, customRules]);
 
-    const activeRulesCount       = Object.values(rules).filter(r => r.isActive).length;
-    const activeCustomRulesCount = customRules.filter(r => r.isActive).length;
-    const totalMatches           = tokens.filter(t => t.type !== 'text').length;
+    const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
+    const totalMatches     = tokens.filter(t => t.type !== 'text').length;
+
+    // Tokens filtered by review approval
+    const effectiveTokens = approvedIds
+        ? tokens.map(t => t.type === 'text' || approvedIds.has(t.id) ? t : { ...t, type: 'text' as const })
+        : tokens;
 
     const handleToggleRule = useCallback(async (ruleId: RuleType) => {
         const wasActive = rules[ruleId]?.isActive ?? false;
@@ -160,8 +173,8 @@ export default function WorkspacePage() {
                 useCanvasStore.getState().setShapes(prev => removeShapesByRule(prev, ruleId));
             } else {
                 const updatedRules = { ...rules, [ruleId]: { ...rules[ruleId], isActive: true } };
-                const newShapes = await mapOcrToShapes(ocrResult, updatedRules, customRules);
-                const filtered  = newShapes.filter((s: any) => s.ruleType === ruleId);
+                const newShapes    = await mapOcrToShapes(ocrResult, updatedRules, customRules);
+                const filtered     = newShapes.filter((s: any) => s.ruleType === ruleId);
                 useCanvasStore.getState().setShapes(prev => [
                     ...prev.filter((s: any) => s.ruleType !== ruleId),
                     ...filtered,
@@ -209,9 +222,8 @@ export default function WorkspacePage() {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 if (e.target?.result) {
-                    const dataUrl = e.target.result as string;
-                    useCanvasStore.getState().setImageSrc(dataUrl);
-                    await processImageForOcr(dataUrl);
+                    useCanvasStore.getState().setImageSrc(e.target.result as string);
+                    await processImageForOcr(e.target.result as string);
                 }
             };
             reader.readAsDataURL(file); return;
@@ -248,9 +260,7 @@ export default function WorkspacePage() {
         try {
             const blob = await (await fetch(src)).blob();
             const fd   = new FormData();
-            fd.append('file', blob, 'image.png');
-            fd.append('mode', 'blur');
-            fd.append('sensitivity', 'medium');
+            fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'medium');
             const resp = await fetch('http://127.0.0.1:8000/api/v3/redact-image', { method: 'POST', body: fd });
             if (!resp.ok) throw new Error(`${resp.status}`);
             const data = await resp.json();
@@ -263,26 +273,24 @@ export default function WorkspacePage() {
                 ...prev.filter((s: any) => !s.id.startsWith('face_')),
                 ...faceShapes,
             ]);
-            useUiStore.getState().addToast(`${data.face_count} face${data.face_count > 1 ? 's' : ''} redacted.`, 'success');
+            useUiStore.getState().addToast(`${data.face_count} face(s) redacted.`, 'success');
         } catch { useUiStore.getState().addToast("Face redaction failed.", "error"); }
         finally { setLoaderStage('idle'); }
     };
 
-    // Core single-page export (used by modal for single page, and direct text export)
+    const buildRedactedText = (tokensToUse: Token[]) => tokensToUse.map(t => {
+        if (t.type === 'text') return t.value;
+        const isBI   = t.type in rules;
+        const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
+        const active = isBI ? rules[t.type as RuleType]?.isActive : cr?.isActive;
+        if (!active) return t.value;
+        const action = isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace');
+        return redactionEngine.getRedactionReplacement(t.type, t.value, action, customRules);
+    }).join('');
+
     const exportSecureFile = async (formatOverride?: DocumentState['fileType'] | string) => {
         if (redactionFailed) { useUiStore.getState().addToast('Engine offline. Export blocked.', 'error'); return; }
         const { fileType, fileName } = useDocumentStore.getState();
-
-        const redactedText = tokens.map(t => {
-            if (t.type === 'text') return t.value;
-            const isBI = t.type in rules;
-            const cr   = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
-            const active = isBI ? rules[t.type as RuleType]?.isActive : cr?.isActive;
-            if (!active) return t.value;
-            const action = isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace');
-            return redactionEngine.getRedactionReplacement(t.type, t.value, action, customRules);
-        }).join('');
-
         const fmt = formatOverride || fileType;
 
         if (fileType === 'image' || fileType === 'pdf') {
@@ -296,11 +304,9 @@ export default function WorkspacePage() {
             };
             const stage = await getStage();
             if (!stage) { useUiStore.getState().addToast("Canvas not ready — please try again.", "warning"); return; }
-
             const cs = useCanvasStore.getState();
             cs.setSelectedShapeId(null);
             await new Promise(r => setTimeout(r, 80));
-
             try {
                 const formatMap: Record<string, string> = { pdf: 'pdf', image: 'png', png: 'png', jpg: 'jpg', jpeg: 'jpg' };
                 const finalExt  = formatMap[fmt as string] || 'png';
@@ -316,87 +322,58 @@ export default function WorkspacePage() {
                 addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: shapes.length, rulesApplied: ['Visual Extractor'] });
                 incrementMetrics(1, shapes.length);
                 useUiStore.getState().addToast(`Exported ${shapes.length} redacted entities`, 'success');
-            } catch (err) {
-                console.error("Export error:", err);
-                useUiStore.getState().addToast("Export failed. Try again.", "error");
-            }
+            } catch { useUiStore.getState().addToast("Export failed. Try again.", "error"); }
             return;
         }
 
+        const redactedText = buildRedactedText(effectiveTokens);
         await exportRedactedText(redactedText, fileName, fmt as any);
-        addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: tokens.filter(t => t.type !== 'text').length, rulesApplied: Array.from(new Set(tokens.filter(t => t.type !== 'text').map(t => t.type))) });
-        incrementMetrics(1, tokens.filter(t => t.type !== 'text').length);
-        useUiStore.getState().addToast(`Protected ${tokens.filter(t => t.type !== 'text').length} entities`, 'success');
+        const entityCount = effectiveTokens.filter(t => t.type !== 'text').length;
+        addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: entityCount, rulesApplied: Array.from(new Set(effectiveTokens.filter(t => t.type !== 'text').map(t => t.type))) });
+        incrementMetrics(1, entityCount);
+        useUiStore.getState().addToast(`Protected ${entityCount} entities`, 'success');
     };
 
-    // Opens modal for multi-page PDFs, direct export otherwise
     const handleExportClick = () => {
         if ((fileType === 'pdf' || fileType === 'image') && pdfPages.length > 1) {
             setShowExportModal(true);
+        } else if (fileType !== 'image' && fileType !== 'pdf' && totalMatches > 0) {
+            setShowReviewModal(true);
         } else {
             exportSecureFile();
         }
     };
 
-    // Called when user confirms in the export modal
+    const handleReviewConfirm = async (ids: Set<string>) => {
+        setApprovedIds(ids);
+        setShowReviewModal(false);
+        await exportSecureFile();
+    };
+
     const handleModalConfirm = async (selection: ExportPageSelection, format: string) => {
         setIsExporting(true);
         setExportProgress({ current: 0, total: 1, status: 'Starting…' });
-
         try {
             if (fileType === 'pdf' && pdfPages.length > 0) {
                 let selectedPageNums: number[];
-                if (selection.mode === 'all') {
-                    selectedPageNums = pdfPages.map((_, i) => i + 1);
-                } else if (selection.mode === 'current') {
-                    selectedPageNums = [selection.page];
-                } else {
-                    selectedPageNums = selection.pages;
-                }
-
+                if (selection.mode === 'all')          selectedPageNums = pdfPages.map((_, i) => i + 1);
+                else if (selection.mode === 'current') selectedPageNums = [selection.page];
+                else                                   selectedPageNums = selection.pages;
                 if (selectedPageNums.length === 1) {
-                    // Single page — fast path
-                    if (currentPage !== selectedPageNums[0]) {
-                        await goToPage(selectedPageNums[0]);
-                        await new Promise(r => setTimeout(r, 600));
-                    }
-                    setShowExportModal(false);
-                    setIsExporting(false);
-                    setExportProgress(null);
-                    await exportSecureFile(format);
-                    return;
+                    if (currentPage !== selectedPageNums[0]) { await goToPage(selectedPageNums[0]); await new Promise(r => setTimeout(r, 600)); }
+                    setShowExportModal(false); setIsExporting(false); setExportProgress(null);
+                    await exportSecureFile(format); return;
                 }
-
-                // Multi-page
                 const savedPage = currentPage;
-                await exportMultiplePages({
-                    pages:         pdfPages,
-                    selectedPages: selectedPageNums,
-                    rules,
-                    customRules,
-                    fileName,
-                    format:        format as 'pdf' | 'png',
-                    onProgress:    (current, total, status) => setExportProgress({ current, total, status }),
-                });
-                useUiStore.getState().addToast(`Exported ${selectedPageNums.length} pages successfully`, 'success');
-
-                // Restore original page
+                await exportMultiplePages({ pages: pdfPages, selectedPages: selectedPageNums, rules, customRules, fileName, format: format as 'pdf' | 'png', onProgress: (current, total, status) => setExportProgress({ current, total, status }) });
+                useUiStore.getState().addToast(`Exported ${selectedPageNums.length} pages`, 'success');
                 if (savedPage !== currentPage) await goToPage(savedPage);
             } else {
-                setShowExportModal(false);
-                setIsExporting(false);
-                setExportProgress(null);
-                await exportSecureFile(format);
-                return;
+                setShowExportModal(false); setIsExporting(false); setExportProgress(null);
+                await exportSecureFile(format); return;
             }
-        } catch (err) {
-            console.error('Multi-page export error:', err);
-            useUiStore.getState().addToast('Export failed. Please try again.', 'error');
-        } finally {
-            setIsExporting(false);
-            setExportProgress(null);
-            setShowExportModal(false);
-        }
+        } catch { useUiStore.getState().addToast('Export failed.', 'error'); }
+        finally { setIsExporting(false); setExportProgress(null); setShowExportModal(false); }
     };
 
     const handleAddRule = () => {
@@ -407,6 +384,21 @@ export default function WorkspacePage() {
     };
     const PRESET_COLORS_LIST: import('@/store/documentStore').PresetColor[] = ['#3B82F6','#10B981','#8B5CF6','#F43F5E','#F59E0B','#06B6D4','#EC4899','#6366F1'];
 
+    const isTextDoc  = fileType !== 'image' && fileType !== 'pdf';
+    const isCanvas   = fileType === 'image' || fileType === 'pdf';
+    const loaderInfo = LOADER_MSG[loaderStage];
+    const isLoading  = loaderStage !== 'idle';
+
+    // Render a token stream
+    const renderTokenStream = (redacted: boolean, tokensToRender: Token[]) =>
+        tokensToRender.map(t => {
+            if (t.type === 'text') return <PlainTextToken key={t.id} token={t} isRedacted={redacted} />;
+            const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
+            const action = rules[t.type as RuleType]?.action || cr?.action || 'replace';
+            return <AnimatedToken key={t.id} token={t} isRedacted={redacted} action={action} accentColor={cr?.color} />;
+        });
+
+    // ── Sidebar ───────────────────────────────────────────────────────────────
     const configPanelContent = (
         <>
             <div className="p-4 md:p-5 border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
@@ -419,8 +411,8 @@ export default function WorkspacePage() {
                 </div>
                 <button onClick={() => setIsDrawerOpen(false)} className="md:hidden p-1.5 text-gray-500 hover:text-white hover:bg-[#3B3B3B] rounded-lg transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
+                <TemplateSelector />
                 {RULE_GROUPS.map((group) => {
                     const groupRules    = group.rules;
                     const activeInGroup = groupRules.filter(r => rules[r.id]?.isActive).length;
@@ -450,8 +442,8 @@ export default function WorkspacePage() {
                                             <div key={rule.id} onClick={() => handleToggleRule(rule.id)}
                                                 className={`flex items-center justify-between px-2.5 py-2 rounded-lg transition-all duration-150 cursor-pointer select-none ${isActive ? 'bg-white/[0.04] hover:bg-white/[0.07]' : 'hover:bg-white/[0.03]'}`}>
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    <div className="shrink-0 transition-all duration-150" style={{ color: isActive ? rule.color : '#4B5563' }}>{rule.icon}</div>
-                                                    <span className={`text-xs transition-colors duration-150 truncate ${isActive ? 'text-gray-200 font-medium' : 'text-gray-500'}`}>{rule.label}</span>
+                                                    <div className="shrink-0" style={{ color: isActive ? rule.color : '#4B5563' }}>{rule.icon}</div>
+                                                    <span className={`text-xs truncate ${isActive ? 'text-gray-200 font-medium' : 'text-gray-500'}`}>{rule.label}</span>
                                                     {isActive && matchCount > 0 && <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0" style={{ backgroundColor: rule.color + '25', color: rule.color }}>{matchCount}</span>}
                                                 </div>
                                                 <div className={`relative w-8 h-4 rounded-full transition-all duration-200 shrink-0 ml-2 ${isActive ? '' : 'bg-[#2A2A2A]'}`} style={isActive ? { backgroundColor: rule.color + 'CC' } : {}}>
@@ -465,7 +457,6 @@ export default function WorkspacePage() {
                         </div>
                     );
                 })}
-
                 <div className="rounded-xl border border-[#2A2A2A] overflow-hidden bg-[#181818]">
                     <button onClick={() => setCustomOpen(!customOpen)} className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-[#1E1E1E] transition-colors cursor-pointer group">
                         <div className="flex items-center gap-2.5">
@@ -519,25 +510,22 @@ export default function WorkspacePage() {
                         </div>
                     </div>
                 </div>
-
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2A2A2A] bg-[#141414]">
                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${redactionFailed ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} />
                     <span className={`text-[10px] font-mono ${redactionFailed ? 'text-red-400' : 'text-gray-500'}`}>
-                        {redactionFailed ? 'ENGINE OFFLINE' : `ENGINE ACTIVE · V3 pipeline · ${activeRulesCount} rules`}
+                        {redactionFailed ? 'ENGINE OFFLINE' : `ENGINE ACTIVE · V3 · ${activeRulesCount} rules`}
                     </span>
                 </div>
             </div>
         </>
     );
 
-    const loaderInfo = LOADER_MSG[loaderStage];
-    const isLoading  = loaderStage !== 'idle';
-
     return (
         <div className="w-full font-sans flex flex-col md:flex-row h-[calc(100vh-64px)] md:h-screen selection:bg-[#FFA500] selection:text-black relative">
 
             <section className="w-full md:w-[62%] lg:w-[68%] flex flex-col border-r border-[#2A2A2A] h-full">
 
+                {/* Toolbar */}
                 <header className="flex items-center justify-between px-4 py-3 bg-[#181818] border-b border-[#2A2A2A] shrink-0">
                     <div className="flex items-center gap-3">
                         <button className="p-1.5 -ml-1 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-[#2A2A2A] cursor-pointer"><ChevronLeft className="w-4 h-4" /></button>
@@ -547,7 +535,7 @@ export default function WorkspacePage() {
                                 <span className="text-sm font-medium text-white truncate max-w-[200px]">{fileName || 'Workspace.txt'}</span>
                             </div>
                             <span className="text-[10px] font-mono text-gray-600 hidden md:block">
-                                {fileType === 'pdf' || fileType === 'image' ? 'Canvas Redaction Layer' : 'Live Editable Buffer'}
+                                {isCanvas ? 'Canvas Redaction Layer' : 'Live Editable Buffer'}
                             </span>
                         </div>
                     </div>
@@ -558,20 +546,32 @@ export default function WorkspacePage() {
                         <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-[#2A2A2A] px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border border-[#2A2A2A]">
                             <UploadCloud className="w-3.5 h-3.5" /><span className="hidden sm:inline">Load File</span>
                         </button>
-                        {(fileType === 'image' || fileType === 'pdf') && (
-                            <button onClick={handleFaceRedaction} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-purple-500/15 border border-[#2A2A2A] hover:border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer" title="Detect faces">
+                        {isCanvas && (
+                            <button onClick={handleFaceRedaction} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-purple-500/15 border border-[#2A2A2A] hover:border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer">
                                 <ScanFace className="w-3.5 h-3.5" /><span className="hidden sm:inline">Faces</span>
                             </button>
                         )}
+
+                        {/* ── Split view button — ALWAYS visible ─────────────── */}
+                        <button
+                            onClick={() => setSplitView(v => !v)}
+                            title={splitView ? 'Exit split view' : 'Split: Original | Redacted'}
+                            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                                splitView
+                                    ? 'text-[#FFA500] bg-[#FFA500]/10 border-[#FFA500]/30'
+                                    : 'text-gray-500 bg-[#252525] border-[#2A2A2A] hover:text-gray-300 hover:border-[#3A3A3A]'
+                            }`}>
+                            <Columns2 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{splitView ? 'Split ✓' : 'Split'}</span>
+                        </button>
+
                         <div className="w-px h-5 bg-[#2A2A2A] mx-1 hidden md:block" />
                         <button onClick={() => setHasReviewed(!hasReviewed)}
                             className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border ${hasReviewed ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' : 'text-gray-500 bg-[#252525] border-[#2A2A2A] hover:text-gray-300'}`}>
                             <CheckCircle2 className="w-3.5 h-3.5" /> Reviewed
                         </button>
                         <div className="relative group">
-                            <button
-                                onClick={handleExportClick}
-                                disabled={redactionFailed || !hasReviewed}
+                            <button onClick={handleExportClick} disabled={redactionFailed || !hasReviewed}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${redactionFailed || !hasReviewed ? 'bg-[#252525] text-gray-600 cursor-not-allowed border border-[#2A2A2A]' : 'bg-[#FFA500] hover:bg-[#ffb733] text-black cursor-pointer shadow-[0_0_12px_rgba(255,165,0,0.2)]'}`}>
                                 <Download className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">Export</span>
@@ -579,9 +579,9 @@ export default function WorkspacePage() {
                                 <ChevronDown className="w-3 h-3 opacity-60" />
                             </button>
                             <div className="absolute top-full right-0 mt-1.5 w-28 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 overflow-hidden p-1">
-                                {((fileType === 'image' || fileType === 'pdf') ? ['pdf','png','jpg'] as const : ['docx','pdf','txt','md','csv','json'] as const).map(fmt => (
+                                {(isCanvas ? ['pdf','png','jpg'] as const : ['docx','pdf','txt','md','csv','json'] as const).map(fmt => (
                                     <button key={fmt} disabled={redactionFailed || !hasReviewed}
-                                        onClick={(e) => { e.stopPropagation(); if (pdfPages.length > 1) { setShowExportModal(true); } else { exportSecureFile(fmt as any); } }}
+                                        onClick={(e) => { e.stopPropagation(); pdfPages.length > 1 ? setShowExportModal(true) : exportSecureFile(fmt as any); }}
                                         className="block w-full text-left px-3 py-1.5 text-[11px] font-mono text-gray-400 hover:bg-[#2A2A2A] hover:text-white uppercase transition-colors disabled:opacity-40 rounded-lg">.{fmt}</button>
                                 ))}
                             </div>
@@ -589,12 +589,13 @@ export default function WorkspacePage() {
                     </div>
                 </header>
 
+                {/* Stats bar */}
                 <div className="bg-[#141414] border-b border-[#2A2A2A] px-4 py-1.5 flex items-center gap-3">
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap flex-1">
                         {Object.entries(tokens.reduce((acc, t) => { if (t.type !== 'text') acc[t.type] = (acc[t.type] || 0) + 1; return acc; }, {} as Record<string, number>)).slice(0, 6).map(([type, count]) => {
                             const isCustom = type.startsWith('custom_');
-                            const label = isCustom ? (customRules.find(r => `custom_${r.id}` === type)?.label || 'Custom') : type;
-                            const color = isCustom ? (customRules.find(r => `custom_${r.id}` === type)?.color || '#8B5CF6') : (ENTITY_COLORS[type] || '#6B7280');
+                            const label    = isCustom ? (customRules.find(r => `custom_${r.id}` === type)?.label || 'Custom') : type;
+                            const color    = isCustom ? (customRules.find(r => `custom_${r.id}` === type)?.color || '#8B5CF6') : (ENTITY_COLORS[type] || '#6B7280');
                             return (
                                 <div key={type} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1E1E1E] border border-[#2A2A2A] shrink-0">
                                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -603,19 +604,21 @@ export default function WorkspacePage() {
                             );
                         })}
                         {totalMatches === 0 && <span className="text-[10px] text-gray-600 font-mono italic">No entities detected</span>}
+                        {approvedIds && <span className="text-[10px] text-emerald-400 font-mono border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full">{approvedIds.size} approved</span>}
                     </div>
                     {fileType === 'pdf' && pdfPages.length > 1 && (
                         <div className="flex items-center gap-1.5 shrink-0 pl-3 border-l border-[#2A2A2A]">
                             <Layers className="w-3 h-3 text-gray-600" />
-                            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 cursor-pointer rounded transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 cursor-pointer rounded"><ChevronLeft className="w-3.5 h-3.5" /></button>
                             <span className="text-[10px] font-mono text-gray-400 min-w-[40px] text-center">{currentPage}/{pdfPages.length}</span>
-                            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === pdfPages.length} className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 cursor-pointer rounded transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === pdfPages.length} className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 cursor-pointer rounded"><ChevronRight className="w-3.5 h-3.5" /></button>
                             {pdfPages.length <= 8 && <div className="flex gap-0.5 ml-1">{pdfPages.map((_, i) => <button key={i} onClick={() => goToPage(i + 1)} className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${currentPage === i + 1 ? 'bg-[#FFA500]' : 'bg-[#2A2A2A] hover:bg-gray-500'}`} />)}</div>}
                         </div>
                     )}
                 </div>
 
-                <div className={`flex-1 relative bg-[#1A1A1A] ${fileType === 'image' || fileType === 'pdf' ? 'overflow-hidden' : 'overflow-y-auto'} ${isDragging ? 'bg-[#222]' : ''}`}
+                {/* ── Document view ─────────────────────────────────────────── */}
+                <div className={`flex-1 relative bg-[#1A1A1A] overflow-hidden ${isDragging ? 'bg-[#222]' : ''}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={onDrop}>
 
                     {isDragging && (
@@ -626,88 +629,180 @@ export default function WorkspacePage() {
                             </div>
                         </div>
                     )}
-
                     {redactionFailed && (
                         <div className="absolute top-0 left-0 right-0 z-50 flex items-center gap-2.5 px-4 py-2.5 bg-red-900/30 border-b border-red-500/20">
                             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                            <div>
-                                <p className="text-xs font-semibold text-red-400">Engine Offline</p>
-                                <p className="text-[10px] text-red-400/60">Backend unreachable at localhost:8000. Export blocked.</p>
-                            </div>
+                            <div><p className="text-xs font-semibold text-red-400">Engine Offline</p><p className="text-[10px] text-red-400/60">Backend unreachable at localhost:8000.</p></div>
                         </div>
                     )}
-
                     {isLoading && (
                         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
                             <div className="relative">
                                 <div className="w-14 h-14 border-4 border-[#FFA500]/10 border-t-[#FFA500] rounded-full animate-spin" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <Activity className="w-5 h-5 text-[#FFA500]/60" />
-                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center"><Activity className="w-5 h-5 text-[#FFA500]/60" /></div>
                             </div>
                             <h2 className="text-base font-semibold text-white mt-5 tracking-wide">{loaderInfo.title}</h2>
                             <p className="text-xs text-gray-500 mt-1.5 font-mono">{loaderInfo.sub}</p>
                         </div>
                     )}
 
-                    {fileType === 'image' || fileType === 'pdf' ? <CanvasEngine /> : (
-                        <div className="relative w-full max-w-3xl mx-auto min-h-full">
-                            <div className="relative w-full p-6 md:p-10 pb-32">
-                                <div className="font-mono text-[13px] leading-[1.8] break-words whitespace-pre-wrap pointer-events-none w-full min-h-[500px]">
-                                    {tokens.map(t => {
-                                        if (t.type === 'text') return <PlainTextToken key={t.id} token={t} isRedacted={previewMode === 'redacted'} />;
-                                        const cr = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
-                                        const action = rules[t.type as RuleType]?.action || cr?.action || 'replace';
-                                        return <AnimatedToken key={t.id} token={t} isRedacted={previewMode === 'redacted'} action={action} accentColor={cr?.color} />;
-                                    })}
-                                    {'\n\n\n'}
+                    {/* ── CANVAS MODE ────────────────────────────────────────── */}
+                    {isCanvas && !splitView && <CanvasEngine />}
+
+                    {/* ── CANVAS SPLIT MODE ──────────────────────────────────── */}
+                    {isCanvas && splitView && (
+                        <div className="flex h-full w-full">
+                            {/* Left: original — previewMode forced to 'original' */}
+                            <div className="flex-1 flex flex-col border-r border-[#2A2A2A] overflow-hidden min-w-0">
+                                <div className="px-3 py-1.5 bg-[#111] border-b border-[#2A2A2A] shrink-0 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Original</span>
                                 </div>
-                                {previewMode === 'original' && (
-                                    <textarea value={rawText} onChange={e => setRawText(e.target.value)}
-                                        className="absolute inset-6 md:inset-10 bottom-32 z-10 bg-transparent text-gray-400/60 font-mono text-[13px] leading-[1.8] resize-none outline-none border-0 p-0 m-0 focus:ring-0 whitespace-pre-wrap break-words overflow-hidden"
-                                        spellCheck={false} placeholder="Paste raw text here or drop a file…" />
-                                )}
+                                {/* Render canvas in original mode by temporarily overriding previewMode via CSS scale */}
+                                <div className="flex-1 overflow-hidden relative" style={{ transform: 'scale(1)', transformOrigin: 'top left' }}>
+                                    {/* We show the image directly without shapes */}
+                                    {useCanvasStore.getState().imageSrc ? (
+                                        <img
+                                            src={useCanvasStore.getState().imageSrc!}
+                                            alt="Original"
+                                            className="w-full h-full object-contain"
+                                            style={{ imageRendering: 'auto' }}
+                                        />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-gray-700 text-sm">No document loaded</div>
+                                    )}
+                                </div>
+                            </div>
+                            {/* Right: redacted canvas */}
+                            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                                <div className="px-3 py-1.5 bg-[#111] border-b border-[#2A2A2A] shrink-0 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[#FFA500] animate-pulse" />
+                                    <span className="text-[10px] font-mono text-[#FFA500] uppercase tracking-wider">Redacted</span>
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <CanvasEngine />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── TEXT MODE — normal (no split) ──────────────────────── */}
+                    {isTextDoc && !splitView && (
+                        <div className="w-full h-full overflow-y-auto">
+                            <div className="relative w-full max-w-3xl mx-auto min-h-full">
+                                <div className="relative w-full p-6 md:p-10 pb-32">
+                                    {/* Token display — shows redacted when previewMode=redacted */}
+                                    <div className="font-mono text-[13px] leading-[1.8] break-words whitespace-pre-wrap pointer-events-none w-full min-h-[500px]">
+                                        {renderTokenStream(previewMode === 'redacted', effectiveTokens)}
+                                        {'\n\n\n'}
+                                    </div>
+                                    {/* Editable textarea — only in original mode */}
+                                    {previewMode === 'original' && (
+                                        <textarea value={rawText} onChange={e => setRawText(e.target.value)}
+                                            className="absolute inset-6 md:inset-10 bottom-32 z-10 bg-transparent text-gray-400/60 font-mono text-[13px] leading-[1.8] resize-none outline-none border-0 p-0 m-0 focus:ring-0 whitespace-pre-wrap break-words overflow-hidden"
+                                            spellCheck={false} placeholder="Paste raw text here or drop a file…" />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── TEXT MODE — SPLIT VIEW ─────────────────────────────── */}
+                    {isTextDoc && splitView && (
+                        <div className="flex h-full w-full">
+
+                            {/* Left pane — ORIGINAL (always editable, shows raw text) */}
+                            <div className="flex-1 flex flex-col border-r border-[#2A2A2A] overflow-hidden min-w-0">
+                                <div className="px-3 py-1.5 bg-[#111] border-b border-[#2A2A2A] shrink-0 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Original</span>
+                                </div>
+                                <div className="flex-1 overflow-y-auto relative">
+                                    {/* Highlighted token view (unredacted) sits beneath */}
+                                    <div className="p-5 pb-20 font-mono text-[13px] leading-[1.8] break-words whitespace-pre-wrap text-gray-300 min-h-full pointer-events-none select-none">
+                                        {renderTokenStream(false, tokens)}
+                                        {'\n\n\n'}
+                                    </div>
+                                    {/* Transparent editable textarea on top */}
+                                    <textarea
+                                        value={rawText}
+                                        onChange={e => setRawText(e.target.value)}
+                                        className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-white font-mono text-[13px] leading-[1.8] resize-none outline-none border-0 p-5 pb-20 focus:ring-0 whitespace-pre-wrap break-words"
+                                        spellCheck={false}
+                                        placeholder=""
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right pane — REDACTED PREVIEW (read-only, always shows redacted) */}
+                            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                                <div className="px-3 py-1.5 bg-[#111] border-b border-[#2A2A2A] shrink-0 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#FFA500] animate-pulse" />
+                                        <span className="text-[10px] font-mono text-[#FFA500] uppercase tracking-wider">Redacted Preview</span>
+                                    </div>
+                                    {approvedIds && (
+                                        <span className="text-[9px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                            {approvedIds.size} approved
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="p-5 pb-20 font-mono text-[13px] leading-[1.8] break-words whitespace-pre-wrap min-h-full">
+                                        {renderTokenStream(true, effectiveTokens)}
+                                        {'\n\n\n'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Empty state */}
+                    {!isCanvas && !rawText && !isLoading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none">
+                            <div className="p-4 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A]">
+                                <UploadCloud className="w-8 h-8 text-gray-600" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-500 font-medium">Drop a file or click Load File</p>
+                                <p className="text-xs text-gray-700 mt-1">Supports PDF, images, TXT, DOCX, CSV and more</p>
                             </div>
                         </div>
                     )}
                 </div>
 
-                <button onClick={() => setPreviewMode(previewMode === 'original' ? 'redacted' : 'original')}
-                    className="absolute bottom-[4.5rem] md:bottom-6 right-4 md:right-6 z-30 flex items-center gap-2 bg-[#181818] hover:bg-[#222] text-white px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.7)] border border-[#2A2A2A] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group">
-                    {previewMode === 'original'
-                        ? <><Shield className="w-4 h-4 text-[#FFA500]" /><span className="text-xs font-semibold">Lock Document</span></>
-                        : <><Eye className="w-4 h-4 text-gray-400 group-hover:text-white" /><span className="text-xs font-semibold">Edit Original</span></>
-                    }
-                </button>
+                {/* Lock FAB — hide in split view (split view always shows both sides) */}
+                {!splitView && (
+                    <button onClick={() => setPreviewMode(previewMode === 'original' ? 'redacted' : 'original')}
+                        className="absolute bottom-[4.5rem] md:bottom-6 right-4 md:right-6 z-30 flex items-center gap-2 bg-[#181818] hover:bg-[#222] text-white px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.7)] border border-[#2A2A2A] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group">
+                        {previewMode === 'original'
+                            ? <><Shield className="w-4 h-4 text-[#FFA500]" /><span className="text-xs font-semibold">Lock Document</span></>
+                            : <><Eye className="w-4 h-4 text-gray-400 group-hover:text-white" /><span className="text-xs font-semibold">Edit Original</span></>
+                        }
+                    </button>
+                )}
             </section>
 
+            {/* Desktop sidebar */}
             <aside className="hidden md:flex md:w-[38%] lg:w-[32%] flex-col h-full bg-[#111111] border-l border-[#1E1E1E]">
                 {configPanelContent}
             </aside>
 
+            {/* Mobile handle */}
             <button onClick={() => setIsDrawerOpen(true)} className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-2 py-3 bg-[#111]/95 backdrop-blur-md border-t border-[#1E1E1E] cursor-pointer" style={{ display: isDrawerOpen ? 'none' : undefined }}>
                 <ChevronUp className="w-4 h-4 text-[#FFA500] animate-bounce" />
                 <span className="text-xs font-medium text-white">Rules</span>
                 {totalMatches > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#FFA500]/20 text-[#FFA500] text-[9px] font-mono border border-[#FFA500]/30">{totalMatches}</span>}
             </button>
-
             {isDrawerOpen && <div className="md:hidden fixed inset-0 z-40 bg-black/70" onClick={() => setIsDrawerOpen(false)} />}
             <div className={`md:hidden fixed left-0 right-0 bottom-0 z-50 bg-[#111111] border-t border-[#1E1E1E] rounded-t-2xl flex flex-col shadow-2xl transition-transform duration-300 ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`} style={{ maxHeight: '85vh' }}>
                 <div className="flex justify-center pt-3 pb-1 shrink-0"><div className="w-8 h-1 rounded-full bg-[#2A2A2A]" /></div>
                 {configPanelContent}
             </div>
 
-            {/* Export Modal */}
-            <ExportModal
-                isOpen={showExportModal}
-                totalPages={pdfPages.length || 1}
-                currentPage={currentPage}
-                onConfirm={handleModalConfirm}
-                onCancel={() => { if (!isExporting) setShowExportModal(false); }}
-                isExporting={isExporting}
-            />
+            <ExportModal isOpen={showExportModal} totalPages={pdfPages.length || 1} currentPage={currentPage} onConfirm={handleModalConfirm} onCancel={() => { if (!isExporting) setShowExportModal(false); }} isExporting={isExporting} />
+            <EntityReviewModal isOpen={showReviewModal} tokens={tokens} onConfirm={handleReviewConfirm} onCancel={() => setShowReviewModal(false)} />
 
-            {/* Multi-page export progress overlay */}
             {isExporting && exportProgress && (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-8 py-6 flex flex-col items-center gap-4 min-w-[280px]">
