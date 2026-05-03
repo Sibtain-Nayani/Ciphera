@@ -1,0 +1,53 @@
+# ── Ciphera V3 — docker-compose.yml ──────────────────────────────────────────
+# Place at: v3/docker-compose.yml
+#
+# Setup:
+#   1. Create v3/.env with your keys:
+#        GROQ_API_KEY=gsk_...
+#        ANTHROPIC_API_KEY=sk-ant-...  (optional)
+#
+#   2. Run:
+#        cd v3
+#        docker compose up --build
+#
+# Frontend → http://localhost:3000
+# Backend  → http://localhost:8000
+# API docs → http://localhost:8000/docs
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ciphera_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env                       # reads GROQ_API_KEY etc from v3/.env
+    volumes:
+      - spacy_models:/root/.cache  # cache spaCy models between restarts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v3/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s            # spaCy model loading takes time
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ciphera_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  spacy_models:

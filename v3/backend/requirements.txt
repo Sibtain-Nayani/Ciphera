@@ -1,13 +1,30 @@
-fastapi==0.115.12
-uvicorn==0.34.0
-presidio-analyzer==2.2.358
-presidio-anonymizer==2.2.358
-spacy==3.8.5
-python-multipart==0.0.20
-pydantic==2.11.1
-pymupdf==1.25.5
-opencv-python-headless==4.11.0.86
-pillow==11.2.1
-numpy==2.2.4
-torch==2.11.0
-faker==37.1.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.8.2
+python-dotenv==1.0.1
+
+# NLP pipeline
+spacy==3.8.3
+# en_core_web_lg installed via: python -m spacy download en_core_web_lg
+
+# PII detection
+presidio-analyzer==2.2.354
+presidio-anonymizer==2.2.354
+
+# PDF rendering
+PyMuPDF==1.24.9
+
+# OCR support
+pytesseract==0.3.13
+
+# Image processing / face detection
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+Pillow==10.4.0
+
+# ML scoring
+groq==0.9.0
+
+# Optional: Anthropic scoring (fallback)
+anthropic==0.34.2

@@ -1,4 +1,5 @@
 "use client";
+import { ConfidenceSlider } from '@/components/redact/ConfidenceSlider';
 import { TemplateSelector } from '@/components/redact/TemplateSelector';
 import { ExportModal, ExportPageSelection } from '@/components/redact/ExportModal';
 import { EntityReviewModal } from '@/components/redact/EntityReviewModal';
@@ -91,7 +92,7 @@ export default function WorkspacePage() {
         rawText, setRawText, previewMode, rules, setPreviewMode,
         toggleRule, fileType, fileName, customRules, clearWorkspace,
     } = useDocumentStore();
-
+    const [threshold, setThreshold] = useState(0.50);
     const [tokens,          setTokens]         = useState<Token[]>([]);
     const [isDragging,      setIsDragging]      = useState(false);
     const [isDrawerOpen,    setIsDrawerOpen]    = useState(false);
@@ -150,7 +151,8 @@ export default function WorkspacePage() {
 
     useEffect(() => {
         const t = setTimeout(async () => {
-            const result = await redactionEngine.tokenize(rawText, rules, customRules, 0.50, false, true, fileName);
+            // Change the 4th argument from 0.50 to threshold:
+            const result = await redactionEngine.tokenize(rawText, rules, customRules, threshold, false, true, fileName);
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
@@ -413,6 +415,7 @@ export default function WorkspacePage() {
             </div>
             <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
                 <TemplateSelector />
+                <ConfidenceSlider value={threshold} onChange={setThreshold} />
                 {RULE_GROUPS.map((group) => {
                     const groupRules    = group.rules;
                     const activeInGroup = groupRules.filter(r => rules[r.id]?.isActive).length;

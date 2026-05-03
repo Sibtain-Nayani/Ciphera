@@ -29,9 +29,9 @@ export async function convertPdfToImages(
     pdfjsLib.GlobalWorkerOptions.workerSrc =
         `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-    const arrayBuffer  = await file.arrayBuffer();
-    const pdfDocument  = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-    const numPages     = pdfDocument.numPages;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDocument = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    const numPages    = pdfDocument.numPages;
     const pages: PdfPageData[] = [];
 
     for (let i = 1; i <= numPages; i++) {
@@ -39,13 +39,17 @@ export async function convertPdfToImages(
         const viewport = page.getViewport({ scale });
         const canvas   = document.createElement('canvas');
         const context  = canvas.getContext('2d');
-
         if (!context) throw new Error("Unable to obtain 2D context for PDF rendering.");
 
         canvas.width  = viewport.width;
         canvas.height = viewport.height;
 
-        await page.render({ canvasContext: context as any, viewport }).promise;
+        // FIX: newer pdfjs-dist types require `canvas` in RenderParameters
+        await page.render({
+            canvasContext: context as any,
+            viewport,
+            canvas,           // ← this was the missing required property
+        }).promise;
 
         pages.push({
             dataUri:    canvas.toDataURL('image/png', 1.0),
