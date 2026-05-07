@@ -157,7 +157,7 @@ export default function WorkspacePage() {
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
         return () => clearTimeout(t);
-    }, [rawText, rules, customRules]);
+    }, [rawText, rules, customRules,threshold]);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches     = tokens.filter(t => t.type !== 'text').length;

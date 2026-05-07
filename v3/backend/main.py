@@ -1,26 +1,22 @@
 """
-Ciphera V3 — main.py (updated)
-================================
-Changes:
-  - Includes feature7_ml_scoring router
-  - Face detection minimum area filter (fixes false positives on document patterns)
-  - /api/v3/redact-image now rejects detections smaller than 0.3% of image area
+Ciphera V3 — main.py (final, all features mounted)
 """
 
 from contextlib import asynccontextmanager
 from typing import Optional
-from dotenv import load_dotenv
-load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from feature1_pipeline_upgrade import (
-    DetectionPipeline, AnalyzeRequest, AnalyzeResponse, EntityResponse,
-)
-from feature2_pdf_multipage   import router as pdf_router,     set_pipeline as pdf_set_pipeline
-from feature6_image_redaction import router as image_router
-from feature7_ml_scoring      import router as scoring_router
+load_dotenv()
+
+from feature1_pipeline_upgrade import DetectionPipeline, AnalyzeRequest, AnalyzeResponse, EntityResponse
+from feature2_pdf_multipage    import router as pdf_router,      set_pipeline as pdf_set_pipeline
+from feature6_image_redaction  import router as image_router
+from feature7_ml_scoring       import router as scoring_router
+from feature8_api_keys         import api_router, public_router   # fixed import names
+from feature9_synthetic        import router as synthetic_router
 
 import feature1_pipeline_upgrade as f1
 
@@ -37,19 +33,40 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Ciphera V3 — Detection API",
+    title="Ciphera V3 — Intelligent PII Anonymization API",
+    description="""
+## Ciphera V3
+
+Enterprise-grade PII detection and anonymization for Indian and global documents.
+
+### Authentication
+Public API endpoints require an API key in the `X-API-Key` header.
+
+### Capabilities
+- Multi-layer detection: Regex → Presidio → spaCy NLP → Voting ensemble
+- Indian PII: Aadhaar, PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Reg
+- Global PII: Email, Phone, Credit Card, SSN, Dates, URLs, IPs
+- Contextual ML scoring via Groq
+- Synthetic data substitution
+- Face detection in images
+    """,
     version="3.3.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(pdf_router)
 app.include_router(image_router)
 app.include_router(scoring_router)
+app.include_router(api_router)
+app.include_router(public_router)
+app.include_router(synthetic_router)
 
 
 @app.post("/api/v3/analyze", response_model=AnalyzeResponse)
@@ -71,21 +88,24 @@ async def analyze(request: AnalyzeRequest):
     return AnalyzeResponse(
         entity_count=len(entities),
         entities=[EntityResponse(**d) for d in dicts],
-        stats={"by_type": type_counts, "by_source": source_counts,
-               "text_length": len(request.text)},
+        stats={"by_type": type_counts, "by_source": source_counts, "text_length": len(request.text)},
     )
 
 
 @app.get("/api/v3/health")
 async def health():
     return {
-        "status":  "ok" if pipeline else "loading",
-        "version": "3.3.0",
+        "status":    "ok" if pipeline else "loading",
+        "version":   "3.3.0",
         "endpoints": [
             "POST /api/v3/analyze",
             "POST /api/v3/analyze-pdf",
             "POST /api/v3/redact-image",
             "POST /api/v3/score-entities",
+            "POST /api/v3/synthesize",
+            "POST /api/v3/public/redact",
+            "POST /api/v3/public/analyze",
+            "POST /api/v3/keys/create",
         ],
     }
 
@@ -93,11 +113,10 @@ async def health():
 @app.get("/api/v3/entities")
 async def list_entity_types():
     return {"entity_types": [
-        "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER",
-        "AADHAAR_NUMBER", "PAN_NUMBER", "GST_NUMBER",
-        "IFSC_CODE", "VOTER_ID", "IN_PASSPORT", "IN_VEHICLE_REG",
-        "CREDIT_CARD", "DATE_TIME", "DATE_OF_BIRTH",
-        "LOCATION", "ORGANIZATION", "URL", "IP_ADDRESS",
+        "PERSON","EMAIL_ADDRESS","PHONE_NUMBER","AADHAAR_NUMBER","PAN_NUMBER",
+        "GST_NUMBER","IFSC_CODE","VOTER_ID","IN_PASSPORT","IN_VEHICLE_REG",
+        "CREDIT_CARD","DATE_TIME","DATE_OF_BIRTH","LOCATION","ORGANIZATION",
+        "URL","IP_ADDRESS",
     ]}
 
 

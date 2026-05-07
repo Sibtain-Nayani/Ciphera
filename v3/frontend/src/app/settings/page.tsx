@@ -1,240 +1,224 @@
 "use client";
 
-import React from 'react';
+/**
+ * Settings Page — Engine Config
+ * Place at: v3/frontend/src/app/settings/page.tsx
+ */
+
+import React, { useState } from 'react';
 import {
-    ShieldCheck, Lock, FileDown, Zap, Code2, Activity, Cpu, Layers,
-    Fingerprint, CalendarDays,
+    Settings, Shield, Sliders, Key, Code2,
+    ChevronDown, CheckCircle2, AlertCircle,
+    Cpu, Zap, Database,
 } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
-import { ToggleSwitch } from '@/components/settings/ToggleSwitch';
-import { ParserCard } from '@/components/settings/ParserCard';
-import { CustomRuleCard } from '@/components/settings/CustomRuleCard';
-import { AddRuleDialog } from '@/components/settings/AddRuleDialog';
+import { ApiKeyManager } from '@/components/settings/ApiKeyManager';
+
+type Tab = 'detection' | 'api' | 'about';
+
+const TAB_CONFIG: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'detection', label: 'Detection Engine',  icon: <Sliders className="w-4 h-4" /> },
+    { id: 'api',       label: 'API Keys',           icon: <Key className="w-4 h-4" /> },
+    { id: 'about',     label: 'System Info',        icon: <Cpu className="w-4 h-4" /> },
+];
 
 export default function SettingsPage() {
-    const { customRules } = useDocumentStore();
+    const [activeTab, setActiveTab]     = useState<Tab>('detection');
+    const [backendStatus, setBackendStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
+    const [backendInfo,   setBackendInfo]   = useState<any>(null);
+    const { rules, setRuleAction } = useDocumentStore();
 
-    const [preferences, setPreferences] = React.useState({
-        strictMode:    true,
-        autoExport:    true,
-        hardwareAccel: true,
-    });
-    const [saveToast, setSaveToast] = React.useState(false);
-
-    const togglePref = (key: keyof typeof preferences) =>
-        setPreferences((p) => ({ ...p, [key]: !p[key] }));
-
-    const handleSave = () => {
-        setSaveToast(true);
-        setTimeout(() => setSaveToast(false), 2500);
+    const checkBackend = async () => {
+        try {
+            const r    = await fetch('http://127.0.0.1:8000/api/v3/health');
+            const data = await r.json();
+            setBackendStatus('ok');
+            setBackendInfo(data);
+        } catch {
+            setBackendStatus('error');
+        }
     };
 
-    const standardParsers: RuleType[] = ['email', 'phone', 'creditCard', 'ssn', 'names'];
-    const dobParsers:      RuleType[] = ['dob', 'date'];
-    const networkParsers:  RuleType[] = ['url', 'ip'];
-    const indianParsers:   RuleType[] = ['aadhaar', 'pan', 'gst', 'ifsc', 'voterId', 'passport', 'vehicleReg'];
+    React.useEffect(() => { checkBackend(); }, []);
 
     return (
-        <div className="flex flex-col min-h-screen">
-            {/* Header */}
-            <header className="p-6 md:p-8 border-b border-border bg-secondary">
-                <div className="max-w-7xl mx-auto w-full">
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-card rounded-xl border border-border shadow-md">
-                            <ShieldCheck className="w-8 h-8 text-[#FFA500]" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-white mb-1">Security &amp; Rule Configuration</h1>
-                            <p className="text-sm max-w-2xl text-muted-foreground">
-                                Manage entity recognition rules, Indian PII parsers, and system preferences for V3 detection pipeline.
-                            </p>
-                        </div>
+        <div className="w-full p-6 md:p-10 font-sans min-h-screen selection:bg-[#FFA500] selection:text-black">
+            <div className="max-w-4xl mx-auto space-y-6">
+
+                {/* Header */}
+                <header className="flex items-center justify-between pb-4 border-b border-[#2A2A2A]">
+                    <div>
+                        <h1 className="text-xl font-semibold text-white flex items-center gap-2.5">
+                            <Settings className="w-5 h-5 text-[#F472B6]" />
+                            Engine Config
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-1">Detection pipeline · API access · System information</p>
                     </div>
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono ${
+                        backendStatus === 'ok'    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                        backendStatus === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                        'bg-[#1E1E1E] border-[#2A2A2A] text-gray-500'
+                    }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                            backendStatus === 'ok' ? 'bg-emerald-500 animate-pulse' :
+                            backendStatus === 'error' ? 'bg-red-500' : 'bg-gray-600'
+                        }`} />
+                        {backendStatus === 'ok' ? 'Backend Online' : backendStatus === 'error' ? 'Backend Offline' : 'Checking…'}
+                    </div>
+                </header>
+
+                {/* Tabs */}
+                <div className="flex gap-1 p-1 bg-[#141414] border border-[#2A2A2A] rounded-xl">
+                    {TAB_CONFIG.map(tab => (
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                                activeTab === tab.id
+                                    ? 'bg-[#FFA500] text-black'
+                                    : 'text-gray-500 hover:text-gray-300 hover:bg-[#1E1E1E]'
+                            }`}>
+                            {tab.icon}
+                            <span className="hidden sm:inline">{tab.label}</span>
+                        </button>
+                    ))}
                 </div>
-            </header>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 pb-32">
-                <div className="max-w-7xl mx-auto w-full space-y-10">
+                {/* ── Detection Engine Tab ────────────────────────────────── */}
+                {activeTab === 'detection' && (
+                    <div className="space-y-4">
 
-                    {/* Standard Parsers */}
-                    <section>
-                        <h2 className="text-xs text-muted-foreground uppercase tracking-wider mb-6 font-medium">Standard Parsers</h2>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {standardParsers.map((k) => <ParserCard key={k} ruleKey={k} />)}
-                        </div>
-                    </section>
-
-                    {/* Date & DOB Parsers */}
-                    <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
-                                <CalendarDays className="w-5 h-5 text-red-400" />
+                        {/* Default actions per rule type */}
+                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+                            <div className="px-5 py-4 border-b border-[#2A2A2A]">
+                                <h3 className="text-sm font-semibold text-white">Default Redaction Actions</h3>
+                                <p className="text-xs text-gray-500 mt-1">Set the default action for each entity type — replace with pseudonym, blackout, or mask partially.</p>
                             </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                                    Date &amp; DOB Parsers
-                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">V3</span>
-                                </h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    Detects dates of birth in 8+ formats: DD/MM/YYYY, DD.MM.YYYY, D Month YYYY, ISO 8601 and more.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {dobParsers.map((k) => <ParserCard key={k} ruleKey={k} />)}
-                        </div>
-                    </section>
-
-                    {/* Network Parsers */}
-                    <section>
-                        <h2 className="text-xs text-muted-foreground uppercase tracking-wider mb-6 font-medium">Network Parsers</h2>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {networkParsers.map((k) => <ParserCard key={k} ruleKey={k} />)}
-                        </div>
-                    </section>
-
-                    {/* Indian PII Parsers */}
-                    <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
-                                <Fingerprint className="w-5 h-5 text-orange-400" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                                    Indian PII Parsers
-                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400">V3</span>
-                                </h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    Domain-specific detection for Indian identity and financial documents.
-                                </p>
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {([
+                                    { id: 'names',      label: 'Names' },
+                                    { id: 'email',      label: 'Email' },
+                                    { id: 'phone',      label: 'Phone' },
+                                    { id: 'dob',        label: 'Date of Birth' },
+                                    { id: 'aadhaar',    label: 'Aadhaar' },
+                                    { id: 'pan',        label: 'PAN' },
+                                    { id: 'creditCard', label: 'Credit Card' },
+                                    { id: 'ssn',        label: 'SSN / TIN' },
+                                    { id: 'gst',        label: 'GST / GSTIN' },
+                                    { id: 'ifsc',       label: 'IFSC Code' },
+                                    { id: 'voterId',    label: 'Voter ID' },
+                                    { id: 'passport',   label: 'Passport' },
+                                ] as { id: RuleType; label: string }[]).map(rule => (
+                                    <div key={rule.id} className="flex items-center justify-between px-3 py-2.5 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
+                                        <span className="text-sm text-gray-300">{rule.label}</span>
+                                        <select
+                                            value={rules[rule.id]?.action || 'replace'}
+                                            onChange={e => setRuleAction(rule.id, e.target.value as any)}
+                                            className="bg-[#252525] border border-[#2A2A2A] text-xs text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#FFA500]/50 cursor-pointer"
+                                        >
+                                            <option value="replace">Replace (pseudonym)</option>
+                                            <option value="blackout">Blackout</option>
+                                            <option value="mask">Partial mask</option>
+                                        </select>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {indianParsers.map((k) => <ParserCard key={k} ruleKey={k} />)}
-                        </div>
-                    </section>
 
-                    {/* Custom Regex Rules */}
-                    <section>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-[#FFA500]/10 rounded-lg border border-[#FFA500]/20">
-                                <Code2 className="w-5 h-5 text-[#FFA500]" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-white">Custom Regex Rules</h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">Define your own patterns for domain-specific redaction.</p>
-                            </div>
-                        </div>
-                        <div className="space-y-6">
-                            {customRules.length > 0 && (
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                    {customRules.map((rule) => <CustomRuleCard key={rule.id} rule={rule} />)}
-                                </div>
-                            )}
-                            {customRules.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border-2 border-dashed border-border text-center">
-                                    <Code2 className="w-10 h-10 text-gray-600 mb-3" />
-                                    <p className="text-sm text-gray-500 font-medium">No custom rules yet</p>
-                                    <p className="text-xs text-gray-600 mt-1 max-w-xs">Create regex patterns tailored to your data.</p>
-                                </div>
-                            )}
-                            <AddRuleDialog />
-                        </div>
-                    </section>
-
-                    {/* System Preferences */}
-                    <section className="bg-card border border-border rounded-xl p-6 shadow-lg">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-[#FFA500]/10 rounded-lg border border-[#FFA500]/20">
-                                <Lock className="w-5 h-5 text-[#FFA500]" />
-                            </div>
-                            <h2 className="text-lg font-semibold text-white">System Preferences</h2>
-                        </div>
-                        <div className="space-y-2">
-                            {[
-                                { key: 'strictMode',    icon: Lock,     label: 'Strict Verification Mode',   desc: 'Forces manual review before export.'                },
-                                { key: 'autoExport',    icon: FileDown, label: 'Auto-Export to PDF',          desc: 'Generates a flattened PDF upon approval.'           },
-                                { key: 'hardwareAccel', icon: Zap,      label: 'Hardware Acceleration',       desc: 'Use local GPU for NLP if available.'                },
-                            ].map(({ key, icon: Icon, label, desc }) => (
-                                <div key={key}
-                                    className="flex items-center justify-between p-4 rounded-xl border border-transparent hover:border-border hover:bg-secondary transition-all cursor-pointer"
-                                    onClick={() => togglePref(key as keyof typeof preferences)}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <Icon className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
-                                        <div>
-                                            <h3 className="text-sm font-medium text-white">{label}</h3>
-                                            <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                        {/* Pipeline info */}
+                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-2xl p-5">
+                            <h3 className="text-sm font-semibold text-white mb-3">Detection Pipeline</h3>
+                            <div className="space-y-2">
+                                {[
+                                    { stage: 'Stage 1', name: 'Regex Engine',    desc: 'Pattern-based detection for structured PII (Aadhaar, PAN, phone)', weight: '1.4×', color: '#F97316' },
+                                    { stage: 'Stage 2', name: 'Presidio NLP',    desc: '28 recognizers including Indian PII patterns',                    weight: '1.0×', color: '#60A5FA' },
+                                    { stage: 'Stage 3', name: 'spaCy NER',       desc: 'en_core_web_lg transformer model for named entity recognition',    weight: '0.9×', color: '#34D399' },
+                                    { stage: 'Stage 4', name: 'Voting Ensemble', desc: 'Weighted merge across all stages with type-lock at ≥0.80',         weight: '—',    color: '#FFA500' },
+                                ].map(s => (
+                                    <div key={s.stage} className="flex items-start gap-3 p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
+                                        <div className="shrink-0 px-2 py-0.5 rounded text-[9px] font-mono font-bold border mt-0.5"
+                                            style={{ backgroundColor: s.color + '15', color: s.color, borderColor: s.color + '30' }}>
+                                            {s.stage}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-white">{s.name}</p>
+                                                <span className="text-[10px] font-mono text-gray-600">{s.weight}</span>
+                                            </div>
+                                            <p className="text-[11px] text-gray-500 mt-0.5">{s.desc}</p>
                                         </div>
                                     </div>
-                                    <ToggleSwitch
-                                        id={`toggle-${key}`}
-                                        checked={preferences[key as keyof typeof preferences]}
-                                        onChange={() => togglePref(key as keyof typeof preferences)}
-                                    />
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </section>
+                    </div>
+                )}
 
-                    {/* Backend Matrix */}
-                    <section className="bg-[#141414] border border-[#3B3B3B] rounded-xl p-6 shadow-xl relative overflow-hidden">
-                        <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
-                        <div className="flex items-center justify-between mb-8 relative z-10">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                                    <Activity className="w-5 h-5 text-emerald-400" />
+                {/* ── API Keys Tab ─────────────────────────────────────────── */}
+                {activeTab === 'api' && <ApiKeyManager />}
+
+                {/* ── System Info Tab ──────────────────────────────────────── */}
+                {activeTab === 'about' && (
+                    <div className="space-y-4">
+                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-2xl p-5 space-y-4">
+                            <h3 className="text-sm font-semibold text-white">Backend Status</h3>
+                            {backendStatus === 'ok' && backendInfo ? (
+                                <div className="space-y-2">
+                                    {[
+                                        { label: 'Version',   value: backendInfo.version || '3.3.0' },
+                                        { label: 'Status',    value: backendInfo.status },
+                                        { label: 'Endpoints', value: `${backendInfo.endpoints?.length || 8} active` },
+                                    ].map(item => (
+                                        <div key={item.label} className="flex justify-between items-center py-2 border-b border-[#2A2A2A] last:border-0">
+                                            <span className="text-sm text-gray-500">{item.label}</span>
+                                            <span className="text-sm font-mono text-white">{item.value}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <h2 className="text-lg font-semibold text-white">Inference Engine Matrix</h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">V3 Multi-layer Pipeline — Regex + Presidio + spaCy Transformer + Voting</p>
+                            ) : (
+                                <div className="flex items-center gap-2 text-red-400 text-sm">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Backend unreachable. Start with: <code className="font-mono text-[11px] bg-[#1E1E1E] px-2 py-0.5 rounded">uvicorn main:app --reload --port 8000</code>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2 px-3 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded-full">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-xs font-mono text-gray-400">STATUS: ONLINE</span>
-                            </div>
+                            )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
-                            {[
-                                { Icon: Layers, label: 'Active Model',   value: 'en_core_web_trf',  sub: 'spaCy RoBERTa Transformer'           },
-                                { Icon: Zap,    label: 'API Endpoint',   value: 'localhost:8000',   sub: '/api/v3/analyze'                     },
-                                { Icon: Cpu,    label: 'Entity Types',   value: '17 Types',         sub: 'Incl. 7 Indian PII + DOB'            },
-                            ].map(({ Icon, label, value, sub }) => (
-                                <div key={label} className="p-4 rounded-xl bg-[#1A1A1A] border border-[#3B3B3B] flex flex-col gap-2">
-                                    <div className="flex items-center gap-2 text-gray-400 mb-1">
-                                        <Icon className="w-4 h-4" />
-                                        <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
+
+                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-2xl p-5">
+                            <h3 className="text-sm font-semibold text-white mb-3">Stack</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { name: 'Next.js 16',        role: 'Frontend framework',    color: '#FFFFFF' },
+                                    { name: 'FastAPI',           role: 'Backend API',           color: '#009688' },
+                                    { name: 'spaCy 3.8',         role: 'NER pipeline',          color: '#09A3D5' },
+                                    { name: 'Presidio 2.2',      role: 'PII detection',         color: '#0078D4' },
+                                    { name: 'Groq LLaMA',        role: 'Contextual scoring',    color: '#F55036' },
+                                    { name: 'React Konva',       role: 'Canvas redaction',      color: '#E91E63' },
+                                    { name: 'Tesseract WASM',    role: 'OCR pipeline',          color: '#4CAF50' },
+                                    { name: 'Docker',            role: 'Containerization',      color: '#2496ED' },
+                                ].map(s => (
+                                    <div key={s.name} className="flex items-center gap-2.5 p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                                        <div>
+                                            <p className="text-xs font-semibold text-white">{s.name}</p>
+                                            <p className="text-[10px] text-gray-600">{s.role}</p>
+                                        </div>
                                     </div>
-                                    <span className="text-lg font-mono text-white tracking-tight">{value}</span>
-                                    <span className="text-[10px] text-gray-500 font-mono">{sub}</span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </section>
 
-                </div>
+                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-2xl p-5">
+                            <h3 className="text-sm font-semibold text-white mb-1">Compliance</h3>
+                            <p className="text-xs text-gray-500 mb-3">Ciphera V3 is designed to support compliance with:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {['DPDP Act 2023','GDPR Article 25','ISO 27001','IT Act 2000'].map(c => (
+                                    <span key={c} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                                        {c}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Footer */}
-            <footer className="sticky bottom-0 z-10 bg-secondary border-t border-border p-4 md:p-6 shadow-2xl">
-                <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-                    <div className={`transition-all duration-300 ${saveToast ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        <span className="text-sm text-emerald-400 font-medium flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Settings saved successfully
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-4 ml-auto">
-                        <button className="px-6 py-2.5 border border-border text-muted-foreground rounded-lg hover:bg-card hover:text-white transition-colors font-medium text-sm cursor-pointer">
-                            Discard
-                        </button>
-                        <button onClick={handleSave}
-                            className="px-6 py-2.5 bg-[#FFA500] text-black rounded-lg shadow-[0_0_15px_rgba(255,165,0,0.3)] hover:bg-[#E69500] transition-all font-medium text-sm cursor-pointer">
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 }
