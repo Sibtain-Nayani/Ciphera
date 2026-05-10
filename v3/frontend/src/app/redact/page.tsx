@@ -23,6 +23,7 @@ import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken
 import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/lib/fileFormat';
 import { convertPdfToImages, PdfPageData } from '@/lib/pdfRenderer';
 import { extractOcrData, mapOcrToShapes, removeShapesByRule } from '@/lib/ocrEngine';
+import { useTemplateStore } from '@/store/templateStore';
 import dynamic from 'next/dynamic';
 
 const CanvasEngine = dynamic(
@@ -151,13 +152,12 @@ export default function WorkspacePage() {
 
     useEffect(() => {
         const t = setTimeout(async () => {
-            // Change the 4th argument from 0.50 to threshold:
             const result = await redactionEngine.tokenize(rawText, rules, customRules, threshold, false, true, fileName);
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
         return () => clearTimeout(t);
-    }, [rawText, rules, customRules,threshold]);
+    }, [rawText, rules, customRules, threshold]);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches     = tokens.filter(t => t.type !== 'text').length;
@@ -247,6 +247,37 @@ export default function WorkspacePage() {
             const { text, type, name } = await extractTextFromFile(file);
             setRawText(text);
             useDocumentStore.getState().setFileMetadata(name, type, file);
+
+            // Auto-classify document and apply matching template
+            try {
+                const classRes = await fetch('http://127.0.0.1:8000/api/v3/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text.slice(0, 2000), filename: file.name }),
+                });
+                if (classRes.ok) {
+                    const cls = await classRes.json();
+                    if (cls.confidence > 0.3 && cls.auto_template) {
+                        useUiStore.getState().addToast(
+                            `Detected: ${cls.document_type.toUpperCase()} document — template auto-applied`,
+                            'info'
+                        );
+                        // Auto-apply matching template from templateStore
+                        const { getAllTemplates } = useTemplateStore.getState();
+                        const template = getAllTemplates().find((t: any) => t.id === cls.auto_template);
+                        if (template) {
+                            const { toggleRule, setRuleAction } = useDocumentStore.getState();
+                            const currentRules = useDocumentStore.getState().rules;
+                            Object.keys(template.rules).forEach((ruleId) => {
+                                const tr = template.rules[ruleId as RuleType];
+                                const cr = currentRules[ruleId as RuleType];
+                                if (tr.isActive !== cr.isActive) toggleRule(ruleId as RuleType);
+                                if (tr.action !== cr.action) setRuleAction(ruleId as RuleType, tr.action);
+                            });
+                        }
+                    }
+                }
+            } catch { /* classifier offline — continue without auto-template */ }
         } catch { useUiStore.getState().addToast("File format not supported.", "error"); }
     };
 
@@ -322,6 +353,21 @@ export default function WorkspacePage() {
                 const finalDims = imgDims || { width: stage.width(), height: stage.height() };
                 await exportVisualCanvas(dataUrl, fileName, finalExt, origFile, shapes, finalDims);
                 addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: shapes.length, rulesApplied: ['Visual Extractor'] });
+                // Persist to backend audit DB
+                fetch('http://127.0.0.1:8000/api/v3/audit/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 'RUN-' + Math.floor(Math.random() * 10000),
+                        name: fileName,
+                        size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown',
+                        date: new Date().toLocaleString(),
+                        status: 'Completed',
+                        entities_discovered: shapes.length,
+                        rules_applied: ['Visual Extractor'],
+                        session_id: 'default',
+                    }),
+                }).catch(() => {}); // silent fail — localStorage is the fallback
                 incrementMetrics(1, shapes.length);
                 useUiStore.getState().addToast(`Exported ${shapes.length} redacted entities`, 'success');
             } catch { useUiStore.getState().addToast("Export failed. Try again.", "error"); }
@@ -332,6 +378,21 @@ export default function WorkspacePage() {
         await exportRedactedText(redactedText, fileName, fmt as any);
         const entityCount = effectiveTokens.filter(t => t.type !== 'text').length;
         addAuditLog({ id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: entityCount, rulesApplied: Array.from(new Set(effectiveTokens.filter(t => t.type !== 'text').map(t => t.type))) });
+        // Persist to backend audit DB
+        fetch('http://127.0.0.1:8000/api/v3/audit/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: 'RUN-' + Math.floor(Math.random() * 10000),
+                name: fileName,
+                size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB',
+                date: new Date().toLocaleString(),
+                status: 'Completed',
+                entities_discovered: entityCount,
+                rules_applied: Array.from(new Set(effectiveTokens.filter(t => t.type !== 'text').map(t => t.type))),
+                session_id: 'default',
+            }),
+        }).catch(() => {}); // silent fail — localStorage is the fallback
         incrementMetrics(1, entityCount);
         useUiStore.getState().addToast(`Protected ${entityCount} entities`, 'success');
     };
