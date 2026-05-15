@@ -14,6 +14,7 @@ import { extractTextFromFile } from '@/lib/fileFormat';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
+import { PageLoader } from '@/components/layout/PageLoader';
 
 type JobStatus = 'queued' | 'processing' | 'done' | 'error';
 type ExportFormat = 'txt' | 'pdf' | 'docx' | 'md' | 'csv';
@@ -177,6 +178,7 @@ export default function BatchPage() {
     const totalEntities   = jobs.reduce((s, j) => s + j.entities, 0);
 
     return (
+        <PageLoader page="batch">
         <div className="w-full p-6 md:p-10 font-sans min-h-screen selection:bg-[#FFA500] selection:text-black">
             {previewJob && <PreviewModal job={previewJob} onClose={() => setPreviewJob(null)} />}
             <div className="max-w-5xl mx-auto space-y-6">
@@ -321,5 +323,6 @@ export default function BatchPage() {
                 )}
             </div>
         </div>
+        </PageLoader>
     );
 }

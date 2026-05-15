@@ -14,6 +14,7 @@ import { useUiStore } from '@/store/uiStore';
 import { extractTextFromFile } from '@/lib/fileFormat';
 import { convertPdfToImages } from '@/lib/pdfRenderer';
 import { exportAuditPDF, exportAuditCSV } from '@/lib/complianceReport';
+import { PageLoader } from '@/components/layout/PageLoader';
 
 const ENTITY_COLORS: Record<string, string> = {
     email: '#60A5FA', phone: '#34D399', creditCard: '#F59E0B', ssn: '#F472B6',
@@ -117,6 +118,7 @@ export default function DashboardPage() {
     const recentLogs     = isMounted ? auditLogs : [];
 
     return (
+        <PageLoader page="dashboard">
         <div className="w-full p-6 md:p-10 font-sans selection:bg-[#FFA500] selection:text-black min-h-screen">
             <main className="max-w-7xl mx-auto space-y-8 pb-16">
 
@@ -310,5 +312,6 @@ export default function DashboardPage() {
 
             </main>
         </div>
+        </PageLoader>
     );
 }

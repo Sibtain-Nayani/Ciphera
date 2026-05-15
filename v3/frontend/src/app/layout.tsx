@@ -1,38 +1,24 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ClientLayout } from "@/components/layout/ClientLayout";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
-
-import { AppShell } from "@/components/layout/AppShell";
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Ciphera | Data Redaction",
-  description: "Enterprise-grade local data anonymization workspace.",
+    title: "Ciphera V3 — Intelligent PII Anonymization",
+    description: "Enterprise-grade document redaction for Indian and global documents.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
-      >
-        <AppShell>
-          {children}
-        </AppShell>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <html lang="en">
+            <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0E0E0E] text-white`}>
+                <ClientLayout>
+                    {children}
+                </ClientLayout>
+            </body>
+        </html>
+    );
 }

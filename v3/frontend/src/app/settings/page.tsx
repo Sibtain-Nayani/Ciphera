@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
 import { ApiKeyManager } from '@/components/settings/ApiKeyManager';
+import { PageLoader } from '@/components/layout/PageLoader';
 
 type Tab = 'detection' | 'api' | 'about';
 
@@ -42,6 +43,7 @@ export default function SettingsPage() {
     React.useEffect(() => { checkBackend(); }, []);
 
     return (
+        <PageLoader page="settings">
         <div className="w-full p-6 md:p-10 font-sans min-h-screen selection:bg-[#FFA500] selection:text-black">
             <div className="max-w-4xl mx-auto space-y-6">
 
@@ -220,5 +222,6 @@ export default function SettingsPage() {
                 )}
             </div>
         </div>
+        </PageLoader>
     );
 }
