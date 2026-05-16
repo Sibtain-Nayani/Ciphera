@@ -13,104 +13,86 @@ import { SiteLoader } from '@/components/layout/SiteLoader';
 const CIPHER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
 const rc = () => CIPHER_CHARS[Math.floor(Math.random() * CIPHER_CHARS.length)];
 
-// ── HoverWord — encrypt once on enter, decrypt on leave, no repeat ─────────────
-// Each word is hardcoded to one of: 'magnify' | 'encrypt' | 'redact'
-type WordEffect = 'magnify' | 'encrypt' | 'redact';
+// ── EncryptWord — staggered letter-by-letter, holds until mouse leaves ────────
+type EncryptMode = 'encrypt' | 'redact' | 'anon';
 
-function HoverWord({ word, className = '', wordEffect }: {
-    word: string; className?: string; wordEffect: WordEffect;
+function EncryptWord({ word, className = '', mode, delay = 0, style }: {
+    word: string; className?: string; mode: EncryptMode; delay?: number; style?: React.CSSProperties;
 }) {
-    const [chars,    setChars]    = useState<string[]>(word.split(''));
-    const [scale,    setScale]    = useState(1);
-    const [active,   setActive]   = useState(false);
-    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const [chars,  setChars]  = useState<string[]>(word.split(''));
+    const [active, setActive] = useState(false);
+    const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-    const clear = () => {
-        timersRef.current.forEach(t => clearTimeout(t));
-        timersRef.current = [];
+    const clear = () => { timers.current.forEach(t => clearTimeout(t)); timers.current = []; };
+
+    // What char to substitute per mode
+    const substitute = (orig: string): string => {
+        if (orig === ' ') return ' ';
+        if (mode === 'redact') return '▓';
+        if (mode === 'anon')   return '░';
+        return rc(); // encrypt
     };
 
     const onEnter = useCallback(() => {
         if (active) return;
-        setActive(true);
         clear();
+        setActive(true);
         const letters = word.split('');
-
-        if (wordEffect === 'magnify') {
-            setScale(1.18);
-        } else if (wordEffect === 'redact') {
-            // Each char replaced with a dim block character, staggered
-            const next = [...letters];
-            letters.forEach((_, i) => {
-                const t = setTimeout(() => {
-                    setChars(prev => {
-                        const n = [...prev];
-                        n[i] = '▓';
-                        return n;
-                    });
-                }, i * 40);
-                timersRef.current.push(t);
-            });
-        } else {
-            // encrypt — each char gets one random substitute, then holds
-            setChars(letters.map(() => rc()));
-        }
-    }, [word, wordEffect, active]);
+        letters.forEach((_, i) => {
+            const t = setTimeout(() => {
+                setChars(prev => { const n = [...prev]; n[i] = substitute(letters[i]); return n; });
+            }, delay + i * 50);
+            timers.current.push(t);
+        });
+    }, [word, mode, active, delay]);
 
     const onLeave = useCallback(() => {
-        setActive(false);
         clear();
+        setActive(false);
         const letters = word.split('');
-
-        if (wordEffect === 'magnify') {
-            setScale(1);
-        } else {
-            // Restore char by char with slight stagger
-            letters.forEach((orig, i) => {
-                const t = setTimeout(() => {
-                    setChars(prev => { const n = [...prev]; n[i] = orig; return n; });
-                }, i * 30);
-                timersRef.current.push(t);
-            });
-        }
-    }, [word, wordEffect]);
+        letters.forEach((orig, i) => {
+            const t = setTimeout(() => {
+                setChars(prev => { const n = [...prev]; n[i] = orig; return n; });
+            }, i * 35);
+            timers.current.push(t);
+        });
+    }, [word]);
 
     useEffect(() => () => clear(), []);
 
-    if (wordEffect === 'magnify') {
-        return (
-            <span
-                className={`inline-block cursor-default select-none transition-transform duration-300 ease-out ${className}`}
-                style={{ transform: `scale(${scale})`, transformOrigin: 'center bottom', display: 'inline-block' }}
-                onMouseEnter={onEnter}
-                onMouseLeave={onLeave}
-            >
-                {word}
-            </span>
-        );
-    }
+    // Color per mode
+    const alteredColor = mode === 'redact'
+        ? 'rgba(255,255,255,0.08)'
+        : mode === 'anon'
+        ? 'rgba(255,255,255,0.25)'
+        : '#FFA500';
+
+    const alteredShadow = mode === 'encrypt'
+        ? '0 0 12px rgba(255,165,0,0.55)'
+        : 'none';
 
     return (
         <span
-            className={`cursor-default select-none ${className}`}
+            className={`cursor-default select-none inline-block ${className}`}
             onMouseEnter={onEnter}
             onMouseLeave={onLeave}
+            // Fixed width via inline-block so layout never shifts
         >
             {chars.map((ch, i) => {
                 const isAltered = ch !== word[i];
                 return (
-                    <span key={i} className="inline-block"
+                    <span
+                        key={i}
                         style={{
-                            color: isAltered
-                                ? wordEffect === 'redact'
-                                    ? 'rgba(255,255,255,0.12)'
-                                    : '#FFA500'
-                                : undefined,
-                            textShadow: isAltered && wordEffect === 'encrypt'
-                                ? '0 0 10px rgba(255,165,0,0.5)'
-                                : 'none',
-                            transition: 'color 0.05s, text-shadow 0.05s',
-                        }}>
+                            display: 'inline-block',
+                            // Fixed per-character width prevents layout shift
+                            minWidth: ch === ' ' ? '0.3em' : '0.58em',
+                            textAlign: 'center',
+                            color: isAltered ? alteredColor : undefined,
+                            textShadow: isAltered ? alteredShadow : 'none',
+                            transition: 'color 0.06s, text-shadow 0.06s',
+                        }}
+                    >
                         {ch}
                     </span>
                 );
@@ -136,29 +118,28 @@ const DEMO_LINES = [
 ];
 
 function TrafficSignalTerminal() {
-    const [sigIdx,   setSigIdx]  = useState(0);
-    const [lineIdx,  setLineIdx] = useState(0);
-    const [charIdx,  setCharIdx] = useState(0);
-    const [phase,    setPhase]   = useState<'typing'|'pause'|'erasing'>('typing');
+    const [sigIdx,  setSigIdx]  = useState(0);
+    const [lineIdx, setLineIdx] = useState(0);
+    const [charIdx, setCharIdx] = useState(0);
+    const [phase,   setPhase]   = useState<'typing'|'pause'|'erasing'>('typing');
     const sig  = SIGNAL_STATES[sigIdx];
     const line = DEMO_LINES[lineIdx];
 
     useEffect(() => {
-        if (lineIdx > 0 && lineIdx % 2 === 0) {
+        if (lineIdx > 0 && lineIdx % 2 === 0)
             setSigIdx(i => (i + 1) % SIGNAL_STATES.length);
-        }
     }, [lineIdx]);
 
     useEffect(() => {
         let t: ReturnType<typeof setTimeout>;
         if (phase === 'typing') {
-            if (charIdx < line.text.length) t = setTimeout(() => setCharIdx(c => c + 1), 26);
+            if (charIdx < line.text.length) t = setTimeout(() => setCharIdx(c => c+1), 26);
             else t = setTimeout(() => setPhase('pause'), 1600);
         } else if (phase === 'pause') {
             t = setTimeout(() => setPhase('erasing'), 300);
         } else {
-            if (charIdx > 0) t = setTimeout(() => setCharIdx(c => c - 1), 10);
-            else { setLineIdx(i => (i + 1) % DEMO_LINES.length); setPhase('typing'); }
+            if (charIdx > 0) t = setTimeout(() => setCharIdx(c => c-1), 10);
+            else { setLineIdx(i => (i+1) % DEMO_LINES.length); setPhase('typing'); }
         }
         return () => clearTimeout(t);
     }, [phase, charIdx, line.text.length]);
@@ -166,14 +147,13 @@ function TrafficSignalTerminal() {
     return (
         <div className="bg-[#0D0D0D] border border-[#2A2A2A] rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)]">
             <div className="flex items-center gap-2 px-4 py-3 bg-[#141414] border-b border-[#2A2A2A]">
-                {/* Traffic lights */}
                 <div className="flex items-center gap-1.5">
                     {SIGNAL_STATES.map((s, i) => (
                         <div key={i} className="w-3 h-3 rounded-full transition-all duration-500"
                             style={{
-                                backgroundColor: sigIdx === i ? s.color : s.color + '28',
-                                boxShadow: sigIdx === i ? `0 0 10px ${s.color}90` : 'none',
-                                transform: sigIdx === i ? 'scale(1.15)' : 'scale(1)',
+                                backgroundColor: sigIdx===i ? s.color : s.color+'28',
+                                boxShadow: sigIdx===i ? `0 0 10px ${s.color}90` : 'none',
+                                transform: sigIdx===i ? 'scale(1.15)' : 'scale(1)',
                             }} />
                     ))}
                 </div>
@@ -181,15 +161,17 @@ function TrafficSignalTerminal() {
                 <div className="ml-auto flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full animate-pulse"
                         style={{ backgroundColor: sig.color, boxShadow: `0 0 6px ${sig.color}` }} />
-                    <span className="text-[9px] font-mono tracking-wider transition-colors duration-500"
-                        style={{ color: sig.color }}>{sig.label}</span>
+                    <span className="text-[9px] font-mono tracking-wider transition-colors duration-500" style={{ color: sig.color }}>
+                        {sig.label}
+                    </span>
                 </div>
             </div>
-            <div className="px-6 pt-3 pb-1 text-[10px] font-mono transition-colors duration-500"
-                style={{ color: sig.color + '70' }}>{sig.status}</div>
+            <div className="px-6 pt-3 pb-1 text-[10px] font-mono transition-colors duration-500" style={{ color: sig.color+'70' }}>
+                {sig.status}
+            </div>
             <div className="px-6 pb-5 min-h-[52px] flex items-center">
                 <div className="font-mono text-sm leading-relaxed">
-                    <span className={line.type === 'redacted' ? 'text-emerald-400' : 'text-gray-300'}>
+                    <span className={line.type==='redacted' ? 'text-emerald-400' : 'text-gray-300'}>
                         {line.text.slice(0, charIdx)}
                     </span>
                     <span className="inline-block w-0.5 h-4 bg-[#FFA500] ml-0.5 animate-pulse align-middle" />
@@ -199,112 +181,98 @@ function TrafficSignalTerminal() {
     );
 }
 
-// ── Stats — re-trigger on every scroll into view ──────────────────────────────
-function AnimatedStat({ target, suffix = '', label }: { target: number; suffix?: string; label: string }) {
-    const [val, setVal]   = useState(0);
-    const [key, setKey]   = useState(0); // bump to re-run animation
-    const ref             = useRef<HTMLDivElement>(null);
-    const runningRef      = useRef(false);
+// ── Stats — re-trigger every scroll ──────────────────────────────────────────
+function AnimatedStat({ target, suffix='', label }: { target: number; suffix?: string; label: string }) {
+    const [val, setVal] = useState(0);
+    const ref           = useRef<HTMLDivElement>(null);
+    const running       = useRef(false);
 
-    const runAnim = useCallback(() => {
-        if (runningRef.current) return;
-        runningRef.current = true;
+    const run = useCallback(() => {
+        if (running.current) return;
+        running.current = true;
         setVal(0);
-        let start = 0;
+        let s = 0;
         const step = target / 50;
-        const timer = setInterval(() => {
-            start += step;
-            if (start >= target) { setVal(target); clearInterval(timer); runningRef.current = false; }
-            else setVal(Math.floor(start));
+        const t = setInterval(() => {
+            s += step;
+            if (s >= target) { setVal(target); clearInterval(t); running.current = false; }
+            else setVal(Math.floor(s));
         }, 20);
     }, [target]);
 
     useEffect(() => {
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                setKey(k => k + 1);
-                runAnim();
-            }
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) run();
+            else { running.current = false; setVal(0); }
         }, { threshold: 0.5 });
-        if (ref.current) observer.observe(ref.current);
-        return () => observer.disconnect();
-    }, [runAnim]);
+        if (ref.current) obs.observe(ref.current);
+        return () => obs.disconnect();
+    }, [run]);
 
     return (
         <div ref={ref} className="text-center">
-            <div key={key} className="text-4xl font-bold text-[#FFA500] font-mono mb-1">
-                {val.toLocaleString()}{suffix}
-            </div>
+            <div className="text-4xl font-bold text-[#FFA500] font-mono mb-1">{val.toLocaleString()}{suffix}</div>
             <div className="text-sm text-gray-500">{label}</div>
         </div>
     );
 }
 
-// ── Pipeline-assembles-into-4 stat — re-triggers on every scroll ──────────────
 function PipelineFlowStat() {
-    const [step,   setStep]   = useState(0);
-    const [key,    setKey]    = useState(0);
-    const ref                 = useRef<HTMLDivElement>(null);
-    const runningRef          = useRef(false);
+    const [step, setStep] = useState(0);
+    const ref             = useRef<HTMLDivElement>(null);
+    const running         = useRef(false);
 
-    const runAnim = useCallback(() => {
-        if (runningRef.current) return;
-        runningRef.current = true;
+    const run = useCallback(() => {
+        if (running.current) return;
+        running.current = true;
         setStep(0);
-        [0, 1, 2, 3, 4].forEach(i => {
-            setTimeout(() => {
-                setStep(i + 1);
-                if (i === 4) runningRef.current = false;
-            }, i * 260);
+        [0,1,2,3,4].forEach(i => {
+            setTimeout(() => { setStep(i+1); if (i===4) running.current=false; }, i*260);
         });
     }, []);
 
     useEffect(() => {
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                setKey(k => k + 1);
-                runAnim();
-            }
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) run();
+            else { running.current=false; setStep(0); }
         }, { threshold: 0.5 });
-        if (ref.current) observer.observe(ref.current);
-        return () => observer.disconnect();
-    }, [runAnim]);
+        if (ref.current) obs.observe(ref.current);
+        return () => obs.disconnect();
+    }, [run]);
 
-    const stages = ['Regex', 'Presidio', 'spaCy', 'Vote'];
-    const colors  = ['#F97316', '#60A5FA', '#34D399', '#FFA500'];
+    const stages = ['Regex','Presidio','spaCy','Vote'];
+    const colors  = ['#F97316','#60A5FA','#34D399','#FFA500'];
 
     return (
-        <div ref={ref} key={key} className="flex flex-col items-center">
+        <div ref={ref} className="flex flex-col items-center">
             <div className="flex items-center gap-1 mb-3 h-8">
-                {stages.map((s, i) => (
+                {stages.map((s,i) => (
                     <React.Fragment key={i}>
                         <div className="transition-all duration-300 rounded px-1.5 py-0.5 text-[8px] font-mono font-bold"
                             style={{
-                                backgroundColor: step > i ? colors[i] + '20' : 'transparent',
-                                color:           step > i ? colors[i]         : 'transparent',
-                                border:          `1px solid ${step > i ? colors[i] + '40' : 'transparent'}`,
-                                transform:       step > i ? 'translateY(0)'   : 'translateY(4px)',
-                                opacity:         step > i ? 1                 : 0,
+                                backgroundColor: step>i ? colors[i]+'20' : 'transparent',
+                                color:           step>i ? colors[i]       : 'transparent',
+                                border:          `1px solid ${step>i ? colors[i]+'40' : 'transparent'}`,
+                                transform:       step>i ? 'translateY(0)' : 'translateY(4px)',
+                                opacity:         step>i ? 1               : 0,
                             }}>
                             {s}
                         </div>
                         {i < 3 && (
                             <div className="w-2 h-px transition-all duration-200"
-                                style={{ backgroundColor: step > i + 1 ? '#FFA500' : 'transparent', opacity: step > i + 1 ? 0.4 : 0 }} />
+                                style={{ backgroundColor: step>i+1 ? '#FFA500':'transparent', opacity: step>i+1 ? 0.4:0 }} />
                         )}
                     </React.Fragment>
                 ))}
             </div>
             <div className="text-4xl font-bold font-mono transition-all duration-500"
-                style={{ color: step >= 5 ? '#FFA500' : 'transparent', transform: step >= 5 ? 'scale(1)' : 'scale(0.6)' }}>
-                4
-            </div>
+                style={{ color: step>=5 ? '#FFA500':'transparent', transform: step>=5 ? 'scale(1)':'scale(0.6)' }}>4</div>
             <div className="text-sm text-gray-500 mt-1">Detection Stages</div>
         </div>
     );
 }
 
-// ── Compliance hover card ─────────────────────────────────────────────────────
+// ── Compliance card ───────────────────────────────────────────────────────────
 interface ComplianceCardProps {
     name: string; shortDesc: string; color: string;
     fullDesc: string; keyPoints: string[]; penalty?: string;
@@ -314,26 +282,25 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
     return (
         <div className="relative rounded-2xl border overflow-hidden cursor-default transition-all duration-500 text-left"
             style={{
-                borderColor:     hovered ? color + '50' : color + '20',
-                backgroundColor: hovered ? color + '10' : color + '06',
-                transform:       hovered ? 'translateY(-4px)' : 'translateY(0)',
-                boxShadow:       hovered ? `0 12px 40px ${color}18` : 'none',
+                borderColor: hovered ? color+'50':color+'20',
+                backgroundColor: hovered ? color+'10':color+'06',
+                transform: hovered ? 'translateY(-4px)':'translateY(0)',
+                boxShadow: hovered ? `0 12px 40px ${color}18`:'none',
             }}
             onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-        >
+            onMouseLeave={() => setHovered(false)}>
             <div className="p-4">
                 <div className="font-bold text-sm mb-0.5" style={{ color }}>{name}</div>
                 <div className="text-[11px] text-gray-500">{shortDesc}</div>
                 {!hovered && <div className="text-[10px] text-gray-700 mt-1.5 font-mono">Hover to expand ↓</div>}
             </div>
             <div className="overflow-hidden transition-all duration-500 ease-out"
-                style={{ maxHeight: hovered ? '280px' : '0px', opacity: hovered ? 1 : 0 }}>
+                style={{ maxHeight: hovered ? '280px':'0px', opacity: hovered ? 1:0 }}>
                 <div className="px-4 pb-4 space-y-2.5">
-                    <div className="h-px w-full" style={{ backgroundColor: color + '20' }} />
+                    <div className="h-px w-full" style={{ backgroundColor: color+'20' }} />
                     <p className="text-[11px] text-gray-400 leading-relaxed">{fullDesc}</p>
                     <div className="space-y-1.5">
-                        {keyPoints.map((pt, i) => (
+                        {keyPoints.map((pt,i) => (
                             <div key={i} className="flex items-start gap-2">
                                 <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: color }} />
                                 <span className="text-[10px] text-gray-500">{pt}</span>
@@ -341,8 +308,7 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
                         ))}
                     </div>
                     {penalty && (
-                        <div className="px-2.5 py-1.5 rounded-lg text-[10px] font-mono"
-                            style={{ backgroundColor: color + '10', color }}>
+                        <div className="px-2.5 py-1.5 rounded-lg text-[10px] font-mono" style={{ backgroundColor: color+'10', color }}>
                             Penalty: {penalty}
                         </div>
                     )}
@@ -354,37 +320,30 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-    const [loaderDone,   setLoaderDone]   = useState(false);
-    const [pageVisible,  setPageVisible]  = useState(false);
-    const [scrolled,     setScrolled]     = useState(false);
-
-    useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', onScroll);
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
+    const [loaderDone,  setLoaderDone]  = useState(false);
+    const [pageVisible, setPageVisible] = useState(false);
 
     const handleLoaderComplete = () => {
         setLoaderDone(true);
         setTimeout(() => setPageVisible(true), 50);
     };
 
-    const complianceCards: ComplianceCardProps[] = [
-        { name: 'DPDP Act 2023', shortDesc: 'Digital Personal Data Protection Act', color: '#F97316',
-          fullDesc: "India's landmark data protection legislation requiring explicit consent before processing personal data of Indian citizens.",
-          keyPoints: ['Explicit consent required before data processing','Data minimization — collect only what is needed','Right to erasure and correction for data principals','Mandatory breach notification within 72 hours'],
-          penalty: 'Up to ₹250 crore per violation' },
-        { name: 'GDPR Art. 25', shortDesc: 'Data protection by design and default', color: '#60A5FA',
-          fullDesc: 'EU regulation requiring privacy to be built into products from the ground up, not added as an afterthought.',
-          keyPoints: ['Privacy must be considered at design stage','Default settings must be most privacy-friendly','Pseudonymization and encryption required where appropriate',"Applies to any org processing EU residents' data"],
-          penalty: 'Up to €20M or 4% of global annual turnover' },
-        { name: 'ISO 27001', shortDesc: 'Information security management', color: '#34D399',
-          fullDesc: 'International standard for establishing, implementing, and maintaining an information security management system.',
-          keyPoints: ['Risk-based approach to information security','Mandatory security controls across 14 domains','Requires documented policies and procedures','Annual surveillance audits and 3-year recertification'] },
-        { name: 'IT Act 2000', shortDesc: 'Section 43A sensitive data protection', color: '#A78BFA',
-          fullDesc: "India's IT Act Section 43A mandates compensation for failure to implement reasonable security practices for sensitive personal data.",
-          keyPoints: ['Applies to body corporates handling sensitive data','Sensitive data includes biometrics, financial info, health records','Must maintain a documented security policy','Negligence in data protection is a civil liability'],
-          penalty: 'Compensation to affected persons — no upper limit' },
+    const compliance: ComplianceCardProps[] = [
+        { name:'DPDP Act 2023', shortDesc:'Digital Personal Data Protection Act', color:'#F97316',
+          fullDesc:"India's landmark data protection legislation requiring explicit consent before processing personal data of Indian citizens.",
+          keyPoints:['Explicit consent required before data processing','Data minimization — collect only what is needed','Right to erasure and correction for data principals','Mandatory breach notification within 72 hours'],
+          penalty:'Up to ₹250 crore per violation' },
+        { name:'GDPR Art. 25', shortDesc:'Data protection by design and default', color:'#60A5FA',
+          fullDesc:'EU regulation requiring privacy to be built into products from the ground up, not added as an afterthought.',
+          keyPoints:['Privacy must be considered at design stage','Default settings must be most privacy-friendly','Pseudonymization and encryption required where appropriate',"Applies to any org processing EU residents' data"],
+          penalty:'Up to €20M or 4% of global annual turnover' },
+        { name:'ISO 27001', shortDesc:'Information security management', color:'#34D399',
+          fullDesc:'International standard for establishing, implementing, and maintaining an information security management system.',
+          keyPoints:['Risk-based approach to information security','Mandatory security controls across 14 domains','Requires documented policies and procedures','Annual surveillance audits and 3-year recertification'] },
+        { name:'IT Act 2000', shortDesc:'Section 43A sensitive data protection', color:'#A78BFA',
+          fullDesc:"India's IT Act Section 43A mandates compensation for failure to implement reasonable security practices for sensitive personal data.",
+          keyPoints:['Applies to body corporates handling sensitive data','Sensitive data includes biometrics, financial info, health records','Must maintain a documented security policy','Negligence in data protection is a civil liability'],
+          penalty:'Compensation to affected persons — no upper limit' },
     ];
 
     return (
@@ -394,9 +353,8 @@ export default function LandingPage() {
             <div className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-[#FFA500] selection:text-black overflow-x-hidden transition-opacity duration-300"
                 style={{ opacity: pageVisible ? 1 : 0 }}>
 
-                {/* Nav — solid bg so it never shows content beneath */}
-                <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#0A0A0A] border-b border-white/[0.05]"
-                    style={{ backdropFilter: scrolled ? 'blur(12px)' : 'none' }}>
+                {/* Nav */}
+                <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#0A0A0A] border-b border-white/[0.05]">
                     <Link href="/" className="flex items-center gap-2.5 group">
                         <div className="p-1.5 rounded-lg bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
                             <Shield className="w-4 h-4 text-black" />
@@ -421,33 +379,70 @@ export default function LandingPage() {
                     <div className="absolute top-48 left-1/4  w-[300px] h-[300px] bg-blue-600/4   rounded-full blur-[100px] pointer-events-none" />
                     <div className="absolute top-48 right-1/4 w-[300px] h-[300px] bg-purple-600/4 rounded-full blur-[100px] pointer-events-none" />
                     <div className="absolute inset-0 pointer-events-none opacity-[0.02]"
-                        style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                        style={{ backgroundImage:'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize:'40px 40px' }} />
 
-                    <div className="relative z-10 max-w-4xl mx-auto">
+                    <div className="relative z-10 max-w-5xl mx-auto">
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFA500]/10 border border-[#FFA500]/20 text-[#FFA500] text-xs font-medium mb-10">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#FFA500] animate-pulse" />
                             DPDP Act 2023 · GDPR · Built for Indian enterprises
                         </div>
 
-                        {/* Headline — hover effects per word, hardcoded, no rectangles */}
-                        <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
-                            <span className="block">
-                                {/* INTELLIGENT — magnify on hover */}
-                                <HoverWord word="INTELLIGENT" className="text-white" wordEffect="magnify" />
-                                {' '}
-                                {/* PII — encrypt (orange cipher chars) */}
-                                <HoverWord word="PII" className="text-white" wordEffect="encrypt" />
+                        {/*
+                          Headline — ET-style serif-adjacent condensed bold.
+                          Using Georgia / Times as fallback — closest to ET's
+                          condensed slab feel without a custom font load.
+                          Equal letter-spacing via letterSpacing: 0.
+                          Each word gets a unique security effect.
+                        */}
+                        <h1
+                            className="mb-6 leading-[1.0]"
+                            style={{
+                                fontFamily: '"Georgia", "Times New Roman", "Palatino", serif',
+                                fontWeight: 700,
+                                fontSize: 'clamp(2.8rem, 8vw, 6.5rem)',
+                                letterSpacing: '-0.01em',
+                                wordSpacing: '0.05em',
+                            }}
+                        >
+                            {/* Line 1 — INTELLIGENT (encrypt/orange) + PII (redact/dims) */}
+                            <span className="block" style={{ whiteSpace: 'nowrap', overflow: 'visible' }}>
+                                <EncryptWord
+                                    word="INTELLIGENT"
+                                    mode="encrypt"
+                                    className="text-white"
+                                />
+                                {/* Non-breaking space — fixed width */}
+                                <span style={{ display:'inline-block', width:'0.35em' }} />
+                                <EncryptWord
+                                    word="PII"
+                                    mode="redact"
+                                    className="text-white"
+                                />
                             </span>
-                            <span className="block text-[#FFA500]">
-                                {/* Anonymization — redact (dims to blocks) */}
-                                <HoverWord word="Anonymization" className="text-[#FFA500]" wordEffect="redact" />
+
+                            {/* Line 2 — Anonymization (anon / ░ fade) in orange */}
+                            <span className="block" style={{ color: '#FFA500' }}>
+                                <EncryptWord
+                                    word="Anonymization"
+                                    mode="anon"
+                                    className=""
+                                    style={{ color: '#FFA500' }}
+                                />
                             </span>
-                            <span className="block text-white">
-                                {/* at — encrypt */}
-                                <HoverWord word="at" className="text-white" wordEffect="encrypt" />
-                                {' '}
-                                {/* Scale — magnify */}
-                                <HoverWord word="Scale" className="text-white" wordEffect="magnify" />
+
+                            {/* Line 3 — at Scale (encrypt) */}
+                            <span className="block text-white" style={{ whiteSpace: 'nowrap', overflow: 'visible' }}>
+                                <EncryptWord
+                                    word="at"
+                                    mode="encrypt"
+                                    className="text-white"
+                                />
+                                <span style={{ display:'inline-block', width:'0.35em' }} />
+                                <EncryptWord
+                                    word="Scale"
+                                    mode="redact"
+                                    className="text-white"
+                                />
                             </span>
                         </h1>
 
@@ -466,7 +461,6 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Terminal */}
                     <div className="relative z-10 mt-16 w-full max-w-2xl mx-auto">
                         <TrafficSignalTerminal />
                     </div>
@@ -477,8 +471,8 @@ export default function LandingPage() {
                     <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center items-end">
                         <AnimatedStat target={17} suffix="+" label="Entity Types Detected" />
                         <PipelineFlowStat />
-                        <AnimatedStat target={7}  suffix=""  label="Indian PII Formats" />
-                        <AnimatedStat target={28} suffix=""  label="Active Recognizers" />
+                        <AnimatedStat target={7}  label="Indian PII Formats" />
+                        <AnimatedStat target={28} label="Active Recognizers" />
                     </div>
                 </section>
 
@@ -491,20 +485,19 @@ export default function LandingPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[
-                                { icon: <Fingerprint className="w-5 h-5" />, color: '#F97316', title: 'Indian PII Detection',    desc: 'Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration — format-validated, not just pattern-matched.' },
-                                { icon: <Zap className="w-5 h-5" />,         color: '#FFA500', title: 'Four-Stage Pipeline',     desc: 'Regex → Presidio → spaCy NER → Voting ensemble. Weighted scoring with type-lock at ≥0.80 confidence prevents misclassification.' },
-                                { icon: <Eye className="w-5 h-5" />,         color: '#60A5FA', title: 'Visual Canvas Redaction', desc: 'Pixel-level redaction for PDFs and images. Draw boxes manually, detect faces automatically, export as flattened PDF.' },
-                                { icon: <Database className="w-5 h-5" />,    color: '#34D399', title: 'Synthetic Substitution',  desc: 'Replace PII with realistic synthetic Indian data. Documents stay readable while all sensitive information is replaced.' },
-                                { icon: <Code2 className="w-5 h-5" />,       color: '#A78BFA', title: 'REST API Access',         desc: 'Authenticated REST endpoints for pipeline integration. Per-key rate limiting and request tracking included.' },
-                                { icon: <Layers className="w-5 h-5" />,      color: '#818CF8', title: 'Batch Processing',        desc: 'Queue multiple documents, download as ZIP in any format. Powered by the same four-stage detection pipeline.' },
-                                { icon: <BarChart3 className="w-5 h-5" />,   color: '#F472B6', title: 'Compliance Reports',      desc: 'DPDP Act 2023 and GDPR Article 25 aligned audit reports. PDF and CSV export per session.' },
-                                { icon: <Users className="w-5 h-5" />,       color: '#2DD4BF', title: 'Human-in-the-Loop',       desc: 'Review and approve each detected entity before export. Full control over what gets redacted, with confidence scores.' },
-                                { icon: <Lock className="w-5 h-5" />,        color: '#EAB308', title: 'Local Inference Only',    desc: 'No data transmitted externally. Fully air-gapped deployment via Docker Compose. Audit logs persist in SQLite.' },
-                            ].map((f, i) => (
+                                { icon:<Fingerprint className="w-5 h-5"/>, color:'#F97316', title:'Indian PII Detection',    desc:'Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration — format-validated, not just pattern-matched.' },
+                                { icon:<Zap className="w-5 h-5"/>,         color:'#FFA500', title:'Four-Stage Pipeline',     desc:'Regex → Presidio → spaCy NER → Voting ensemble. Weighted scoring with type-lock at ≥0.80 confidence prevents misclassification.' },
+                                { icon:<Eye className="w-5 h-5"/>,         color:'#60A5FA', title:'Visual Canvas Redaction', desc:'Pixel-level redaction for PDFs and images. Draw boxes manually, detect faces automatically, export as flattened PDF.' },
+                                { icon:<Database className="w-5 h-5"/>,    color:'#34D399', title:'Synthetic Substitution',  desc:'Replace PII with realistic synthetic Indian data. Documents stay readable while all sensitive information is replaced.' },
+                                { icon:<Code2 className="w-5 h-5"/>,       color:'#A78BFA', title:'REST API Access',         desc:'Authenticated REST endpoints for pipeline integration. Per-key rate limiting and request tracking included.' },
+                                { icon:<Layers className="w-5 h-5"/>,      color:'#818CF8', title:'Batch Processing',        desc:'Queue multiple documents, download as ZIP in any format. Powered by the same four-stage detection pipeline.' },
+                                { icon:<BarChart3 className="w-5 h-5"/>,   color:'#F472B6', title:'Compliance Reports',      desc:'DPDP Act 2023 and GDPR Article 25 aligned audit reports. PDF and CSV export per session.' },
+                                { icon:<Users className="w-5 h-5"/>,       color:'#2DD4BF', title:'Human-in-the-Loop',       desc:'Review and approve each detected entity before export. Full control over what gets redacted, with confidence scores.' },
+                                { icon:<Lock className="w-5 h-5"/>,        color:'#EAB308', title:'Local Inference Only',    desc:'No data transmitted externally. Fully air-gapped deployment via Docker Compose. Audit logs persist in SQLite.' },
+                            ].map((f,i) => (
                                 <div key={i} className="group p-5 rounded-2xl bg-[#0E0E0E] border border-[#1A1A1A] hover:border-[#2A2A2A] hover:bg-[#111] transition-all duration-300">
-                                    <div className="p-2.5 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300"
-                                        style={{ backgroundColor: f.color + '15' }}>
-                                        <div style={{ color: f.color }}>{f.icon}</div>
+                                    <div className="p-2.5 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor:f.color+'15' }}>
+                                        <div style={{ color:f.color }}>{f.icon}</div>
                                     </div>
                                     <h3 className="font-semibold text-white mb-2 text-sm">{f.title}</h3>
                                     <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
@@ -523,22 +516,22 @@ export default function LandingPage() {
                         </div>
                         <div className="space-y-4">
                             {[
-                                { step: '01', name: 'Regex Engine',    weight: '1.4×', color: '#F97316', desc: 'Format-aware pattern matching for structured Indian PII. Aadhaar validated with Verhoeff checksum, PAN alphanumeric structure verified, GSTIN state codes checked. Highest weight due to format precision.' },
-                                { step: '02', name: 'Presidio NLP',    weight: '1.0×', color: '#60A5FA', desc: '28 specialized recognizers for global PII patterns. Phone numbers, credit cards, email addresses, SSN, medical license numbers, URLs, IP addresses, and more.' },
-                                { step: '03', name: 'spaCy NER',       weight: '0.9×', color: '#34D399', desc: 'en_core_web_lg transformer model provides context-aware named entity recognition. Detects names, locations, organizations by understanding surrounding text.' },
-                                { step: '04', name: 'Voting Ensemble', weight: '—',    color: '#FFA500', desc: 'Weighted scores merged across all stages. Type-locked at ≥0.80 regex confidence — prevents spaCy from reclassifying a PAN number as a location based on context alone.' },
-                            ].map((s, i) => (
+                                { step:'01', name:'Regex Engine',    weight:'1.4×', color:'#F97316', desc:'Format-aware pattern matching for structured Indian PII. Aadhaar validated with Verhoeff checksum, PAN alphanumeric structure verified, GSTIN state codes checked. Highest weight due to format precision.' },
+                                { step:'02', name:'Presidio NLP',    weight:'1.0×', color:'#60A5FA', desc:'28 specialized recognizers for global PII patterns. Phone numbers, credit cards, email addresses, SSN, medical license numbers, URLs, IP addresses, and more.' },
+                                { step:'03', name:'spaCy NER',       weight:'0.9×', color:'#34D399', desc:'en_core_web_lg transformer model provides context-aware named entity recognition. Detects names, locations, organizations by understanding surrounding text.' },
+                                { step:'04', name:'Voting Ensemble', weight:'—',    color:'#FFA500', desc:'Weighted scores merged across all stages. Type-locked at ≥0.80 regex confidence — prevents spaCy from reclassifying a PAN number as a location based on context alone.' },
+                            ].map((s,i) => (
                                 <div key={i} className="flex gap-4 p-5 rounded-2xl bg-[#111] border border-[#1A1A1A] hover:border-[#2A2A2A] transition-all">
                                     <div className="shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center text-[10px] font-mono font-bold mt-0.5"
-                                        style={{ borderColor: s.color + '50', backgroundColor: s.color + '10', color: s.color }}>
+                                        style={{ borderColor:s.color+'50', backgroundColor:s.color+'10', color:s.color }}>
                                         {s.step}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
                                             <h3 className="font-semibold text-white">{s.name}</h3>
-                                            {s.weight !== '—' && (
+                                            {s.weight!=='—' && (
                                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded border shrink-0"
-                                                    style={{ color: s.color, borderColor: s.color + '30', backgroundColor: s.color + '10' }}>
+                                                    style={{ color:s.color, borderColor:s.color+'30', backgroundColor:s.color+'10' }}>
                                                     weight {s.weight}
                                                 </span>
                                             )}
@@ -551,7 +544,7 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* API — solid bg so nav never overlaps */}
+                {/* API */}
                 <section id="api" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
                     <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         <div>
@@ -566,7 +559,7 @@ export default function LandingPage() {
                                     'POST /api/v3/public/analyze — detect entities without redacting',
                                     'POST /api/v3/synthesize — replace PII with synthetic data',
                                     'POST /api/v3/classify — auto-detect document type',
-                                ].map((item, i) => (
+                                ].map((item,i) => (
                                     <li key={i} className="flex items-start gap-2.5">
                                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                         <span className="text-xs font-mono text-gray-400">{item}</span>
@@ -590,13 +583,13 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Compliance — solid bg */}
+                {/* Compliance */}
                 <section id="compliance" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
                     <div className="max-w-4xl mx-auto text-center">
                         <h2 className="text-3xl font-bold mb-4">Built for regulatory compliance</h2>
                         <p className="text-gray-400 mb-12 max-w-xl mx-auto">Hover each regulation to understand its requirements and how Ciphera addresses them.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {complianceCards.map((card, i) => <ComplianceCard key={i} {...card} />)}
+                            {compliance.map((card,i) => <ComplianceCard key={i} {...card} />)}
                         </div>
                     </div>
                 </section>
