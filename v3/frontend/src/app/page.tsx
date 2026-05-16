@@ -9,87 +9,86 @@ import {
 } from 'lucide-react';
 import { SiteLoader } from '@/components/layout/SiteLoader';
 
-// ── Hover-encrypt headline ────────────────────────────────────────────────────
-// Each word independently encrypts on hover — character substitution only,
-// no background shapes or rectangles.
-const CIPHER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?▒░';
-const EFFECTS = ['cipher', 'redact', 'encrypt'] as const;
-type Effect = typeof EFFECTS[number];
+// ── Cipher chars ──────────────────────────────────────────────────────────────
+const CIPHER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
+const rc = () => CIPHER_CHARS[Math.floor(Math.random() * CIPHER_CHARS.length)];
 
-function pickEffect(): Effect {
-    return EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
-}
+// ── HoverWord — encrypt once on enter, decrypt on leave, no repeat ─────────────
+// Each word is hardcoded to one of: 'magnify' | 'encrypt' | 'redact'
+type WordEffect = 'magnify' | 'encrypt' | 'redact';
 
-function HoverWord({
-    word,
-    className = '',
-    effect,
-}: {
-    word: string;
-    className?: string;
-    effect?: Effect;
+function HoverWord({ word, className = '', wordEffect }: {
+    word: string; className?: string; wordEffect: WordEffect;
 }) {
-    const [chars, setChars] = useState<string[]>(word.split(''));
-    const [active, setActive] = useState(false);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const revealTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-    const currentEffect = useRef<Effect>(effect || pickEffect());
+    const [chars,    setChars]    = useState<string[]>(word.split(''));
+    const [scale,    setScale]    = useState(1);
+    const [active,   setActive]   = useState(false);
+    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-    const clearAll = () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        revealTimers.current.forEach(t => clearTimeout(t));
-        revealTimers.current = [];
+    const clear = () => {
+        timersRef.current.forEach(t => clearTimeout(t));
+        timersRef.current = [];
     };
 
     const onEnter = useCallback(() => {
-        clearAll();
+        if (active) return;
         setActive(true);
-        currentEffect.current = effect || pickEffect();
+        clear();
         const letters = word.split('');
 
-        if (currentEffect.current === 'redact') {
-            // Chars go to ░ one by one
-            setChars(letters.map(() => '░'));
-            letters.forEach((orig, i) => {
+        if (wordEffect === 'magnify') {
+            setScale(1.18);
+        } else if (wordEffect === 'redact') {
+            // Each char replaced with a dim block character, staggered
+            const next = [...letters];
+            letters.forEach((_, i) => {
                 const t = setTimeout(() => {
-                    setChars(prev => { const n=[...prev]; n[i]='█'; return n; });
-                }, i * 35);
-                revealTimers.current.push(t);
+                    setChars(prev => {
+                        const n = [...prev];
+                        n[i] = '▓';
+                        return n;
+                    });
+                }, i * 40);
+                timersRef.current.push(t);
             });
-        } else if (currentEffect.current === 'encrypt') {
-            // Each char cycles rapidly through cipher chars
-            intervalRef.current = setInterval(() => {
-                setChars(prev => prev.map((_, i) =>
-                    Math.random() > 0.3
-                        ? CIPHER_CHARS[Math.floor(Math.random() * CIPHER_CHARS.length)]
-                        : letters[i]
-                ));
-            }, 45);
         } else {
-            // cipher — each char substituted with random, independently
-            intervalRef.current = setInterval(() => {
-                setChars(prev => prev.map((orig, i) => {
-                    if (Math.random() > 0.5) return CIPHER_CHARS[Math.floor(Math.random() * CIPHER_CHARS.length)];
-                    return orig;
-                }));
-            }, 60);
+            // encrypt — each char gets one random substitute, then holds
+            setChars(letters.map(() => rc()));
         }
-    }, [word, effect]);
+    }, [word, wordEffect, active]);
 
     const onLeave = useCallback(() => {
-        clearAll();
         setActive(false);
+        clear();
         const letters = word.split('');
-        // Smoothly restore char by char
-        letters.forEach((orig, i) => {
-            const t = setTimeout(() => {
-                setChars(prev => { const n=[...prev]; n[i]=orig; return n; });
-            }, i * 25 + Math.random() * 20);
-            revealTimers.current.push(t);
-        });
-    }, [word]);
 
-    useEffect(() => () => clearAll(), []);
+        if (wordEffect === 'magnify') {
+            setScale(1);
+        } else {
+            // Restore char by char with slight stagger
+            letters.forEach((orig, i) => {
+                const t = setTimeout(() => {
+                    setChars(prev => { const n = [...prev]; n[i] = orig; return n; });
+                }, i * 30);
+                timersRef.current.push(t);
+            });
+        }
+    }, [word, wordEffect]);
+
+    useEffect(() => () => clear(), []);
+
+    if (wordEffect === 'magnify') {
+        return (
+            <span
+                className={`inline-block cursor-default select-none transition-transform duration-300 ease-out ${className}`}
+                style={{ transform: `scale(${scale})`, transformOrigin: 'center bottom', display: 'inline-block' }}
+                onMouseEnter={onEnter}
+                onMouseLeave={onLeave}
+            >
+                {word}
+            </span>
+        );
+    }
 
     return (
         <span
@@ -97,33 +96,34 @@ function HoverWord({
             onMouseEnter={onEnter}
             onMouseLeave={onLeave}
         >
-            {chars.map((ch, i) => (
-                <span
-                    key={i}
-                    className="inline-block transition-colors duration-75"
-                    style={{
-                        color: active && (ch === '█' || ch === '░')
-                            ? 'rgba(255,255,255,0.15)'
-                            : active && ch !== word[i]
-                            ? currentEffect.current === 'encrypt' ? '#FFA500' : '#b91c1c'
-                            : undefined,
-                        textShadow: active && ch !== word[i] && currentEffect.current === 'encrypt'
-                            ? '0 0 8px rgba(255,165,0,0.4)'
-                            : 'none',
-                    }}
-                >
-                    {ch}
-                </span>
-            ))}
+            {chars.map((ch, i) => {
+                const isAltered = ch !== word[i];
+                return (
+                    <span key={i} className="inline-block"
+                        style={{
+                            color: isAltered
+                                ? wordEffect === 'redact'
+                                    ? 'rgba(255,255,255,0.12)'
+                                    : '#FFA500'
+                                : undefined,
+                            textShadow: isAltered && wordEffect === 'encrypt'
+                                ? '0 0 10px rgba(255,165,0,0.5)'
+                                : 'none',
+                            transition: 'color 0.05s, text-shadow 0.05s',
+                        }}>
+                        {ch}
+                    </span>
+                );
+            })}
         </span>
     );
 }
 
 // ── Traffic signal terminal ───────────────────────────────────────────────────
-const TERMINAL_STATES = [
-    { light: 'red',    label: 'CONNECTING',  text: 'Establishing secure channel…',   color: '#ef4444' },
-    { light: 'yellow', label: 'PROCESSING',  text: 'Running detection pipeline…',    color: '#eab308' },
-    { light: 'green',  label: 'SECURED',     text: 'PII redacted. Channel secured.', color: '#22c55e' },
+const SIGNAL_STATES = [
+    { color: '#ef4444', label: 'CONNECTING',  status: 'Establishing secure channel…'   },
+    { color: '#eab308', label: 'PROCESSING',  status: 'Running detection pipeline…'    },
+    { color: '#22c55e', label: 'SECURED',     status: 'PII redacted. Channel secured.' },
 ] as const;
 
 const DEMO_LINES = [
@@ -136,83 +136,61 @@ const DEMO_LINES = [
 ];
 
 function TrafficSignalTerminal() {
-    const [stateIdx, setStateIdx] = useState(0);
-    const [lineIdx,  setLineIdx]  = useState(0);
-    const [charIdx,  setCharIdx]  = useState(0);
-    const [phase,    setPhase]    = useState<'typing' | 'pause' | 'erasing'>('typing');
-    const currentState = TERMINAL_STATES[stateIdx];
-    const currentLine  = DEMO_LINES[lineIdx];
+    const [sigIdx,   setSigIdx]  = useState(0);
+    const [lineIdx,  setLineIdx] = useState(0);
+    const [charIdx,  setCharIdx] = useState(0);
+    const [phase,    setPhase]   = useState<'typing'|'pause'|'erasing'>('typing');
+    const sig  = SIGNAL_STATES[sigIdx];
+    const line = DEMO_LINES[lineIdx];
 
-    // Cycle signal state every time a line pair completes
     useEffect(() => {
         if (lineIdx > 0 && lineIdx % 2 === 0) {
-            setStateIdx(i => (i + 1) % TERMINAL_STATES.length);
+            setSigIdx(i => (i + 1) % SIGNAL_STATES.length);
         }
     }, [lineIdx]);
 
-    // Typing animation
     useEffect(() => {
-        let timer: ReturnType<typeof setTimeout>;
+        let t: ReturnType<typeof setTimeout>;
         if (phase === 'typing') {
-            if (charIdx < currentLine.text.length) timer = setTimeout(() => setCharIdx(c => c + 1), 26);
-            else timer = setTimeout(() => setPhase('pause'), 1600);
+            if (charIdx < line.text.length) t = setTimeout(() => setCharIdx(c => c + 1), 26);
+            else t = setTimeout(() => setPhase('pause'), 1600);
         } else if (phase === 'pause') {
-            timer = setTimeout(() => setPhase('erasing'), 300);
+            t = setTimeout(() => setPhase('erasing'), 300);
         } else {
-            if (charIdx > 0) timer = setTimeout(() => setCharIdx(c => c - 1), 10);
+            if (charIdx > 0) t = setTimeout(() => setCharIdx(c => c - 1), 10);
             else { setLineIdx(i => (i + 1) % DEMO_LINES.length); setPhase('typing'); }
         }
-        return () => clearTimeout(timer);
-    }, [phase, charIdx, currentLine.text.length]);
+        return () => clearTimeout(t);
+    }, [phase, charIdx, line.text.length]);
 
     return (
         <div className="bg-[#0D0D0D] border border-[#2A2A2A] rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)]">
-            {/* Terminal header with traffic signal */}
             <div className="flex items-center gap-2 px-4 py-3 bg-[#141414] border-b border-[#2A2A2A]">
-                {/* Traffic signal lights */}
+                {/* Traffic lights */}
                 <div className="flex items-center gap-1.5">
-                    {TERMINAL_STATES.map((s, i) => (
-                        <div
-                            key={i}
-                            className="w-3 h-3 rounded-full transition-all duration-500"
+                    {SIGNAL_STATES.map((s, i) => (
+                        <div key={i} className="w-3 h-3 rounded-full transition-all duration-500"
                             style={{
-                                backgroundColor: stateIdx === i ? s.color : s.color + '30',
-                                boxShadow: stateIdx === i ? `0 0 8px ${s.color}80` : 'none',
-                                transform: stateIdx === i ? 'scale(1.15)' : 'scale(1)',
-                            }}
-                        />
+                                backgroundColor: sigIdx === i ? s.color : s.color + '28',
+                                boxShadow: sigIdx === i ? `0 0 10px ${s.color}90` : 'none',
+                                transform: sigIdx === i ? 'scale(1.15)' : 'scale(1)',
+                            }} />
                     ))}
                 </div>
                 <span className="ml-2 text-[11px] font-mono text-gray-600">ciphera v3 — live detection engine</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                    <div
-                        className="w-1.5 h-1.5 rounded-full transition-all duration-500"
-                        style={{
-                            backgroundColor: currentState.color,
-                            boxShadow: `0 0 6px ${currentState.color}`,
-                            animation: stateIdx === 2 ? 'none' : 'pulse 1s infinite',
-                        }}
-                    />
-                    <span
-                        className="text-[9px] font-mono tracking-wider transition-colors duration-500"
-                        style={{ color: currentState.color }}
-                    >
-                        {currentState.label}
-                    </span>
+                    <div className="w-1.5 h-1.5 rounded-full animate-pulse"
+                        style={{ backgroundColor: sig.color, boxShadow: `0 0 6px ${sig.color}` }} />
+                    <span className="text-[9px] font-mono tracking-wider transition-colors duration-500"
+                        style={{ color: sig.color }}>{sig.label}</span>
                 </div>
             </div>
-            {/* Status line */}
-            <div
-                className="px-6 pt-3 pb-1 text-[10px] font-mono transition-colors duration-500"
-                style={{ color: currentState.color + '80' }}
-            >
-                {currentState.text}
-            </div>
-            {/* Typing content */}
+            <div className="px-6 pt-3 pb-1 text-[10px] font-mono transition-colors duration-500"
+                style={{ color: sig.color + '70' }}>{sig.status}</div>
             <div className="px-6 pb-5 min-h-[52px] flex items-center">
                 <div className="font-mono text-sm leading-relaxed">
-                    <span className={currentLine.type === 'redacted' ? 'text-emerald-400' : 'text-gray-300'}>
-                        {currentLine.text.slice(0, charIdx)}
+                    <span className={line.type === 'redacted' ? 'text-emerald-400' : 'text-gray-300'}>
+                        {line.text.slice(0, charIdx)}
                     </span>
                     <span className="inline-block w-0.5 h-4 bg-[#FFA500] ml-0.5 animate-pulse align-middle" />
                 </div>
@@ -221,32 +199,40 @@ function TrafficSignalTerminal() {
     );
 }
 
-// ── Stats with scroll-triggered animations ────────────────────────────────────
+// ── Stats — re-trigger on every scroll into view ──────────────────────────────
 function AnimatedStat({ target, suffix = '', label }: { target: number; suffix?: string; label: string }) {
-    const [val, setVal]         = useState(0);
-    const [triggered, setTriggered] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+    const [val, setVal]   = useState(0);
+    const [key, setKey]   = useState(0); // bump to re-run animation
+    const ref             = useRef<HTMLDivElement>(null);
+    const runningRef      = useRef(false);
+
+    const runAnim = useCallback(() => {
+        if (runningRef.current) return;
+        runningRef.current = true;
+        setVal(0);
+        let start = 0;
+        const step = target / 50;
+        const timer = setInterval(() => {
+            start += step;
+            if (start >= target) { setVal(target); clearInterval(timer); runningRef.current = false; }
+            else setVal(Math.floor(start));
+        }, 20);
+    }, [target]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(([entry]) => {
-            if (!entry.isIntersecting || triggered) return;
-            setTriggered(true);
-            observer.disconnect();
-            let start = 0;
-            const step = target / 50;
-            const timer = setInterval(() => {
-                start += step;
-                if (start >= target) { setVal(target); clearInterval(timer); }
-                else setVal(Math.floor(start));
-            }, 20);
+            if (entry.isIntersecting) {
+                setKey(k => k + 1);
+                runAnim();
+            }
         }, { threshold: 0.5 });
         if (ref.current) observer.observe(ref.current);
         return () => observer.disconnect();
-    }, [target, triggered]);
+    }, [runAnim]);
 
     return (
         <div ref={ref} className="text-center">
-            <div className="text-4xl font-bold text-[#FFA500] font-mono mb-1">
+            <div key={key} className="text-4xl font-bold text-[#FFA500] font-mono mb-1">
                 {val.toLocaleString()}{suffix}
             </div>
             <div className="text-sm text-gray-500">{label}</div>
@@ -254,66 +240,63 @@ function AnimatedStat({ target, suffix = '', label }: { target: number; suffix?:
     );
 }
 
-// The "4" stat — pipeline flowchart that assembles into 4
+// ── Pipeline-assembles-into-4 stat — re-triggers on every scroll ──────────────
 function PipelineFlowStat() {
-    const [step, setStep]         = useState(0);
-    const [triggered, setTriggered] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+    const [step,   setStep]   = useState(0);
+    const [key,    setKey]    = useState(0);
+    const ref                 = useRef<HTMLDivElement>(null);
+    const runningRef          = useRef(false);
+
+    const runAnim = useCallback(() => {
+        if (runningRef.current) return;
+        runningRef.current = true;
+        setStep(0);
+        [0, 1, 2, 3, 4].forEach(i => {
+            setTimeout(() => {
+                setStep(i + 1);
+                if (i === 4) runningRef.current = false;
+            }, i * 260);
+        });
+    }, []);
 
     useEffect(() => {
         const observer = new IntersectionObserver(([entry]) => {
-            if (!entry.isIntersecting || triggered) return;
-            setTriggered(true);
-            observer.disconnect();
-            // Animate steps in sequence
-            [0,1,2,3,4].forEach(i => {
-                setTimeout(() => setStep(i + 1), i * 280);
-            });
+            if (entry.isIntersecting) {
+                setKey(k => k + 1);
+                runAnim();
+            }
         }, { threshold: 0.5 });
         if (ref.current) observer.observe(ref.current);
         return () => observer.disconnect();
-    }, [triggered]);
+    }, [runAnim]);
 
-    const stages = ['Regex', 'Presidio', 'spaCy', 'Ensemble'];
+    const stages = ['Regex', 'Presidio', 'spaCy', 'Vote'];
     const colors  = ['#F97316', '#60A5FA', '#34D399', '#FFA500'];
 
     return (
-        <div ref={ref} className="flex flex-col items-center">
-            {/* Mini pipeline that resolves to "4" */}
+        <div ref={ref} key={key} className="flex flex-col items-center">
             <div className="flex items-center gap-1 mb-3 h-8">
                 {stages.map((s, i) => (
                     <React.Fragment key={i}>
-                        <div
-                            className="transition-all duration-300 rounded px-1.5 py-0.5 text-[8px] font-mono font-bold"
+                        <div className="transition-all duration-300 rounded px-1.5 py-0.5 text-[8px] font-mono font-bold"
                             style={{
                                 backgroundColor: step > i ? colors[i] + '20' : 'transparent',
-                                color: step > i ? colors[i] : 'transparent',
-                                border: `1px solid ${step > i ? colors[i] + '40' : 'transparent'}`,
-                                transform: step > i ? 'translateY(0)' : 'translateY(4px)',
-                                opacity: step > i ? 1 : 0,
-                            }}
-                        >
+                                color:           step > i ? colors[i]         : 'transparent',
+                                border:          `1px solid ${step > i ? colors[i] + '40' : 'transparent'}`,
+                                transform:       step > i ? 'translateY(0)'   : 'translateY(4px)',
+                                opacity:         step > i ? 1                 : 0,
+                            }}>
                             {s}
                         </div>
                         {i < 3 && (
-                            <div
-                                className="w-3 h-px transition-all duration-200"
-                                style={{
-                                    backgroundColor: step > i + 1 ? '#FFA500' : 'transparent',
-                                    opacity: step > i + 1 ? 0.4 : 0,
-                                }}
-                            />
+                            <div className="w-2 h-px transition-all duration-200"
+                                style={{ backgroundColor: step > i + 1 ? '#FFA500' : 'transparent', opacity: step > i + 1 ? 0.4 : 0 }} />
                         )}
                     </React.Fragment>
                 ))}
             </div>
-            <div
-                className="text-4xl font-bold font-mono transition-all duration-500"
-                style={{
-                    color: step >= 5 ? '#FFA500' : 'transparent',
-                    transform: step >= 5 ? 'scale(1)' : 'scale(0.6)',
-                }}
-            >
+            <div className="text-4xl font-bold font-mono transition-all duration-500"
+                style={{ color: step >= 5 ? '#FFA500' : 'transparent', transform: step >= 5 ? 'scale(1)' : 'scale(0.6)' }}>
                 4
             </div>
             <div className="text-sm text-gray-500 mt-1">Detection Stages</div>
@@ -331,10 +314,10 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
     return (
         <div className="relative rounded-2xl border overflow-hidden cursor-default transition-all duration-500 text-left"
             style={{
-                borderColor: hovered ? color + '50' : color + '20',
+                borderColor:     hovered ? color + '50' : color + '20',
                 backgroundColor: hovered ? color + '10' : color + '06',
-                transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-                boxShadow: hovered ? `0 12px 40px ${color}18` : 'none',
+                transform:       hovered ? 'translateY(-4px)' : 'translateY(0)',
+                boxShadow:       hovered ? `0 12px 40px ${color}18` : 'none',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
@@ -371,9 +354,9 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-    const [loaderDone, setLoaderDone] = useState(false);
-    const [pageVisible, setPageVisible] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
+    const [loaderDone,   setLoaderDone]   = useState(false);
+    const [pageVisible,  setPageVisible]  = useState(false);
+    const [scrolled,     setScrolled]     = useState(false);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 20);
@@ -383,7 +366,6 @@ export default function LandingPage() {
 
     const handleLoaderComplete = () => {
         setLoaderDone(true);
-        // Slight delay so wipe transition matches loader
         setTimeout(() => setPageVisible(true), 50);
     };
 
@@ -407,16 +389,14 @@ export default function LandingPage() {
 
     return (
         <>
-            {/* Loader — runs before page appears */}
             {!loaderDone && <SiteLoader onComplete={handleLoaderComplete} />}
 
-            {/* Landing page — revealed after loader wipes up */}
-            <div
-                className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-[#FFA500] selection:text-black overflow-x-hidden transition-opacity duration-300"
-                style={{ opacity: pageVisible ? 1 : 0 }}
-            >
-                {/* Nav */}
-                <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 transition-all duration-300 ${scrolled ? 'bg-[#0A0A0A]/90 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
+            <div className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-[#FFA500] selection:text-black overflow-x-hidden transition-opacity duration-300"
+                style={{ opacity: pageVisible ? 1 : 0 }}>
+
+                {/* Nav — solid bg so it never shows content beneath */}
+                <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#0A0A0A] border-b border-white/[0.05]"
+                    style={{ backdropFilter: scrolled ? 'blur(12px)' : 'none' }}>
                     <Link href="/" className="flex items-center gap-2.5 group">
                         <div className="p-1.5 rounded-lg bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
                             <Shield className="w-4 h-4 text-black" />
@@ -449,20 +429,25 @@ export default function LandingPage() {
                             DPDP Act 2023 · GDPR · Built for Indian enterprises
                         </div>
 
-                        {/* Headline — hover-per-word cipher effect, no background shapes */}
+                        {/* Headline — hover effects per word, hardcoded, no rectangles */}
                         <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
                             <span className="block">
-                                <HoverWord word="INTELLIGENT" className="text-white" effect="cipher" />
+                                {/* INTELLIGENT — magnify on hover */}
+                                <HoverWord word="INTELLIGENT" className="text-white" wordEffect="magnify" />
                                 {' '}
-                                <HoverWord word="PII" className="text-white" effect="redact" />
+                                {/* PII — encrypt (orange cipher chars) */}
+                                <HoverWord word="PII" className="text-white" wordEffect="encrypt" />
                             </span>
                             <span className="block text-[#FFA500]">
-                                <HoverWord word="Anonymization" className="text-[#FFA500]" effect="encrypt" />
+                                {/* Anonymization — redact (dims to blocks) */}
+                                <HoverWord word="Anonymization" className="text-[#FFA500]" wordEffect="redact" />
                             </span>
                             <span className="block text-white">
-                                <HoverWord word="at" className="text-white" effect="cipher" />
+                                {/* at — encrypt */}
+                                <HoverWord word="at" className="text-white" wordEffect="encrypt" />
                                 {' '}
-                                <HoverWord word="Scale" className="text-white" effect="redact" />
+                                {/* Scale — magnify */}
+                                <HoverWord word="Scale" className="text-white" wordEffect="magnify" />
                             </span>
                         </h1>
 
@@ -481,14 +466,14 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Traffic signal terminal */}
+                    {/* Terminal */}
                     <div className="relative z-10 mt-16 w-full max-w-2xl mx-auto">
                         <TrafficSignalTerminal />
                     </div>
                 </section>
 
                 {/* Stats */}
-                <section className="px-6 md:px-12 py-16 border-y border-white/[0.04]">
+                <section className="px-6 md:px-12 py-16 border-y border-white/[0.04] bg-[#0A0A0A]">
                     <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center items-end">
                         <AnimatedStat target={17} suffix="+" label="Entity Types Detected" />
                         <PipelineFlowStat />
@@ -498,7 +483,7 @@ export default function LandingPage() {
                 </section>
 
                 {/* Features */}
-                <section id="features" className="px-6 md:px-12 py-24">
+                <section id="features" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16">
                             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything needed to protect sensitive data</h2>
@@ -517,7 +502,8 @@ export default function LandingPage() {
                                 { icon: <Lock className="w-5 h-5" />,        color: '#EAB308', title: 'Local Inference Only',    desc: 'No data transmitted externally. Fully air-gapped deployment via Docker Compose. Audit logs persist in SQLite.' },
                             ].map((f, i) => (
                                 <div key={i} className="group p-5 rounded-2xl bg-[#0E0E0E] border border-[#1A1A1A] hover:border-[#2A2A2A] hover:bg-[#111] transition-all duration-300">
-                                    <div className="p-2.5 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor: f.color + '15' }}>
+                                    <div className="p-2.5 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300"
+                                        style={{ backgroundColor: f.color + '15' }}>
                                         <div style={{ color: f.color }}>{f.icon}</div>
                                     </div>
                                     <h3 className="font-semibold text-white mb-2 text-sm">{f.title}</h3>
@@ -565,8 +551,8 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* API */}
-                <section id="api" className="px-6 md:px-12 py-24">
+                {/* API — solid bg so nav never overlaps */}
+                <section id="api" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
                     <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA] text-xs font-medium mb-6">
@@ -588,7 +574,7 @@ export default function LandingPage() {
                                 ))}
                             </ul>
                         </div>
-                        <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-5 font-mono text-[12px] leading-relaxed overflow-x-auto">
+                        <div className="bg-[#080808] border border-[#1A1A1A] rounded-2xl p-5 font-mono text-[12px] leading-relaxed overflow-x-auto">
                             <div className="text-gray-600 mb-2"># Redact via REST API</div>
                             <div className="text-[#60A5FA]">curl <span className="text-white">-X POST</span> \</div>
                             <div className="text-white pl-4">http://your-server/api/v3/public/redact \</div>
@@ -604,7 +590,7 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Compliance */}
+                {/* Compliance — solid bg */}
                 <section id="compliance" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
                     <div className="max-w-4xl mx-auto text-center">
                         <h2 className="text-3xl font-bold mb-4">Built for regulatory compliance</h2>
@@ -616,7 +602,7 @@ export default function LandingPage() {
                 </section>
 
                 {/* CTA */}
-                <section className="px-6 md:px-12 py-24 relative overflow-hidden">
+                <section className="px-6 md:px-12 py-24 relative overflow-hidden bg-[#0A0A0A]">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FFA500]/3 to-transparent pointer-events-none" />
                     <div className="max-w-2xl mx-auto text-center relative z-10">
                         <h2 className="text-4xl font-bold mb-4 leading-tight">Your documents.<br />Your infrastructure.<br />Your control.</h2>
@@ -628,7 +614,7 @@ export default function LandingPage() {
                 </section>
 
                 {/* Footer */}
-                <footer className="px-6 md:px-12 py-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+                <footer className="px-6 md:px-12 py-8 border-t border-white/[0.04] bg-[#080808] flex flex-col md:flex-row items-center justify-between gap-4">
                     <Link href="/" className="flex items-center gap-2 group">
                         <div className="p-1 rounded-md bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
                             <Shield className="w-3 h-3 text-black" />
