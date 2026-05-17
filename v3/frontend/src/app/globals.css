@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -44,6 +45,9 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  /* Barlow as display font */
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-barlow:  'Barlow', sans-serif;
 }
 
 :root {
@@ -122,4 +126,28 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Apply Barlow Condensed to all h1/h2/h3 headings globally */
+  h1, h2, h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Ticker animation — used on landing compliance strip */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker 28s linear infinite;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* Loader scan line */
+@keyframes scanPass {
+  0%   { top: 0%;   opacity: 1; }
+  100% { top: 100%; opacity: 0; }
 }

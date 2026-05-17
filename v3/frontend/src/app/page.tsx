@@ -397,11 +397,12 @@ export default function LandingPage() {
                         <h1
                             className="mb-6 leading-[1.0]"
                             style={{
-                                fontFamily: '"Georgia", "Times New Roman", "Palatino", serif',
-                                fontWeight: 700,
-                                fontSize: 'clamp(2.8rem, 8vw, 6.5rem)',
+                                fontFamily: '"Barlow Condensed", sans-serif',
+                                fontWeight: 900,
+                                fontSize: 'clamp(52px, 6vw, 76px)',
+                                lineHeight:    0.88,
+                                textTransform: 'uppercase',
                                 letterSpacing: '-0.01em',
-                                wordSpacing: '0.05em',
                             }}
                         >
                             {/* Line 1 — INTELLIGENT (encrypt/orange) + PII (redact/dims) */}
@@ -480,7 +481,7 @@ export default function LandingPage() {
                 <section id="features" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16">
-                            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything needed to protect sensitive data</h2>
+                            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 700, letterSpacing: '-0.01em' }}>Everything needed to protect sensitive data</h2>
                             <p className="text-gray-400 max-w-xl mx-auto">Built for compliance teams, legal departments, and data engineers working with Indian and global documents.</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -511,7 +512,7 @@ export default function LandingPage() {
                 <section id="pipeline" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-16">
-                            <h2 className="text-3xl md:text-4xl font-bold mb-4">How the detection pipeline works</h2>
+                            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 700, letterSpacing: '-0.01em' }}>How the detection pipeline works</h2>
                             <p className="text-gray-400">Four stages vote on each entity. The ensemble produces higher accuracy than any single method.</p>
                         </div>
                         <div className="space-y-4">
@@ -551,7 +552,7 @@ export default function LandingPage() {
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA] text-xs font-medium mb-6">
                                 <Code2 className="w-3 h-3" /> REST API
                             </div>
-                            <h2 className="text-3xl font-bold mb-4">Integrate into any pipeline</h2>
+                            <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 700, letterSpacing: '-0.01em' }}>Integrate into any pipeline</h2>
                             <p className="text-gray-400 mb-6 leading-relaxed">Authenticated REST endpoints let you redact documents programmatically from any language or framework.</p>
                             <ul className="space-y-3">
                                 {[
@@ -586,7 +587,7 @@ export default function LandingPage() {
                 {/* Compliance */}
                 <section id="compliance" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
                     <div className="max-w-4xl mx-auto text-center">
-                        <h2 className="text-3xl font-bold mb-4">Built for regulatory compliance</h2>
+                        <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 700, letterSpacing: '-0.01em' }}>Built for regulatory compliance</h2>
                         <p className="text-gray-400 mb-12 max-w-xl mx-auto">Hover each regulation to understand its requirements and how Ciphera addresses them.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {compliance.map((card,i) => <ComplianceCard key={i} {...card} />)}
@@ -598,7 +599,7 @@ export default function LandingPage() {
                 <section className="px-6 md:px-12 py-24 relative overflow-hidden bg-[#0A0A0A]">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FFA500]/3 to-transparent pointer-events-none" />
                     <div className="max-w-2xl mx-auto text-center relative z-10">
-                        <h2 className="text-4xl font-bold mb-4 leading-tight">Your documents.<br />Your infrastructure.<br />Your control.</h2>
+                        <h2 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 700, letterSpacing: '-0.01em' }}>Your documents.<br />Your infrastructure.<br />Your control.</h2>
                         <p className="text-gray-400 mb-8 leading-relaxed">No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.</p>
                         <Link href="/dashboard" className="inline-flex items-center gap-2 px-8 py-4 bg-[#FFA500] hover:bg-[#ffb733] text-black font-bold rounded-2xl transition-all text-base shadow-[0_0_40px_rgba(255,165,0,0.2)]">
                             Open Mission Control <ArrowRight className="w-5 h-5" />
@@ -612,7 +613,7 @@ export default function LandingPage() {
                         <div className="p-1 rounded-md bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
                             <Shield className="w-3 h-3 text-black" />
                         </div>
-                        <span className="font-semibold text-sm">Ciphera V3</span>
+                        <span className="font-semibold text-sm">CIPHERA V3</span>
                         <span className="text-xs text-gray-700 font-mono">· DJSCE IPD Project</span>
                     </Link>
                     <div className="text-xs text-gray-700 font-mono">Local inference · Zero telemetry · DPDP Act 2023 aligned</div>
