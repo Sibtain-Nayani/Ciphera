@@ -46,7 +46,7 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
   /* Barlow as display font */
-  --font-display: 'Barlow Condensed', sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Black', sans-serif;
   --font-barlow:  'Barlow', sans-serif;
 }
 
@@ -122,6 +122,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    cursor: none !important;
   }
   body {
     @apply bg-background text-foreground;
@@ -129,7 +130,7 @@
 
   /* Apply Barlow Condensed to all h1/h2/h3 headings globally */
   h1, h2, h3 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Barlow Condensed', 'Arial Black', sans-serif;
     font-weight: 900;
     letter-spacing: -0.01em;
   }

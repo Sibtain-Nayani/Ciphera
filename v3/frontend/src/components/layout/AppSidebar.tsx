@@ -33,7 +33,7 @@ export function AppSidebar() {
                 </div>
                 {!collapsed && (
                     <div className="overflow-hidden">
-                        <div className="font-bold text-white tracking-tight leading-none" style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '17px' }}>CIPHERA</div>
+                        <div className="font-bold text-white tracking-tight leading-none" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '17px' }}>Ciphera</div>
                         <div className="text-[9px] font-mono text-[#FFA500]/50 tracking-widest mt-0.5">V3 · SECURE</div>
                     </div>
                 )}
