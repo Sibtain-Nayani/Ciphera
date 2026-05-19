@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -123,9 +123,17 @@
   * {
     @apply border-border outline-ring/50;
     cursor: none !important;
+    scrollbar-width: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+  }
+  html {
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
 
   /* Apply Barlow Condensed to all h1/h2/h3 headings globally */
@@ -134,6 +142,15 @@
     font-weight: 900;
     letter-spacing: -0.01em;
   }
+}
+
+/* ── Global layout container ─────────────────────────────────────── */
+.content-wrap {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 clamp(24px, 4vw, 64px);
+  box-sizing: border-box;
 }
 
 /* Ticker animation — used on landing compliance strip */
@@ -145,6 +162,13 @@
   animation: ticker 28s linear infinite;
   white-space: nowrap;
   display: inline-block;
+}
+
+/* Pipeline scan beam */
+@keyframes scanbeam {
+  0%   { top: 0%;   opacity: 0.15; }
+  50%  { opacity: 0.15; }
+  100% { top: 100%; opacity: 0; }
 }
 
 /* Loader scan line */

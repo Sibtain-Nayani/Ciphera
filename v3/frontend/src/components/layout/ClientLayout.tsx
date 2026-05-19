@@ -4,106 +4,205 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { useEffect, useRef, useState } from "react";
 
-// ── Global custom cursor ──────────────────────────────────────────────────────
-// Renders on ALL pages — landing + app pages
-// Dot: sharp, instant, #F5C400, mixBlendMode difference
-// Ring: hollow square, lags 12% per frame for smooth elastic follow
 function GlobalCursor() {
-    const dotRef  = useRef<HTMLDivElement>(null);
-    const ringRef = useRef<HTMLDivElement>(null);
-    const posRef  = useRef({ x: -200, y: -200 });
-    const ringPos = useRef({ x: -200, y: -200 });
-    const rafRef  = useRef<number>(0);
+    const cursorRef = useRef<HTMLDivElement>(null);
+    const [cursorState, setCursorState] = useState<'default' | 'text' | 'button'>('default');
     const [visible, setVisible] = useState(false);
+
+    // RAF lerp-based smooth cursor tracking
+    const mousePos = useRef({ x: -200, y: -200 });
+    const cursorPos = useRef({ x: -200, y: -200 });
+    const rafId = useRef<number>(0);
+
+    useEffect(() => {
+        const LERP_FACTOR = 0.12;
+
+        const animate = () => {
+            cursorPos.current.x += (mousePos.current.x - cursorPos.current.x) * LERP_FACTOR;
+            cursorPos.current.y += (mousePos.current.y - cursorPos.current.y) * LERP_FACTOR;
+
+            if (cursorRef.current) {
+                cursorRef.current.style.transform = `translate3d(${cursorPos.current.x}px, ${cursorPos.current.y}px, 0) translate(-50%, -50%)`;
+            }
+
+            rafId.current = requestAnimationFrame(animate);
+        };
+
+        rafId.current = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(rafId.current);
+    }, []);
 
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
-            posRef.current = { x: e.clientX, y: e.clientY };
             if (!visible) setVisible(true);
-            // Dot is instant — no lag
-            if (dotRef.current) {
-                dotRef.current.style.left = `${e.clientX - 4}px`;
-                dotRef.current.style.top  = `${e.clientY - 4}px`;
-            }
+            mousePos.current.x = e.clientX;
+            mousePos.current.y = e.clientY;
         };
 
-        const animate = () => {
-            // Ring elastic follow
-            ringPos.current.x += (posRef.current.x - ringPos.current.x) * 0.10;
-            ringPos.current.y += (posRef.current.y - ringPos.current.y) * 0.10;
-            if (ringRef.current) {
-                ringRef.current.style.left = `${ringPos.current.x - 16}px`;
-                ringRef.current.style.top  = `${ringPos.current.y - 16}px`;
+        const onMouseOver = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target) return;
+
+            // Check if hovering a button/link/interactive
+            const isButton = target.closest('button, a, input[type="submit"], input[type="button"], [role="button"]');
+            
+            // Check if hovering text.
+            const isText = !isButton && (
+                target.tagName.match(/^(H[1-6]|P|SPAN|LI|CODE|LABEL|TD|TH)$/i) ||
+                (target.childNodes.length > 0 && Array.from(target.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()))
+            );
+
+            if (isButton) {
+                setCursorState('button');
+            } else if (isText) {
+                setCursorState('text');
+            } else {
+                setCursorState('default');
             }
-            rafRef.current = requestAnimationFrame(animate);
         };
 
         const onLeave = () => setVisible(false);
         const onEnter = () => setVisible(true);
 
         window.addEventListener('mousemove', onMove, { passive: true });
+        window.addEventListener('mouseover', onMouseOver, { passive: true });
         document.addEventListener('mouseleave', onLeave);
         document.addEventListener('mouseenter', onEnter);
-        rafRef.current = requestAnimationFrame(animate);
 
         return () => {
             window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseover', onMouseOver);
             document.removeEventListener('mouseleave', onLeave);
             document.removeEventListener('mouseenter', onEnter);
-            cancelAnimationFrame(rafRef.current);
         };
-    }, []);
+    }, [visible]);
+
+    // Dimensions based on state
+    let width = '16px';
+    let height = '16px';
+    let borderRadius = '50%';
+    let background = 'transparent';
+    let mixBlendMode: React.CSSProperties['mixBlendMode'] = 'normal';
+
+    if (cursorState === 'text') {
+        width = '80px';
+        height = '12px';
+        borderRadius = '0px'; // redaction bar shape
+    } else if (cursorState === 'button') {
+        width = '16px';
+        height = '16px';
+        borderRadius = '50%';
+        background = '#F5C400';
+    }
 
     return (
-        <>
-            {/* Dot — 8px square, #F5C400, instant */}
-            <div
-                ref={dotRef}
-                style={{
-                    position:      'fixed',
-                    width:         '8px',
-                    height:        '8px',
-                    background:    '#F5C400',
-                    pointerEvents: 'none',
-                    zIndex:        99999,
-                    opacity:       visible ? 1 : 0,
-                    transition:    'opacity 0.15s ease',
-                    mixBlendMode:  'difference',
-                    top:           '-200px',
-                    left:          '-200px',
-                }}
-            />
-            {/* Ring — 32px hollow square, lags behind */}
-            <div
-                ref={ringRef}
-                style={{
-                    position:      'fixed',
-                    width:         '32px',
-                    height:        '32px',
-                    border:        '1px solid rgba(245,196,0,0.45)',
-                    pointerEvents: 'none',
-                    zIndex:        99998,
-                    opacity:       visible ? 1 : 0,
-                    transition:    'opacity 0.15s ease',
-                    top:           '-200px',
-                    left:          '-200px',
-                }}
-            />
-        </>
+        <div
+            ref={cursorRef}
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: width,
+                height: height,
+                border: '1px solid #F5C400',
+                borderRadius: borderRadius,
+                background: background,
+                pointerEvents: 'none',
+                zIndex: 99999,
+                opacity: visible ? 1 : 0,
+                transform: 'translate3d(-200px, -200px, 0) translate(-50%, -50%)',
+                transition: 'width 0.15s ease, height 0.15s ease, background 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease',
+                mixBlendMode: mixBlendMode,
+            }}
+        />
     );
 }
 
-// ── Client layout — sidebar + cursor ─────────────────────────────────────────
 export function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname  = usePathname();
     const isLanding = pathname === "/";
+    const mainRef = useRef<HTMLDivElement>(null);
+    const [scrollPercent, setScrollPercent] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const el = mainRef.current;
+            if (!el) return;
+            const total = el.scrollHeight - el.clientHeight;
+            if (total <= 0) {
+                setScrollPercent(0);
+                return;
+            }
+            const pct = (el.scrollTop / total) * 100;
+            setScrollPercent(pct);
+        };
+        
+        const el = mainRef.current;
+        if (el) {
+            el.addEventListener('scroll', handleScroll, { passive: true });
+            // Initial check
+            handleScroll();
+        }
+        
+        const t = setTimeout(handleScroll, 200);
+
+        return () => {
+            if (el) el.removeEventListener('scroll', handleScroll);
+            clearTimeout(t);
+        };
+    }, [pathname]);
+
+    const scrollPercentFormatted = String(Math.round(scrollPercent)).padStart(3, '0') + '%';
 
     return (
         <>
             <GlobalCursor />
+
+            {/* Document Progress Indicator */}
+            {isLanding && (
+                <div style={{
+                    position: 'fixed',
+                    right: '12px',
+                    top: '40px',
+                    bottom: '40px',
+                    width: '32px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    pointerEvents: 'none',
+                    zIndex: 9999,
+                }}>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#F5C400', letterSpacing: '0.18em', fontWeight: 'bold' }}>▲</span>
+                    <div style={{
+                        width: '2px',
+                        background: 'rgba(239, 239, 239, 0.05)',
+                        flexGrow: 1,
+                        margin: '12px 0',
+                        position: 'relative',
+                        borderRadius: '1px',
+                        overflow: 'hidden',
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: `${scrollPercent}%`,
+                            background: '#F5C400',
+                            transition: 'height 0.08s ease-out',
+                        }} />
+                    </div>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#F5C400', letterSpacing: '0.18em', fontWeight: 'bold' }}>
+                        {scrollPercentFormatted}
+                    </span>
+                </div>
+            )}
+
             <div className="flex h-screen overflow-hidden">
                 {!isLanding && <AppSidebar />}
-                <main className="flex-1 overflow-y-auto min-w-0">
+                <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
                     {children}
                 </main>
             </div>

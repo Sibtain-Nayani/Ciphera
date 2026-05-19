@@ -118,7 +118,7 @@ export function CustomRuleCard({ rule }: { rule: CustomRule }) {
                                         : 'bg-input text-red-400 border-red-500/30 focus:border-red-500 focus:ring-red-500/50'
                                 }
                             `}
-                            style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                         />
                         {/* Validation indicator */}
                         <span className="absolute right-3 top-2.5 flex items-center gap-1.5">

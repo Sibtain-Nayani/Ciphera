@@ -132,7 +132,7 @@ export function AddRuleDialog() {
                     </p>
                     <div
                         className="p-3 rounded-lg bg-background border border-border text-sm font-mono break-all whitespace-pre-wrap"
-                        style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                     >
                         {parts.length > 0 ? parts : <span className="text-gray-500">{form.testInput}</span>}
                     </div>
@@ -242,7 +242,7 @@ export function AddRuleDialog() {
                                     : 'bg-input text-white border-border focus:border-[#FFA500] focus:ring-[#FFA500]'
                                 }
                             `}
-                            style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                         />
                         <span className="absolute right-3 top-2.5 flex items-center gap-1.5">
                             {form.pattern.trim() && (
@@ -304,7 +304,7 @@ export function AddRuleDialog() {
                                 placeholder="Paste sample text to test your regex…"
                                 rows={3}
                                 className="w-full rounded-lg px-4 py-2.5 text-sm bg-input text-white border border-border transition-all resize-none focus:outline-none focus:border-[#FFA500] focus:ring-1 focus:ring-[#FFA500] placeholder:text-gray-600 font-mono"
-                                style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
+                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                             />
                             {renderTestResult()}
                         </div>

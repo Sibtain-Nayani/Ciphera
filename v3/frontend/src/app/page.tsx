@@ -1,169 +1,190 @@
-// @ts-ignore
-/* eslint-disable */
-// Font import handled in globals.css
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
-import {
-    Shield, ArrowRight, Fingerprint, Zap, Lock,
-    CheckCircle2, Code2, Database, Eye, Users,
-    BarChart3, Layers,
-} from 'lucide-react';
 import { SiteLoader } from '@/components/layout/SiteLoader';
 
-// ── Cipher chars ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CIPHER CHARS
+// ─────────────────────────────────────────────────────────────────────────────
 const CIPHER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
 const rc = () => CIPHER_CHARS[Math.floor(Math.random() * CIPHER_CHARS.length)];
-
-// ── EncryptWord — staggered letter-by-letter, holds until mouse leaves ────────
 type EncryptMode = 'encrypt' | 'redact' | 'anon';
 
-function EncryptWord({ word, className = '', mode, delay = 0 }: {
-    word: string; className?: string; mode: EncryptMode; delay?: number;
+// ─────────────────────────────────────────────────────────────────────────────
+// ENCRYPT WORD — staggered letter effect, holds until mouse leaves
+// ─────────────────────────────────────────────────────────────────────────────
+function EncryptWord({ word, mode, style: extStyle = {} }: {
+    word: string; mode: EncryptMode; style?: React.CSSProperties;
 }) {
-    const [chars,  setChars]  = useState<string[]>(word.split(''));
+    const [chars, setChars]   = useState<string[]>(word.split(''));
     const [active, setActive] = useState(false);
     const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
     const clear = () => { timers.current.forEach(t => clearTimeout(t)); timers.current = []; };
 
-    // What char to substitute per mode
-    const substitute = (orig: string): string => {
-        if (orig === ' ') return ' ';
-        if (mode === 'redact') return '▓';
-        if (mode === 'anon')   return '░';
-        return rc(); // encrypt
-    };
+    const sub = (orig: string) => orig === ' ' ? ' ' : mode === 'redact' ? '▓' : mode === 'anon' ? '░' : rc();
 
     const onEnter = useCallback(() => {
-        if (active) return;
-        clear();
-        setActive(true);
-        const letters = word.split('');
-        letters.forEach((_, i) => {
-            const t = setTimeout(() => {
-                setChars(prev => { const n = [...prev]; n[i] = substitute(letters[i]); return n; });
-            }, delay + i * 50);
+        if (active) return; clear(); setActive(true);
+        word.split('').forEach((ch, i) => {
+            const t = setTimeout(() => setChars(prev => { const n=[...prev]; n[i]=sub(ch); return n; }), i*50);
             timers.current.push(t);
         });
-    }, [word, mode, active, delay]);
+    }, [word, mode, active]);
 
     const onLeave = useCallback(() => {
-        clear();
-        setActive(false);
-        const letters = word.split('');
-        letters.forEach((orig, i) => {
-            const t = setTimeout(() => {
-                setChars(prev => { const n = [...prev]; n[i] = orig; return n; });
-            }, i * 35);
+        clear(); setActive(false);
+        word.split('').forEach((orig, i) => {
+            const t = setTimeout(() => setChars(prev => { const n=[...prev]; n[i]=orig; return n; }), i*35);
             timers.current.push(t);
         });
     }, [word]);
 
     useEffect(() => () => clear(), []);
 
-    // Color per mode
-    const alteredColor = mode === 'redact'
-        ? 'rgba(255,255,255,0.08)'
-        : mode === 'anon'
-        ? 'rgba(255,255,255,0.25)'
-        : '#FFA500';
-
-    const alteredShadow = mode === 'encrypt'
-        ? '0 0 12px rgba(255,165,0,0.55)'
-        : 'none';
+    const altColor  = mode==='redact' ? 'rgba(239,239,239,0.08)' : mode==='anon' ? 'rgba(239,239,239,0.25)' : '#F5C400';
+    const altShadow = mode==='encrypt' ? '0 0 10px rgba(245,196,0,0.5)' : 'none';
 
     return (
-        <span
-            className={`cursor-default select-none inline-block ${className}`}
-            onMouseEnter={onEnter}
-            onMouseLeave={onLeave}
-            // Fixed width via inline-block so layout never shifts
-        >
+        <span style={{ cursor:'default', userSelect:'none', display:'inline-block', ...extStyle }}
+            onMouseEnter={onEnter} onMouseLeave={onLeave}>
             {chars.map((ch, i) => {
-                const isAltered = ch !== word[i];
-                return (
-                    <span
-                        key={i}
-                        style={{
-                            display: 'inline-block',
-                            // Fixed per-character width prevents layout shift
-                            minWidth: ch === ' ' ? '0.3em' : '0.58em',
-                            textAlign: 'center',
-                            color: isAltered ? alteredColor : undefined,
-                            textShadow: isAltered ? alteredShadow : 'none',
-                            transition: 'color 0.06s, text-shadow 0.06s',
-                        }}
-                    >
-                        {ch}
-                    </span>
-                );
+                const alt = ch !== word[i];
+                return <span key={i} style={{ display:'inline-block', minWidth: ch===' '?'0.3em':'0.56em', textAlign:'center', color:alt?altColor:undefined, textShadow:alt?altShadow:'none', transition:'color 0.05s, text-shadow 0.05s' }}>{ch}</span>;
             })}
         </span>
     );
 }
 
-// ── RedactedReveal — "STAYS YOURS" classified document effect ─────────────────
-function RedactedReveal() {
+// ─────────────────────────────────────────────────────────────────────────────
+// REDACTED REVEAL — solid bar by default, hover reveals (used for headlines)
+// ─────────────────────────────────────────────────────────────────────────────
+function RedactedReveal({ text, style: extStyle = {} }: { text: string; style?: React.CSSProperties }) {
     const [revealed, setRevealed] = useState(false);
     return (
-        <span style={{ display: 'inline-block' }}>
+        <span style={{ display:'inline-block', whiteSpace: 'nowrap', width: 'max-content', ...extStyle }}>
             <span
                 onMouseEnter={() => setRevealed(true)}
                 onMouseLeave={() => setRevealed(false)}
                 style={{
-                    display:     'inline-block',
-                    background:  revealed ? '#F5C400' : '#EFEFEF',
-                    color:       revealed ? '#080808' : 'transparent',
-                    cursor:      'pointer',
-                    transition:  'background 0.4s ease, color 0.4s ease',
-                    padding:     '0 6px',
-                    userSelect:  'none',
-                    // Inherit font size from parent h1
-                    fontFamily:  'inherit',
-                    fontWeight:  'inherit',
-                    fontSize:    'inherit',
-                    lineHeight:  'inherit',
-                    letterSpacing: 'inherit',
-                    textTransform: 'inherit',
+                    display:'inline-block', background: revealed?'#F5C400':'#EFEFEF',
+                    color: revealed?'#080808':'transparent', cursor:'pointer',
+                    transition:'background 0.4s ease, color 0.4s ease',
+                    padding:'0 6px', userSelect:'none',
+                    fontFamily:'inherit', fontWeight:'inherit',
+                    fontSize:'inherit', lineHeight:'inherit',
+                    letterSpacing:'inherit', textTransform:'inherit',
+                    whiteSpace: 'nowrap',
+                    width: 'max-content',
                 }}
-            >
-                STAYS YOURS
-            </span>
-            <span style={{
-                display:       'block',
-                fontFamily:    "'Courier New', monospace",
-                fontSize:      '9px',
-                letterSpacing: '0.16em',
-                color:         'rgba(239,239,239,0.2)',
-                textTransform: 'uppercase',
-                marginTop:     '4px',
-                fontWeight:    400,
-            }}>
-                Hover to reveal
-            </span>
+            >{text}</span>
         </span>
     );
 }
 
-// ── Traffic signal terminal ───────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// DECLASSIFYING SUBTEXT — words appear one by one from redacted bars
+// ─────────────────────────────────────────────────────────────────────────────
+const SUBTEXT = "Aadhaar. PAN. GSTIN. Biometrics. — found, flagged, and removed. Before anything leaves your machine.";
+
+function DeclassifySubtext() {
+    const words = SUBTEXT.split(' ');
+    const [revealed, setRevealed] = useState<boolean[]>(Array(words.length).fill(false));
+
+    useEffect(() => {
+        const timers: ReturnType<typeof setTimeout>[] = [];
+        const BASE_DELAY = 600; // ms before first word appears
+        words.forEach((_, i) => {
+            const t = setTimeout(() => {
+                setRevealed(prev => { const n=[...prev]; n[i]=true; return n; });
+            }, BASE_DELAY + i * 110);
+            timers.push(t);
+        });
+        return () => timers.forEach(t => clearTimeout(t));
+    }, []);
+
+    return (
+        <p style={{
+            fontFamily: 'Barlow, sans-serif', fontSize: '13px',
+            lineHeight: 1.8, maxWidth: '520px', margin: '0 auto 16px',
+            letterSpacing: '0.01em',
+        }}>
+            {words.map((word, i) => (
+                <span key={i} style={{ display:'inline-block', marginRight:'0.3em' }}>
+                    <span style={{
+                        display:'inline-block',
+                        background:  revealed[i] ? 'transparent' : '#EFEFEF',
+                        color:       revealed[i] ? 'rgba(239,239,239,0.5)' : 'transparent',
+                        transition:  'background 0.3s ease, color 0.3s ease',
+                        padding:     revealed[i] ? '0' : '0 1px',
+                        borderRadius: 0,
+                        userSelect:  'none',
+                    }}>{word}</span>
+                </span>
+            ))}
+        </p>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TERMINAL INIT — types "> initializing ciphera v3..." once on page load
+// ─────────────────────────────────────────────────────────────────────────────
+const INIT_TEXT = '> initializing ciphera v3...';
+
+function TerminalInit() {
+    const [text, setText]       = useState('');
+    const [visible, setVisible] = useState(true);
+
+    useEffect(() => {
+        let idx = 0;
+        const type = setInterval(() => {
+            idx++;
+            setText(INIT_TEXT.slice(0, idx));
+            if (idx >= INIT_TEXT.length) {
+                clearInterval(type);
+                setTimeout(() => setVisible(false), 1200);
+            }
+        }, 38);
+        return () => clearInterval(type);
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0,
+            zIndex: 9990, background: '#080808',
+            borderBottom: '1px solid rgba(239,239,239,0.07)',
+            padding: '6px 36px',
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px',
+            letterSpacing: '0.18em', color: '#F5C400',
+            pointerEvents: 'none',
+        }}>
+            {text}<span style={{ animation: 'blink 1s step-end infinite' }}>█</span>
+            <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRAFFIC SIGNAL TERMINAL (hero right column)
+// ─────────────────────────────────────────────────────────────────────────────
 const SIGNAL_STATES = [
-    { color: '#ef4444', label: 'CONNECTING',  status: 'Establishing secure channel…'   },
-    { color: '#eab308', label: 'PROCESSING',  status: 'Running detection pipeline…'    },
-    { color: '#22c55e', label: 'SECURED',     status: 'PII redacted. Channel secured.' },
+    { color:'#ef4444', label:'CONNECTING',  status:'Establishing secure channel…'  },
+    { color:'#eab308', label:'PROCESSING',  status:'Running detection pipeline…'   },
+    { color:'#22c55e', label:'SECURED',     status:'PII redacted. Channel secured.' },
 ] as const;
 
 const DEMO_LINES = [
-    { text: 'Name: John Doe, Aadhaar: 4532 8812 9901, PAN: ABCDE1234F', type: 'original' },
-    { text: 'Name: [PERSON_1], Aadhaar: [AADHAAR_1], PAN: [PAN_1]',     type: 'redacted' },
-    { text: 'Mobile: +91 98765 43210, Email: john.doe@acmecorp.com',      type: 'original' },
-    { text: 'Mobile: [PHONE_1], Email: [EMAIL_1]',                        type: 'redacted' },
-    { text: 'IFSC: SBIN0001234, DOB: 15/08/1990, Voter: ABC1234567',      type: 'original' },
-    { text: 'IFSC: [IFSC_1], DOB: [DATE_1], Voter: [VOTER_ID_1]',        type: 'redacted' },
+    { text:'Name: John Doe, Aadhaar: 4532 8812 9901, PAN: ABCDE1234F', type:'original' },
+    { text:'Name: [PERSON_1], Aadhaar: [AADHAAR_1], PAN: [PAN_1]',     type:'redacted' },
+    { text:'Mobile: +91 98765 43210, Email: john.doe@acmecorp.com',      type:'original' },
+    { text:'Mobile: [PHONE_1], Email: [EMAIL_1]',                        type:'redacted' },
+    { text:'IFSC: SBIN0001234, DOB: 15/08/1990, Voter: ABC1234567',      type:'original' },
+    { text:'IFSC: [IFSC_1], DOB: [DATE_1], Voter: [VOTER_ID_1]',        type:'redacted' },
 ];
 
-function TrafficSignalTerminal() {
+function TrafficTerminal() {
     const [sigIdx,  setSigIdx]  = useState(0);
     const [lineIdx, setLineIdx] = useState(0);
     const [charIdx, setCharIdx] = useState(0);
@@ -171,191 +192,393 @@ function TrafficSignalTerminal() {
     const sig  = SIGNAL_STATES[sigIdx];
     const line = DEMO_LINES[lineIdx];
 
-    useEffect(() => {
-        if (lineIdx > 0 && lineIdx % 2 === 0)
-            setSigIdx(i => (i + 1) % SIGNAL_STATES.length);
-    }, [lineIdx]);
-
+    useEffect(() => { if (lineIdx>0 && lineIdx%2===0) setSigIdx(i=>(i+1)%3); }, [lineIdx]);
     useEffect(() => {
         let t: ReturnType<typeof setTimeout>;
-        if (phase === 'typing') {
-            if (charIdx < line.text.length) t = setTimeout(() => setCharIdx(c => c+1), 26);
-            else t = setTimeout(() => setPhase('pause'), 1600);
-        } else if (phase === 'pause') {
-            t = setTimeout(() => setPhase('erasing'), 300);
+        if (phase==='typing') {
+            if (charIdx<line.text.length) t=setTimeout(()=>setCharIdx(c=>c+1),26);
+            else t=setTimeout(()=>setPhase('pause'),1600);
+        } else if (phase==='pause') {
+            t=setTimeout(()=>setPhase('erasing'),300);
         } else {
-            if (charIdx > 0) t = setTimeout(() => setCharIdx(c => c-1), 10);
-            else { setLineIdx(i => (i+1) % DEMO_LINES.length); setPhase('typing'); }
+            if (charIdx>0) t=setTimeout(()=>setCharIdx(c=>c-1),10);
+            else { setLineIdx(i=>(i+1)%DEMO_LINES.length); setPhase('typing'); }
         }
-        return () => clearTimeout(t);
-    }, [phase, charIdx, line.text.length]);
+        return ()=>clearTimeout(t);
+    }, [phase,charIdx,line.text.length]);
 
     return (
-        <div className="bg-[#0D0D0D] border border-[#2A2A2A] rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)]">
-            <div className="flex items-center gap-2 px-4 py-3 bg-[#141414] border-b border-[#2A2A2A]">
-                <div className="flex items-center gap-1.5">
-                    {SIGNAL_STATES.map((s, i) => (
-                        <div key={i} className="w-3 h-3 rounded-full transition-all duration-500"
-                            style={{
-                                backgroundColor: sigIdx===i ? s.color : s.color+'28',
-                                boxShadow: sigIdx===i ? `0 0 10px ${s.color}90` : 'none',
-                                transform: sigIdx===i ? 'scale(1.15)' : 'scale(1)',
-                            }} />
+        <div style={{ border:'1px solid rgba(239,239,239,0.07)', background:'#080808', height:'100%', display:'flex', flexDirection:'column' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 20px', borderBottom:'1px solid rgba(239,239,239,0.07)' }}>
+                <div style={{ display:'flex', gap:'6px' }}>
+                    {SIGNAL_STATES.map((s,i)=>(
+                        <div key={i} style={{ width:12, height:12, borderRadius:'50%', background:sigIdx===i?s.color:s.color+'28', boxShadow:sigIdx===i?`0 0 8px ${s.color}80`:'none', transition:'all 0.5s', transform:sigIdx===i?'scale(1.15)':'scale(1)' }} />
                     ))}
                 </div>
-                <span className="ml-2 text-[11px] font-mono text-gray-600">ciphera v3 — live detection engine</span>
-                <div className="ml-auto flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full animate-pulse"
-                        style={{ backgroundColor: sig.color, boxShadow: `0 0 6px ${sig.color}` }} />
-                    <span className="text-[9px] font-mono tracking-wider transition-colors duration-500" style={{ color: sig.color }}>
-                        {sig.label}
-                    </span>
+                <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginLeft:'8px' }}>ciphera v3 — live detection engine</span>
+                <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'6px' }}>
+                    <div style={{ width:6, height:6, borderRadius:'50%', background:sig.color, boxShadow:`0 0 6px ${sig.color}`, animation:'pulse 1.5s infinite' }} />
+                    <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:sig.color, transition:'color 0.5s' }}>{sig.label}</span>
                 </div>
             </div>
-            <div className="px-6 pt-3 pb-1 text-[10px] font-mono transition-colors duration-500" style={{ color: sig.color+'70' }}>
-                {sig.status}
-            </div>
-            <div className="px-6 pb-5 min-h-[52px] flex items-center">
-                <div className="font-mono text-sm leading-relaxed">
-                    <span className={line.type==='redacted' ? 'text-emerald-400' : 'text-gray-300'}>
-                        {line.text.slice(0, charIdx)}
-                    </span>
-                    <span className="inline-block w-0.5 h-4 bg-[#FFA500] ml-0.5 animate-pulse align-middle" />
+            <div style={{ padding:'8px 20px 4px', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:sig.color+'80', transition:'color 0.5s' }}>{sig.status}</div>
+            <div style={{ padding:'8px 20px 20px', minHeight:'52px', display:'flex', flexGrow:1, alignItems:'flex-start' }}>
+                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', lineHeight:1.6 }}>
+                    <span style={{ color:line.type==='redacted'?'#22c55e':'rgba(239,239,239,0.6)' }}>{line.text.slice(0,charIdx)}</span>
+                    <span style={{ display:'inline-block', width:'2px', height:'14px', background:'#F5C400', marginLeft:'2px', animation:'blink 1s step-end infinite', verticalAlign:'middle' }} />
                 </div>
             </div>
         </div>
     );
 }
 
-// ── Stats — re-trigger every scroll ──────────────────────────────────────────
-function AnimatedStat({ target, suffix='', label }: { target: number; suffix?: string; label: string }) {
-    const [val, setVal] = useState(0);
-    const ref           = useRef<HTMLDivElement>(null);
-    const running       = useRef(false);
-
-    const run = useCallback(() => {
-        if (running.current) return;
-        running.current = true;
-        setVal(0);
-        let s = 0;
-        const step = target / 50;
-        const t = setInterval(() => {
-            s += step;
-            if (s >= target) { setVal(target); clearInterval(t); running.current = false; }
-            else setVal(Math.floor(s));
-        }, 20);
-    }, [target]);
+// ─────────────────────────────────────────────────────────────────────────────
+// STATS — redact-then-count, no pills, ticker above
+// ─────────────────────────────────────────────────────────────────────────────
+function StatCell({ target, suffix='', label, index }: { target:number|string; suffix?:string; label:string; index:string }) {
+    const isNum = typeof target === 'number';
+    const [phase,  setPhase]  = useState<'hidden'|'redacted'|'counting'|'done'>('hidden');
+    const [val,    setVal]    = useState(0);
+    const ref                 = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const obs = new IntersectionObserver(([e]) => {
-            if (e.isIntersecting) run();
-            else { running.current = false; setVal(0); }
-        }, { threshold: 0.5 });
+            if (e.isIntersecting) {
+                setPhase('redacted');
+                setTimeout(() => {
+                    setPhase('counting');
+                    if (!isNum) { setTimeout(()=>setPhase('done'),400); return; }
+                    let s = 0;
+                    const step = (target as number)/50;
+                    const t = setInterval(()=>{
+                        s+=step;
+                        if (s>=(target as number)) { setVal(target as number); clearInterval(t); setPhase('done'); }
+                        else setVal(Math.floor(s));
+                    }, 20);
+                }, 600);
+            } else {
+                setPhase('hidden'); setVal(0);
+            }
+        }, { threshold:0.5 });
         if (ref.current) obs.observe(ref.current);
-        return () => obs.disconnect();
-    }, [run]);
+        return ()=>obs.disconnect();
+    }, [target, isNum]);
+
+    const isRedacted = phase==='redacted';
+    const display    = phase==='hidden'||phase==='redacted' ? (isNum?'██':target) : (isNum ? val.toLocaleString() : target);
 
     return (
-        <div ref={ref} className="text-center">
-            <div className="text-4xl font-bold text-[#FFA500] font-mono mb-1">{val.toLocaleString()}{suffix}</div>
-            <div className="text-sm text-gray-500">{label}</div>
+        <div ref={ref} style={{ padding:'16px 24px', borderRight:'1px solid rgba(239,239,239,0.07)', position:'relative', height:'80px', boxSizing:'border-box', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+            <div style={{ position:'absolute', top:12, right:12, fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', color:'rgba(239,239,239,0.42)' }}>{index}</div>
+            <div style={{
+                fontFamily:'Barlow Condensed, sans-serif', fontWeight:900,
+                fontSize:'48px', lineHeight:1, letterSpacing:'-0.02em',
+                color: isRedacted ? 'transparent' : '#EFEFEF',
+                background: isRedacted ? '#EFEFEF' : 'transparent',
+                transition:'background 0.4s ease, color 0.4s ease',
+                display:'inline-block',
+            }}>
+                {String(display)}<span style={{ color:isRedacted?'transparent':'#F5C400', fontSize:'28px', background:'transparent' }}>{!isRedacted && suffix}</span>
+            </div>
+            <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'12px', letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(239,239,239,0.45)', marginTop:'8px' }}>{label}</div>
         </div>
     );
 }
 
 function PipelineFlowStat() {
-    const [step, setStep] = useState(0);
-    const ref             = useRef<HTMLDivElement>(null);
-    const running         = useRef(false);
-
-    const run = useCallback(() => {
-        if (running.current) return;
-        running.current = true;
-        setStep(0);
-        [0,1,2,3,4].forEach(i => {
-            setTimeout(() => { setStep(i+1); if (i===4) running.current=false; }, i*260);
-        });
-    }, []);
+    const [step, setStep]   = useState(0);
+    const [phase, setPhase] = useState<'hidden'|'redacted'|'done'>('hidden');
+    const ref               = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const obs = new IntersectionObserver(([e]) => {
-            if (e.isIntersecting) run();
-            else { running.current=false; setStep(0); }
-        }, { threshold: 0.5 });
+            if (e.isIntersecting) {
+                setPhase('redacted'); setStep(0);
+                setTimeout(()=>{
+                    setPhase('done');
+                    [0,1,2,3,4].forEach(i=>setTimeout(()=>setStep(i+1), i*260));
+                }, 600);
+            } else { setPhase('hidden'); setStep(0); }
+        }, { threshold:0.5 });
         if (ref.current) obs.observe(ref.current);
-        return () => obs.disconnect();
-    }, [run]);
+        return ()=>obs.disconnect();
+    }, []);
 
     const stages = ['Regex','Presidio','spaCy','Vote'];
-    const colors  = ['#F97316','#60A5FA','#34D399','#FFA500'];
+    const colors  = ['#B91C1C','#F5C400','rgba(239,239,239,0.5)','#EFEFEF'];
+    const isRedacted = phase==='redacted';
 
     return (
-        <div ref={ref} className="flex flex-col items-center">
-            <div className="flex items-center gap-1 mb-3 h-8">
-                {stages.map((s,i) => (
+        <div ref={ref} style={{ padding:'28px 24px', borderRight:'1px solid rgba(239,239,239,0.07)', position:'relative' }}>
+            <div style={{ position:'absolute', top:12, right:12, fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', color:'rgba(239,239,239,0.42)' }}>02</div>
+            <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:'10px', height:'18px', opacity: isRedacted?0:1, transition:'opacity 0.4s' }}>
+                {stages.map((s,i)=>(
                     <React.Fragment key={i}>
-                        <div className="transition-all duration-300 rounded px-1.5 py-0.5 text-[8px] font-mono font-bold"
-                            style={{
-                                backgroundColor: step>i ? colors[i]+'20' : 'transparent',
-                                color:           step>i ? colors[i]       : 'transparent',
-                                border:          `1px solid ${step>i ? colors[i]+'40' : 'transparent'}`,
-                                transform:       step>i ? 'translateY(0)' : 'translateY(4px)',
-                                opacity:         step>i ? 1               : 0,
-                            }}>
-                            {s}
-                        </div>
-                        {i < 3 && (
-                            <div className="w-2 h-px transition-all duration-200"
-                                style={{ backgroundColor: step>i+1 ? '#FFA500':'transparent', opacity: step>i+1 ? 0.4:0 }} />
-                        )}
+                        <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:step>i?colors[i]:'transparent', border:`1px solid ${step>i?colors[i]+'50':'transparent'}`, padding:'1px 4px', transition:'all 0.3s', opacity:step>i?1:0 }}>{s}</span>
+                        {i<3 && <span style={{ width:4, height:1, background:step>i+1?'#F5C400':'transparent', transition:'all 0.2s' }} />}
                     </React.Fragment>
                 ))}
             </div>
-            <div className="text-4xl font-bold font-mono transition-all duration-500"
-                style={{ color: step>=5 ? '#FFA500':'transparent', transform: step>=5 ? 'scale(1)':'scale(0.6)' }}>4</div>
-            <div className="text-sm text-gray-500 mt-1">Detection Stages</div>
+            <div style={{
+                fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'52px', lineHeight:1, letterSpacing:'-0.02em',
+                color: isRedacted ? 'transparent' : step>=5 ? '#EFEFEF' : 'transparent',
+                background: isRedacted ? '#EFEFEF' : 'transparent',
+                transition: isRedacted ? 'background 0.4s ease, color 0.4s ease' : 'color 0.5s ease',
+                transform: (!isRedacted && step>=5) ? 'scale(1)' : 'scale(0.85)',
+                display:'inline-block',
+            }}>4</div>
+            <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'12px', letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(239,239,239,0.45)', marginTop:'8px' }}>Detection Stages</div>
         </div>
     );
 }
 
-// ── Compliance card ───────────────────────────────────────────────────────────
-interface ComplianceCardProps {
-    name: string; shortDesc: string; color: string;
-    fullDesc: string; keyPoints: string[]; penalty?: string;
-}
-function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }: ComplianceCardProps) {
-    const [hovered, setHovered] = useState(false);
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE CELL with scroll-triggered title highlighter
+// ─────────────────────────────────────────────────────────────────────────────
+function LocalInferenceCounter() {
+    const [tick, setTick] = useState(false);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTick(t => !t);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
     return (
-        <div className="relative rounded-2xl border overflow-hidden cursor-default transition-all duration-500 text-left"
-            style={{
-                borderColor: hovered ? color+'50':color+'20',
-                backgroundColor: hovered ? color+'10':color+'06',
-                transform: hovered ? 'translateY(-4px)':'translateY(0)',
-                boxShadow: hovered ? `0 12px 40px ${color}18`:'none',
-            }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}>
-            <div className="p-4">
-                <div className="font-bold text-sm mb-0.5" style={{ color }}>{name}</div>
-                <div className="text-[11px] text-gray-500">{shortDesc}</div>
-                {!hovered && <div className="text-[10px] text-gray-700 mt-1.5 font-mono">Hover to expand ↓</div>}
+        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.08em', lineHeight:1.8 }}>
+            <div style={{ color:'#F5C400', fontWeight:'bold' }}>{'>'} 0 BYTES TRANSMITTED</div>
+            <div style={{ color:'rgba(239,239,239,0.5)', marginTop:'8px' }}>
+                PACKETS TRANSMITTED: <span style={{ color:'#22c55e' }}>000</span>
+                <span style={{ display:'inline-block', width:'6px', height:'10px', background:'#22c55e', marginLeft:'4px', opacity: tick ? 1 : 0.2, transition:'opacity 0.1s' }} />
             </div>
-            <div className="overflow-hidden transition-all duration-500 ease-out"
-                style={{ maxHeight: hovered ? '280px':'0px', opacity: hovered ? 1:0 }}>
-                <div className="px-4 pb-4 space-y-2.5">
-                    <div className="h-px w-full" style={{ backgroundColor: color+'20' }} />
-                    <p className="text-[11px] text-gray-400 leading-relaxed">{fullDesc}</p>
-                    <div className="space-y-1.5">
-                        {keyPoints.map((pt,i) => (
-                            <div key={i} className="flex items-start gap-2">
-                                <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: color }} />
-                                <span className="text-[10px] text-gray-500">{pt}</span>
+            <div style={{ color:'rgba(239,239,239,0.42)', fontSize:'12px', letterSpacing:'0.18em', marginTop:'4px' }}>
+                STATUS: SECURE_LOCAL_LOOPBACK
+            </div>
+        </div>
+    );
+}
+
+function FeatureCell({ index, title, desc, noBorderRight, noBorderBottom, special }:{
+    index:string; title:string; desc:string;
+    noBorderRight?:boolean; noBorderBottom?:boolean; special?:boolean;
+}) {
+    const [hovered,      setHovered]      = useState(false);
+    const [highlighted,  setHighlighted]  = useState(false);
+    const [highlightPct, setHighlightPct] = useState(0);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting && !highlighted) {
+                setHighlighted(true);
+                // Sweep highlight across title
+                let pct = 0;
+                const sweep = setInterval(()=>{
+                    pct += 4;
+                    setHighlightPct(pct);
+                    if (pct >= 100) {
+                        clearInterval(sweep);
+                        setTimeout(()=>setHighlightPct(0), 300);
+                    }
+                }, 16);
+            }
+        }, { threshold:0.5 });
+        if (ref.current) obs.observe(ref.current);
+        return ()=>obs.disconnect();
+    }, [highlighted]);
+
+    return (
+        <div ref={ref}
+            onMouseEnter={()=>setHovered(true)}
+            onMouseLeave={()=>setHovered(false)}
+            style={{
+                padding:'20px 24px',
+                borderRight:  noBorderRight  ? 'none' : '1px solid rgba(239,239,239,0.07)',
+                borderBottom: noBorderBottom ? 'none' : '1px solid rgba(239,239,239,0.07)',
+                borderBottomColor: hovered ? '#F5C400' : 'rgba(239,239,239,0.07)',
+                transition:'border-color 0.2s',
+                cursor:'default',
+                position:'relative',
+            }}>
+            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:hovered?'#F5C400':'rgba(239,239,239,0.4)', marginBottom:'20px', transition:'color 0.2s' }}>
+                {index} ——
+            </div>
+            {special ? (
+                <LocalInferenceCounter />
+            ) : (
+                <>
+                    {/* Title with sweep highlight */}
+                    <div style={{
+                        fontFamily:'Barlow, sans-serif', fontWeight:700, fontSize:'14px',
+                        marginBottom:'8px', position:'relative', display:'inline-block',
+                    }}>
+                        <span style={{
+                            position:'absolute', top:0, left:0, height:'100%',
+                            background:'#F5C400',
+                            width: highlightPct>0 ? `${highlightPct}%` : '0%',
+                            transition: highlightPct>0 ? 'width 0.016s linear' : 'none',
+                            opacity: highlightPct>0 && highlightPct<100 ? 0.35 : 0,
+                            pointerEvents:'none',
+                        }} />
+                        <span style={{ color:'#EFEFEF', position:'relative', zIndex:1 }}>{title}</span>
+                    </div>
+                    <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)' }}>{desc}</div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PIPELINE TABLE ROW with scanner beam
+// ─────────────────────────────────────────────────────────────────────────────
+function PipelineTable() {
+    const [scanY, setScanY]       = useState(0);
+    const [hovRow, setHovRow]     = useState<number|null>(null);
+    const tableRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let y = 0;
+        const interval = setInterval(()=>{
+            y = (y + 0.3) % 100;
+            setScanY(y);
+        }, 40);
+        return ()=>clearInterval(interval);
+    }, []);
+
+    const rows = [
+        { stage:'01', name:'Regex Engine',    weight:'1.4×', desc:'Format-aware pattern matching for structured Indian PII. Aadhaar validated with Verhoeff checksum, PAN alphanumeric structure verified, GSTIN state codes checked. Highest weight due to format precision.' },
+        { stage:'02', name:'Presidio NLP',    weight:'1.0×', desc:'28 specialized recognizers for global PII patterns. Phone numbers, credit cards, email addresses, SSN, medical license numbers, URLs, IP addresses, and more.' },
+        { stage:'03', name:'spaCy NER',       weight:'0.9×', desc:'en_core_web_lg transformer model provides context-aware named entity recognition. Detects names, locations, organizations by understanding surrounding text.' },
+        { stage:'04', name:'Voting Ensemble', weight:'FINAL', desc:'Weighted scores merged across all stages. Type-locked at ≥0.80 regex confidence — prevents spaCy from reclassifying a PAN number as a location based on context alone.' },
+    ];
+
+    return (
+        <div ref={tableRef} style={{ position:'relative', overflow:'hidden' }}>
+            {/* Scanner beam */}
+            <div style={{
+                position:'absolute', left:0, right:0, height:'2px',
+                background:'linear-gradient(to right, transparent, #F5C400, transparent)',
+                top:`${scanY}%`, opacity:0.12, pointerEvents:'none', zIndex:2, transition:'none',
+            }} />
+
+            {/* Header */}
+            <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 80px', gap:'24px', padding:'10px 36px', borderBottom:'1px solid rgba(239,239,239,0.07)', borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                {['STAGE','ENGINE · DESCRIPTION'].map(h=>(
+                    <div key={h} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>{h}</div>
+                ))}
+                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', textAlign:'right' }}>WEIGHT</div>
+            </div>
+
+            {rows.map((row,i)=>(
+                <div key={i}
+                    onMouseEnter={()=>setHovRow(i)}
+                    onMouseLeave={()=>setHovRow(null)}
+                    style={{
+                        display:'grid', gridTemplateColumns:'100px 1fr 80px',
+                        gap:'24px', padding:'16px 36px',
+                        borderBottom: i<rows.length-1 ? '1px solid rgba(239,239,239,0.07)':'none',
+                        background: hovRow===i ? 'rgba(245,196,0,0.04)' : 'transparent',
+                        transition:'background 0.2s', cursor:'default', position:'relative',
+                    }}>
+                    <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', paddingTop:'3px' }}>Stage {row.stage}</div>
+                    <div>
+                        <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:700, fontSize:'14px', color:'#EFEFEF', marginBottom:'6px' }}>{row.name}</div>
+                        <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)' }}>{row.desc}</div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                        <span style={{
+                            fontFamily:"'IBM Plex Mono', monospace", fontSize: row.weight==='FINAL'?'13px':'11px',
+                            letterSpacing:'0.14em', textTransform:'uppercase',
+                            color: row.weight==='FINAL' ? '#EFEFEF' : '#F5C400',
+                            border: row.weight==='FINAL' ? 'none' : '1px solid rgba(245,196,0,0.3)',
+                            padding: row.weight==='FINAL' ? '0' : '3px 8px',
+                            display:'inline-block', fontWeight: row.weight==='FINAL' ? 700 : 400,
+                            animation: hovRow===i && row.weight!=='FINAL' ? 'pulse 0.4s ease' : 'none',
+                        }}>{row.weight}</span>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API ENDPOINT ROW
+// ─────────────────────────────────────────────────────────────────────────────
+function ApiEndpointRow({ path, desc }: { path:string; desc:string }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+            style={{ display:'flex', gap:'8px', padding:'5px 0', cursor:'default', transition:'opacity 0.15s', opacity:hov?1:0.65 }}>
+            <span style={{ color:'rgba(239,239,239,0.42)', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', flexShrink:0 }}>{'>'}</span>
+            <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', color:hov?'#EFEFEF':'rgba(239,239,239,0.6)' }}>
+                <span style={{ color:'#F5C400' }}>{path}</span>
+                <span style={{ color:'rgba(239,239,239,0.42)' }}> — {desc}</span>
+            </span>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPLIANCE ROW — dossier file tab style
+// ─────────────────────────────────────────────────────────────────────────────
+function ComplianceRow({ code, name, fullName, fullDesc, keyPoints, penalty }: {
+    code:string; name:string; fullName:string; fullDesc:string; keyPoints:string[]; penalty?:string;
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const [redlineH, setRedlineH] = useState(0);
+
+    const onEnter = () => {
+        setExpanded(true);
+        // Animate red line from top to bottom over 0.3s
+        let h = 0;
+        const step = setInterval(()=>{
+            h = Math.min(h + 8, 100);
+            setRedlineH(h);
+            if (h >= 100) clearInterval(step);
+        }, 12);
+    };
+    const onLeave = () => { setExpanded(false); setRedlineH(0); };
+
+    return (
+        <div onMouseEnter={onEnter} onMouseLeave={onLeave}
+            style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', position:'relative', cursor:'default', transition:'background 0.2s' }}>
+            {/* Red annotation line on left edge */}
+            <div style={{
+                position:'absolute', left:0, top:0, width:'2px',
+                background:'#B91C1C', height:`${redlineH}%`,
+                transition:'none',
+            }} />
+
+            {/* Main row */}
+            <div style={{ display:'grid', gridTemplateColumns:'130px 1fr auto', gap:'16px', padding:'0 24px', height:'56px', alignItems:'center' }}>
+                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'#F5C400', fontWeight:700 }}>
+                    [{code}]
+                </div>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:600, fontSize:'13px', color:'#EFEFEF', marginBottom:'2px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{fullName}</div>
+                    <div style={{ fontFamily:'Barlow, sans-serif', fontSize:'12px', color:'rgba(239,239,239,0.42)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{name}</div>
+                </div>
+                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'#4ade80', whiteSpace:'nowrap' }}>
+                    [COMPLIANT ✓]
+                </div>
+            </div>
+
+            {/* Expanded detail */}
+            <div style={{ maxHeight: expanded?'240px':'0', overflow:'hidden', transition:'max-height 0.35s ease', opacity:expanded?1:0 }}>
+                <div style={{ padding:'0 24px 16px', borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                    <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', margin:'12px 0 8px' }}>{fullDesc}</p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
+                        {keyPoints.map((pt,i)=>(
+                            <div key={i} style={{ display:'flex', gap:'8px' }}>
+                                <span style={{ color:'#B91C1C', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', flexShrink:0, marginTop:'2px' }}>—</span>
+                                <span style={{ fontFamily:'Barlow', fontSize:'12px', lineHeight:1.5, color:'rgba(239,239,239,0.42)' }}>{pt}</span>
                             </div>
                         ))}
                     </div>
                     {penalty && (
-                        <div className="px-2.5 py-1.5 rounded-lg text-[10px] font-mono" style={{ backgroundColor: color+'10', color }}>
-                            Penalty: {penalty}
+                        <div style={{ marginTop:'10px', padding:'4px 8px', border:'1px solid rgba(245,196,0,0.25)', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'#F5C400' }}>
+                            {penalty}
                         </div>
                     )}
                 </div>
@@ -364,285 +587,617 @@ function ComplianceCard({ name, shortDesc, color, fullDesc, keyPoints, penalty }
     );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 3D ROTATING DOCUMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REBUILT 3D A4 DOCUMENT COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+const getDocumentStyle = (progress: number) => {
+  let rotY: number, rotX: number, rotZ: number, opacity: number, scale: number;
+
+  if (progress < 0.15) {
+    const p = progress / 0.15;
+    rotY = 45; rotX = 12; rotZ = -4;
+    opacity = p; scale = 1;
+  } else if (progress < 0.45) {
+    const p = (progress - 0.15) / 0.30;
+    rotY = 45 - (25 * p);
+    rotX = 12 - (7 * p);
+    rotZ = -4 + (3 * p);
+    opacity = 1; scale = 1;
+  } else if (progress < 0.70) {
+    const p = (progress - 0.45) / 0.25;
+    rotY = 20 - (20 * p);
+    rotX = 5 - (5 * p);
+    rotZ = -1 + p;
+    opacity = 1; scale = 1;
+  } else if (progress < 0.85) {
+    rotY = 0; rotX = 0; rotZ = 0;
+    opacity = 1; scale = 1;
+  } else {
+    const p = (progress - 0.85) / 0.15;
+    rotY = 0; rotX = 0; rotZ = 0;
+    opacity = 1 - p; scale = 1 + (0.08 * p);
+  }
+
+  return {
+    transform: `perspective(1400px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`,
+    opacity,
+    transition: 'none'
+  };
+};
+
+const getBarStyle = (barIndex: number, progress: number) => {
+  const revealStart = 0.45 + (barIndex * 0.025);
+  const revealEnd = revealStart + 0.06;
+  const barProgress = Math.max(0, Math.min(1,
+    (progress - revealStart) / (revealEnd - revealStart)
+  ));
+  return {
+    width: `${100 - (barProgress * 100)}%`,
+    transition: 'none'
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCROLL-TRIGGERED ANIMATION WRAPPER (Task 7)
+// ─────────────────────────────────────────────────────────────────────────────
+function AnimateOnScroll({ children, delay = 0, direction = 'up', style: extStyle = {} }: {
+    children: React.ReactNode; delay?: number; direction?: 'up' | 'left' | 'right'; style?: React.CSSProperties;
+}) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
+        }, { threshold: 0.15 });
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+
+    const initialTransform = direction === 'up' ? 'translateY(24px)' : direction === 'left' ? 'translateX(-16px)' : 'translateX(16px)';
+
+    return (
+        <div ref={ref} style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translate(0)' : initialTransform,
+            transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+            ...extStyle,
+        }}>
+            {children}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RED EYEBROW LINE (Task 7 — animated red line + label fade)
+// ─────────────────────────────────────────────────────────────────────────────
+function RedEyebrow({ text }: { text: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
+        }, { threshold: 0.15 });
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ width: visible ? '18px' : '0px', height: '2px', background: '#B91C1C', flexShrink: 0, transition: 'width 0.3s ease' }} />
+            <span style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.26em', textTransform: 'uppercase', color: '#B91C1C',
+                opacity: visible ? 1 : 0, transition: 'opacity 0.2s ease 0.3s',
+            }}>{text}</span>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REBUILT 3D HERO SECTION CONTAINER (Task 2 + Task 3)
+// ─────────────────────────────────────────────────────────────────────────────
+function HeroSectionRebuild() {
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const heroRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const container = document.getElementById('hero-scroll-container');
+        const mainEl = document.querySelector('main') || window;
+
+        const handleScroll = () => {
+            if (!container) return;
+            let scrollTop = window.scrollY;
+            let containerTop = container.offsetTop;
+
+            if (mainEl instanceof HTMLElement) {
+                const containerRect = container.getBoundingClientRect();
+                const mainRect = mainEl.getBoundingClientRect();
+                scrollTop = mainRect.top - containerRect.top;
+                containerTop = 0;
+            }
+
+            const containerHeight = container.offsetHeight - window.innerHeight;
+            const progress = Math.max(0, Math.min(1,
+                (scrollTop - containerTop) / containerHeight
+            ));
+            setScrollProgress(progress); // 0 at top, 1 at bottom of hero
+        };
+
+        mainEl.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        return () => {
+            mainEl.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    const heroTextOpacity = scrollProgress > 0.85
+        ? 1 - ((scrollProgress - 0.85) / 0.15)
+        : 1;
+
+    return (
+        <div id="hero-scroll-container" style={{ height: '800vh', position: 'relative' }}>
+            <div id="hero-sticky" style={{
+                position: 'sticky',
+                top: 0,
+                height: '100vh',
+                width: '100%',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                alignItems: 'center',
+                padding: '0 clamp(36px, 5vw, 80px)',
+                boxSizing: 'border-box',
+                overflow: 'hidden',
+            }}>
+                {/* Left column: Hero text block */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', opacity: heroTextOpacity }}>
+                    {/* Eyebrow */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ width: '18px', height: '2px', background: '#B91C1C', flexShrink: 0 }} />
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)' }}>
+                            DPDP Act 2023 · GDPR · Built for Indian enterprises
+                        </span>
+                    </div>
+
+                    {/* Headline */}
+                    <h1 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 'clamp(64px,9vw,120px)', lineHeight: 0.85, textTransform: 'uppercase', letterSpacing: '-0.01em', margin: '0' }}>
+                        <span style={{ display: 'block', color: '#EFEFEF' }}>YOUR DATA</span>
+                        <span style={{ display: 'flex', flexDirection: 'column', width: 'max-content' }}>
+                            <RedactedReveal text="STAYS YOURS" />
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)', fontWeight: 400, marginTop: '6px', whiteSpace: 'nowrap' }}>
+                                hover to reveal
+                            </span>
+                        </span>
+                        <span style={{ display: 'block', color: '#F5C400' }}>ALWAYS.</span>
+                    </h1>
+
+                    {/* Subtext */}
+                    <div style={{ marginTop: '28px', maxWidth: '420px' }}>
+                        <DeclassifySubtext />
+                    </div>
+
+                    {/* CTAs */}
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '32px' }}>
+                        <Link href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', fontWeight: 700, borderRadius: 0, transition: 'letter-spacing 0.2s' }}>
+                            Start Redacting →
+                        </Link>
+                        <Link href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.42)', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', borderRadius: 0, transition: 'border-color 0.2s, color 0.2s' }}>
+                            Batch Processing
+                        </Link>
+                    </div>
+
+                    {/* Trust strip */}
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '20px' }}>
+                        {['Zero data retention', 'Client-side only', 'Air-gap compatible', 'DPDP compliant'].map(item => (
+                            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ color: 'rgba(239,239,239,0.42)', fontSize: '12px' }}>✓</span>
+                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)' }}>{item}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Right column: 3D document centered both axes */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(239,239,239,0.02) 1px, transparent 1px)', backgroundSize: '16px 16px', pointerEvents: 'none' }} />
+                    
+                    <div style={{perspective: '1400px', perspectiveOrigin: 'center center'}}>
+                        <div id="doc-3d" style={getDocumentStyle(scrollProgress)}>
+                            <div style={{
+                                width: 'clamp(300px, 38vw, 460px)',
+                                background: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(239,239,239,0.12)',
+                                padding: '32px 28px',
+                                fontFamily: 'IBM Plex Mono',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
+                            }}>
+                                {/* Scan Line for Phase 2 */}
+                                {scrollProgress >= 0.15 && scrollProgress < 0.45 && (
+                                    <div 
+                                        className="scanline-element"
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            width: '100%',
+                                            height: '3px',
+                                            background: 'linear-gradient(90deg, transparent, #F5C400, transparent)',
+                                            boxShadow: '0 0 12px #F5C400',
+                                            zIndex: 3,
+                                            animation: 'scanline 2s linear infinite',
+                                        }} 
+                                    />
+                                )}
+                                
+                                <style>{`
+                                    @keyframes scanline {
+                                        0% { top: 0%; opacity: 0; }
+                                        10% { opacity: 1; }
+                                        90% { opacity: 1; }
+                                        100% { top: 100%; opacity: 0; }
+                                    }
+                                `}</style>
+
+                                {/* Header */}
+                                <div style={{fontSize:'9px', color:'rgba(239,239,239,0.3)', marginBottom:'20px', display:'flex', justifyContent:'space-between'}}>
+                                    <span>CLASSIFICATION: RESTRICTED</span>
+                                    <span>REF: CPH-2025-001</span>
+                                </div>
+
+                                {/* 8 fields with redaction bars */}
+                                {['SUBJECT','AADHAAR','PAN','PHONE','EMAIL','DOB','BANK','ADDRESS'].map((field, i) => (
+                                    <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'12px', gap:'12px'}}>
+                                        <span style={{fontSize:'9px', color:'rgba(239,239,239,0.25)', minWidth:'64px'}}>{field}</span>
+                                        <div style={{position:'relative', flex:1, height:'14px', background:'rgba(239,239,239,0.05)'}}>
+                                            <div style={{
+                                                position:'absolute', top:0, left:0, height:'100%',
+                                                background:'#EFEFEF',
+                                                ...getBarStyle(i, scrollProgress)
+                                            }} />
+                                            <span style={{
+                                                position:'absolute', left:'8px', top:'50%',
+                                                transform:'translateY(-50%)',
+                                                fontSize:'9px', color:'#F5C400',
+                                                opacity: scrollProgress > (0.45 + i * 0.025 + 0.06) ? 1 : 0,
+                                                transition: 'opacity 0.3s'
+                                            }}>[REDACTED]</span>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Status */}
+                                <div style={{marginTop:'20px', paddingTop:'16px', borderTop:'1px solid rgba(239,239,239,0.07)', fontSize:'9px', color: scrollProgress > 0.70 ? '#4ade80' : '#F5C400'}}>
+                                    STATUS: {scrollProgress > 0.70 ? 'CLEAN' : 'AWAITING REDACTION'}
+                                </div>
+
+                                {/* DECLASSIFIED stamp */}
+                                {scrollProgress > 0.70 && (
+                                    <div style={{
+                                        position:'absolute', top:'50%', left:'50%',
+                                        transform:'translate(-50%, -50%) rotate(-12deg)',
+                                        border:'3px solid #B91C1C', color:'#B91C1C',
+                                        fontFamily:'IBM Plex Mono', fontWeight:'700',
+                                        fontSize:'clamp(18px, 2.5vw, 28px)',
+                                        padding:'8px 20px', letterSpacing:'0.2em',
+                                        opacity: Math.min(1, (scrollProgress - 0.70) / 0.10),
+                                        pointerEvents:'none'
+                                    }}>
+                                        DECLASSIFIED
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
     const [loaderDone,  setLoaderDone]  = useState(false);
     const [pageVisible, setPageVisible] = useState(false);
+    const [navScrolled, setNavScrolled] = useState(false);
 
-    const handleLoaderComplete = () => {
-        setLoaderDone(true);
-        setTimeout(() => setPageVisible(true), 50);
-    };
+    const handleLoaderComplete = () => { setLoaderDone(true); setTimeout(()=>setPageVisible(true),50); };
 
-    const compliance: ComplianceCardProps[] = [
-        { name:'DPDP Act 2023', shortDesc:'Digital Personal Data Protection Act', color:'#F97316',
-          fullDesc:"India's landmark data protection legislation requiring explicit consent before processing personal data of Indian citizens.",
-          keyPoints:['Explicit consent required before data processing','Data minimization — collect only what is needed','Right to erasure and correction for data principals','Mandatory breach notification within 72 hours'],
-          penalty:'Up to ₹250 crore per violation' },
-        { name:'GDPR Art. 25', shortDesc:'Data protection by design and default', color:'#60A5FA',
-          fullDesc:'EU regulation requiring privacy to be built into products from the ground up, not added as an afterthought.',
-          keyPoints:['Privacy must be considered at design stage','Default settings must be most privacy-friendly','Pseudonymization and encryption required where appropriate',"Applies to any org processing EU residents' data"],
-          penalty:'Up to €20M or 4% of global annual turnover' },
-        { name:'ISO 27001', shortDesc:'Information security management', color:'#34D399',
-          fullDesc:'International standard for establishing, implementing, and maintaining an information security management system.',
-          keyPoints:['Risk-based approach to information security','Mandatory security controls across 14 domains','Requires documented policies and procedures','Annual surveillance audits and 3-year recertification'] },
-        { name:'IT Act 2000', shortDesc:'Section 43A sensitive data protection', color:'#A78BFA',
-          fullDesc:"India's IT Act Section 43A mandates compensation for failure to implement reasonable security practices for sensitive personal data.",
-          keyPoints:['Applies to body corporates handling sensitive data','Sensitive data includes biometrics, financial info, health records','Must maintain a documented security policy','Negligence in data protection is a civil liability'],
-          penalty:'Compensation to affected persons — no upper limit' },
-    ];
+    // Task 8: Nav blur on scroll past 60px
+    useEffect(() => {
+        const mainEl = document.querySelector('main');
+        if (!mainEl) return;
+        const handleScroll = () => setNavScrolled(mainEl.scrollTop > 60);
+        mainEl.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        return () => mainEl.removeEventListener('scroll', handleScroll);
+    }, [loaderDone]);
 
     return (
         <>
             {!loaderDone && <SiteLoader onComplete={handleLoaderComplete} />}
 
-            <div className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-[#FFA500] selection:text-black overflow-x-hidden transition-opacity duration-300"
-                style={{ opacity: pageVisible ? 1 : 0 }}>
+            <div style={{ minHeight:'100vh', background:'#080808', color:'#EFEFEF', fontFamily:'Barlow, sans-serif', opacity:pageVisible?1:0, transition:'opacity 0.3s ease', cursor:'none' }}>
 
-                {/* Nav */}
-                <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#0A0A0A] border-b border-white/[0.05]">
-                    <Link href="/" className="flex items-center gap-2.5 group">
-                        <div className="p-1.5 rounded-lg bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
-                            <Shield className="w-4 h-4 text-black" />
+                {/* Terminal init — types on load */}
+                {pageVisible && <TerminalInit />}
+
+                {/* ── Nav (Task 8: blur on scroll) ────────────────────────── */}
+                <nav style={{
+                    position:'fixed', top:0, left:0, right:0, zIndex:100,
+                    background: navScrolled ? 'rgba(8,8,8,0.95)' : '#080808',
+                    backdropFilter: navScrolled ? 'blur(12px)' : 'none',
+                    borderBottom: navScrolled ? '1px solid rgba(239,239,239,0.07)' : '1px solid transparent',
+                    transition:'background 0.3s, border-color 0.3s, backdrop-filter 0.3s',
+                }}>
+                    {/* ── Top ref bar ─────────────────────────────────────────── */}
+                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', marginTop: navScrolled ? 0 : '10px', transition: 'margin-top 0.3s' }}>
+                        <div className="content-wrap" style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', padding:'6px clamp(24px, 4vw, 64px)' }}>
+                            DOC-REF: CPH-2025-001 · CLIENT-SIDE · ZERO RETENTION · DPDP ACT 2023
                         </div>
-                        <span className="font-bold text-lg tracking-tight">Ciphera</span>
-                        <span className="text-[10px] font-mono text-[#FFA500]/60 border border-[#FFA500]/20 px-1.5 py-0.5 rounded">V3</span>
-                    </Link>
-                    <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-                        <a href="#features"   className="hover:text-white transition-colors cursor-pointer">Features</a>
-                        <a href="#pipeline"   className="hover:text-white transition-colors cursor-pointer">Pipeline</a>
-                        <a href="#api"        className="hover:text-white transition-colors cursor-pointer">API</a>
-                        <a href="#compliance" className="hover:text-white transition-colors cursor-pointer">Compliance</a>
                     </div>
-                    <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 bg-[#FFA500] hover:bg-[#ffb733] text-black text-sm font-semibold rounded-xl transition-all">
-                        Open App <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+
+                    <div className="content-wrap" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px clamp(24px, 4vw, 64px)' }}>
+                        <Link href="/" style={{ textDecoration:'none', display:'flex', alignItems:'baseline', gap:'8px' }}>
+                            <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'20px', letterSpacing:'0.12em', textTransform:'uppercase', color:'#EFEFEF' }}>Ciphera</span>
+                            <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', color:'rgba(239,239,239,0.42)' }}>v3</span>
+                        </Link>
+                        <div style={{ display:'flex', alignItems:'center', gap:'32px' }}>
+                            {['Features','Pipeline','API','Compliance'].map(l=>(
+                                <a key={l} href={`#${l.toLowerCase()}`}
+                                    style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', textDecoration:'none', cursor:'pointer', transition:'color 0.15s' }}
+                                    onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
+                                    onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.4)')}
+                                >{l}</a>
+                            ))}
+                        </div>
+                        <Link href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'10px 20px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
+                            onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
+                            onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
+                        >
+                            Open App →
+                        </Link>
+                    </div>
                 </nav>
 
-                {/* Hero */}
-                <section className="relative pt-36 pb-24 px-6 md:px-12 flex flex-col items-center text-center overflow-hidden">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-[#FFA500]/5 rounded-full blur-[140px] pointer-events-none" />
-                    <div className="absolute top-48 left-1/4  w-[300px] h-[300px] bg-blue-600/4   rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute top-48 right-1/4 w-[300px] h-[300px] bg-purple-600/4 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute inset-0 pointer-events-none opacity-[0.02]"
-                        style={{ backgroundImage:'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize:'40px 40px' }} />
+                {/* ── 3D Sticky Hero Section Rebuild ────────────────────────── */}
+                <HeroSectionRebuild />
 
-                    <div className="relative z-10 max-w-5xl mx-auto">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFA500]/10 border border-[#FFA500]/20 text-[#FFA500] text-xs font-medium mb-10">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#FFA500] animate-pulse" />
-                            DPDP Act 2023 · GDPR · Built for Indian enterprises
+                <div id="rest-of-page">
+
+                {/* ── PII Ticker + Stats ──────────────────────────────────── */}
+                <section style={{ borderTop:'1px solid rgba(239,239,239,0.07)', marginTop: 0 }}>
+                    {/* Ticker — 28s speed */}
+                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', overflow:'hidden', padding:'0', height:'28px', display:'flex', alignItems:'center' }}>
+                        <div style={{ animation:'ticker 28s linear infinite', whiteSpace:'nowrap', display:'inline-block' }}>
+                            {Array(3).fill(['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE']).flat().map((item,i)=>(
+                                <span key={i} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(245,196,0,0.42)', margin:'0 20px' }}>
+                                    {item} ·
+                                </span>
+                            ))}
                         </div>
-
-                        {/*
-                          Headline — ET-style serif-adjacent condensed bold.
-                          Using Georgia / Times as fallback — closest to ET's
-                          condensed slab feel without a custom font load.
-                          Equal letter-spacing via letterSpacing: 0.
-                          Each word gets a unique security effect.
-                        */}
-                        <h1
-                            className="mb-6 leading-[1.0]"
-                            style={{
-                                fontFamily: '"Barlow Condensed", "Arial Black", sans-serif',
-                                fontWeight: 900,
-                                fontSize: 'clamp(2.8rem, 8vw, 6.5rem)',
-                                letterSpacing: '-0.01em',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            {/* Line 1 — YOUR DATA */}
-                            <span style={{ display: 'block', color: '#EFEFEF' }}>
-                                YOUR DATA
-                            </span>
-
-                            {/* Line 2 — STAYS YOURS — redacted by default, reveals on hover */}
-                            <span style={{ display: 'block' }}>
-                                <RedactedReveal />
-                            </span>
-
-                            {/* Line 3 — ALWAYS. */}
-                            <span style={{ display: 'block', color: '#F5C400' }}>
-                                ALWAYS.
-                            </span>
-                        </h1>
-
-                        <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                            Enterprise-grade document redaction powered by a four-stage detection pipeline.
-                            Aadhaar, PAN, GSTIN, biometric data — identified and sanitized before it leaves your system.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link href="/dashboard" className="flex items-center gap-2 px-6 py-3.5 bg-[#FFA500] hover:bg-[#ffb733] text-black font-semibold rounded-xl transition-all text-sm shadow-[0_0_30px_rgba(255,165,0,0.25)] hover:shadow-[0_0_50px_rgba(255,165,0,0.4)]">
-                                Start Redacting <ArrowRight className="w-4 h-4" />
-                            </Link>
-                            <Link href="/batch" className="flex items-center gap-2 px-6 py-3.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-medium rounded-xl transition-all text-sm">
-                                <Layers className="w-4 h-4" /> Batch Processing
-                            </Link>
-                        </div>
+                        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
                     </div>
 
-                    <div className="relative z-10 mt-16 w-full max-w-2xl mx-auto">
-                        <TrafficSignalTerminal />
+                    {/* Stats grid */}
+                    <div className="content-wrap">
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+                            <StatCell target={17}   suffix="+" label="Entity Types Detected" index="01" />
+                            <StatCell target={4}    suffix=""  label="Detection Stages"      index="02" />
+                            <StatCell target={7}    suffix=""  label="Indian PII Formats"    index="03" />
+                            <StatCell target="0kb"  suffix=""  label="Sent to Server"        index="04" />
+                        </div>
                     </div>
                 </section>
 
-                {/* Stats */}
-                <section className="px-6 md:px-12 py-16 border-y border-white/[0.04] bg-[#0A0A0A]">
-                    <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center items-end">
-                        <AnimatedStat target={17} suffix="+" label="Entity Types Detected" />
-                        <PipelineFlowStat />
-                        <AnimatedStat target={7}  label="Indian PII Formats" />
-                        <AnimatedStat target={28} label="Active Recognizers" />
-                    </div>
-                </section>
-
-                {/* Features */}
-                <section id="features" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="text-center mb-16">
-                            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '-0.01em' }}>Everything needed to protect sensitive data</h2>
-                            <p className="text-gray-400 max-w-xl mx-auto">Built for compliance teams, legal departments, and data engineers working with Indian and global documents.</p>
+                {/* ── Features ─────────────────────────────────────────────── */}
+                <section id="features" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                    {/* Meta strip */}
+                    <div className="content-wrap">
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 0', borderBottom:'1px solid rgba(239,239,239,0.07)', marginBottom:'40px' }}>
+                            <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>// Capabilities</span>
+                            <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>[09 Modules]</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+
+                    {/* Heading */}
+                    <div className="content-wrap" style={{ paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                        <AnimateOnScroll>
+                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(40px,5vw,64px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 16px 0' }}>
+                                <span style={{ display:'block', color:'#EFEFEF' }}>NOTHING LEAVES.</span>
+                                <span style={{ display:'block' }}>
+                                    <RedactedReveal text="NOTHING ESCAPES." />
+                                </span>
+                            </h2>
+                        </AnimateOnScroll>
+                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginTop:'16px' }}>
+                            09 modules. All running locally. All running now.
+                        </div>
+                    </div>
+
+                    {/* Grid */}
+                    <div className="content-wrap">
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)' }}>
                             {[
-                                { icon:<Fingerprint className="w-5 h-5"/>, color:'#F97316', title:'Indian PII Detection',    desc:'Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration — format-validated, not just pattern-matched.' },
-                                { icon:<Zap className="w-5 h-5"/>,         color:'#FFA500', title:'Four-Stage Pipeline',     desc:'Regex → Presidio → spaCy NER → Voting ensemble. Weighted scoring with type-lock at ≥0.80 confidence prevents misclassification.' },
-                                { icon:<Eye className="w-5 h-5"/>,         color:'#60A5FA', title:'Visual Canvas Redaction', desc:'Pixel-level redaction for PDFs and images. Draw boxes manually, detect faces automatically, export as flattened PDF.' },
-                                { icon:<Database className="w-5 h-5"/>,    color:'#34D399', title:'Synthetic Substitution',  desc:'Replace PII with realistic synthetic Indian data. Documents stay readable while all sensitive information is replaced.' },
-                                { icon:<Code2 className="w-5 h-5"/>,       color:'#A78BFA', title:'REST API Access',         desc:'Authenticated REST endpoints for pipeline integration. Per-key rate limiting and request tracking included.' },
-                                { icon:<Layers className="w-5 h-5"/>,      color:'#818CF8', title:'Batch Processing',        desc:'Queue multiple documents, download as ZIP in any format. Powered by the same four-stage detection pipeline.' },
-                                { icon:<BarChart3 className="w-5 h-5"/>,   color:'#F472B6', title:'Compliance Reports',      desc:'DPDP Act 2023 and GDPR Article 25 aligned audit reports. PDF and CSV export per session.' },
-                                { icon:<Users className="w-5 h-5"/>,       color:'#2DD4BF', title:'Human-in-the-Loop',       desc:'Review and approve each detected entity before export. Full control over what gets redacted, with confidence scores.' },
-                                { icon:<Lock className="w-5 h-5"/>,        color:'#EAB308', title:'Local Inference Only',    desc:'No data transmitted externally. Fully air-gapped deployment via Docker Compose. Audit logs persist in SQLite.' },
-                            ].map((f,i) => (
-                                <div key={i} className="group p-5 rounded-2xl bg-[#0E0E0E] border border-[#1A1A1A] hover:border-[#2A2A2A] hover:bg-[#111] transition-all duration-300">
-                                    <div className="p-2.5 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300" style={{ backgroundColor:f.color+'15' }}>
-                                        <div style={{ color:f.color }}>{f.icon}</div>
-                                    </div>
-                                    <h3 className="font-semibold text-white mb-2 text-sm">{f.title}</h3>
-                                    <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
-                                </div>
+                                { index:'01', title:'Indian PII Detection',    desc:'Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration — format-validated, not just pattern-matched.' },
+                                { index:'02', title:'Four-Stage Pipeline',     desc:'Regex → Presidio → spaCy NER → Voting ensemble. Weighted scoring with type-lock at ≥0.80 confidence prevents misclassification.' },
+                                { index:'03', title:'Visual Canvas Redaction', desc:'Pixel-level redaction for PDFs and images. Draw boxes manually, detect faces automatically, export as flattened PDF.' },
+                                { index:'04', title:'Synthetic Substitution',  desc:'Replace PII with realistic synthetic Indian data. Documents stay readable while all sensitive information is replaced.' },
+                                { index:'05', title:'REST API Access',         desc:'Authenticated REST endpoints for pipeline integration. Per-key rate limiting and request tracking included.' },
+                                { index:'06', title:'Batch Processing',        desc:'Queue multiple documents, download as ZIP in any format. Powered by the same four-stage detection pipeline.' },
+                                { index:'07', title:'Compliance Reports',      desc:'DPDP Act 2023 and GDPR Article 25 aligned audit reports. PDF and CSV export per session.' },
+                                { index:'08', title:'Human-in-the-Loop',       desc:'Review and approve each detected entity before export. Full control over what gets redacted, with confidence scores.' },
+                                { index:'09', title:'Local Inference Only',    desc:'',  special:true },
+                            ].map((f,i)=>(
+                                <AnimateOnScroll key={i} delay={i * 80}>
+                                    <FeatureCell index={f.index} title={f.title} desc={f.desc}
+                                        noBorderRight={(i+1)%3===0} noBorderBottom={i>=6}
+                                        special={f.special} />
+                                </AnimateOnScroll>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Pipeline */}
-                <section id="pipeline" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="text-center mb-16">
-                            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '-0.01em' }}>How the detection pipeline works</h2>
-                            <p className="text-gray-400">Four stages vote on each entity. The ensemble produces higher accuracy than any single method.</p>
+                {/* ── Pipeline (Task 8: scanbeam) ─────────────────────────── */}
+                <section id="pipeline" style={{ borderTop:'1px solid rgba(239,239,239,0.07)', position:'relative', overflow:'hidden' }}>
+                    {/* Scan beam */}
+                    <div style={{ position:'absolute', left:0, right:0, height:'1px', background:'#F5C400', opacity:0.15, animation:'scanbeam 4s ease-in-out infinite', pointerEvents:'none', zIndex:1 }} />
+
+                    <div className="content-wrap" style={{ paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                        <RedEyebrow text="// DETECTION ENGINE · ACTIVE" />
+                        <AnimateOnScroll>
+                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4vw,48px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0', display:'flex', flexWrap:'wrap', alignItems:'center', gap:'16px' }}>
+                                <span style={{ color:'#EFEFEF' }}>FOUR STAGES.</span>
+                                <span style={{ color:'rgba(239,239,239,0.07)' }}>·</span>
+                                <span style={{ color:'#F5C400' }}>ONE VERDICT.</span>
+                            </h2>
+                        </AnimateOnScroll>
+                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
+                            Each entity is voted on. Confidence threshold: ≥0.80. Below that — flagged for human review.
                         </div>
-                        <div className="space-y-4">
-                            {[
-                                { step:'01', name:'Regex Engine',    weight:'1.4×', color:'#F97316', desc:'Format-aware pattern matching for structured Indian PII. Aadhaar validated with Verhoeff checksum, PAN alphanumeric structure verified, GSTIN state codes checked. Highest weight due to format precision.' },
-                                { step:'02', name:'Presidio NLP',    weight:'1.0×', color:'#60A5FA', desc:'28 specialized recognizers for global PII patterns. Phone numbers, credit cards, email addresses, SSN, medical license numbers, URLs, IP addresses, and more.' },
-                                { step:'03', name:'spaCy NER',       weight:'0.9×', color:'#34D399', desc:'en_core_web_lg transformer model provides context-aware named entity recognition. Detects names, locations, organizations by understanding surrounding text.' },
-                                { step:'04', name:'Voting Ensemble', weight:'—',    color:'#FFA500', desc:'Weighted scores merged across all stages. Type-locked at ≥0.80 regex confidence — prevents spaCy from reclassifying a PAN number as a location based on context alone.' },
-                            ].map((s,i) => (
-                                <div key={i} className="flex gap-4 p-5 rounded-2xl bg-[#111] border border-[#1A1A1A] hover:border-[#2A2A2A] transition-all">
-                                    <div className="shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center text-[10px] font-mono font-bold mt-0.5"
-                                        style={{ borderColor:s.color+'50', backgroundColor:s.color+'10', color:s.color }}>
-                                        {s.step}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                                            <h3 className="font-semibold text-white">{s.name}</h3>
-                                            {s.weight!=='—' && (
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded border shrink-0"
-                                                    style={{ color:s.color, borderColor:s.color+'30', backgroundColor:s.color+'10' }}>
-                                                    weight {s.weight}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    </div>
+                    <div className="content-wrap">
+                        <PipelineTable />
                     </div>
                 </section>
 
-                {/* API */}
-                <section id="api" className="px-6 md:px-12 py-24 bg-[#0A0A0A]">
-                    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA] text-xs font-medium mb-6">
-                                <Code2 className="w-3 h-3" /> REST API
+                {/* ── API ──────────────────────────────────────────────────── */}
+                <section id="api" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                        <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)' }}>
+                            <RedEyebrow text="// API ACCESS · AUTHENTICATED" />
+                            <AnimateOnScroll>
+                                <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(32px,4vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 8px 0' }}>
+                                    <span style={{ display:'block', color:'#EFEFEF' }}>REDACT FROM</span>
+                                    <span style={{ display:'block' }}><RedactedReveal text="ANYWHERE." /></span>
+                                </h2>
+                            </AnimateOnScroll>
+                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', margin:'16px 0 32px' }}>
+                            Any language. Any framework. Per-key rate limiting. Full audit trail.
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
+                            <ApiEndpointRow path="POST /api/v3/public/redact"   desc="sanitize and return" />
+                            <ApiEndpointRow path="POST /api/v3/public/analyze"  desc="detect, don't redact" />
+                            <ApiEndpointRow path="POST /api/v3/synthesize"      desc="replace with synthetic data" />
+                            <ApiEndpointRow path="POST /api/v3/classify"        desc="identify document type" />
+                        </div>
+                    </div>
+                        <div style={{ paddingLeft:'clamp(24px, 4vw, 64px)' }}>
+                            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginBottom:'8px' }}>// REQUEST</div>
+                            <div style={{ border:'1px solid rgba(239,239,239,0.07)', padding:'20px', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', lineHeight:1.8, background:'transparent', overflow:'auto', marginBottom:'20px' }}>
+                                <div style={{ color:'rgba(239,239,239,0.42)', marginBottom:'6px' }}># Redact via REST API</div>
+                                <div><span style={{ color:'#60A5FA' }}>curl</span> <span style={{ color:'#EFEFEF' }}>-X POST</span> \</div>
+                                <div style={{ paddingLeft:'16px', color:'#EFEFEF' }}>http://your-server/api/v3/public/redact \</div>
+                                <div style={{ paddingLeft:'16px' }}><span style={{ color:'#34D399' }}>-H</span> <span style={{ color:'#F5C400' }}>&quot;X-API-Key: ck_live_...&quot;</span> \</div>
+                                <div style={{ paddingLeft:'16px' }}><span style={{ color:'#34D399' }}>-d</span> <span style={{ color:'#F5C400' }}>{'\'{"text": "Aadhaar: 4532 8812 9901"}\''}</span></div>
                             </div>
-                            <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '-0.01em' }}>Integrate into any pipeline</h2>
-                            <p className="text-gray-400 mb-6 leading-relaxed">Authenticated REST endpoints let you redact documents programmatically from any language or framework.</p>
-                            <ul className="space-y-3">
-                                {[
-                                    'POST /api/v3/public/redact — redact and return sanitized text',
-                                    'POST /api/v3/public/analyze — detect entities without redacting',
-                                    'POST /api/v3/synthesize — replace PII with synthetic data',
-                                    'POST /api/v3/classify — auto-detect document type',
-                                ].map((item,i) => (
-                                    <li key={i} className="flex items-start gap-2.5">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                        <span className="text-xs font-mono text-gray-400">{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <div className="bg-[#080808] border border-[#1A1A1A] rounded-2xl p-5 font-mono text-[12px] leading-relaxed overflow-x-auto">
-                            <div className="text-gray-600 mb-2"># Redact via REST API</div>
-                            <div className="text-[#60A5FA]">curl <span className="text-white">-X POST</span> \</div>
-                            <div className="text-white pl-4">http://your-server/api/v3/public/redact \</div>
-                            <div className="pl-4"><span className="text-[#34D399]">-H</span> <span className="text-[#FFA500]">"X-API-Key: ck_live_..."</span> \</div>
-                            <div className="pl-4"><span className="text-[#34D399]">-d</span> <span className="text-[#FFA500]">'{`{"text": "Aadhaar: 4532 8812 9901"}`}'</span></div>
-                            <div className="mt-4 pt-4 border-t border-[#1A1A1A] text-gray-600"># Response</div>
-                            <div className="text-emerald-400">{`{`}</div>
-                            <div className="pl-4 text-gray-300">"redacted_text": <span className="text-[#FFA500]">"Aadhaar: [AADHAAR_1]"</span>,</div>
-                            <div className="pl-4 text-gray-300">"entities_found": <span className="text-[#60A5FA]">1</span>,</div>
-                            <div className="pl-4 text-gray-300">"processing_ms": <span className="text-[#60A5FA]">38</span></div>
-                            <div className="text-emerald-400">{`}`}</div>
+                            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginBottom:'8px' }}>// RESPONSE</div>
+                            <div style={{ border:'1px solid rgba(239,239,239,0.07)', padding:'20px', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', lineHeight:1.8, background:'transparent', overflow:'auto' }}>
+                                <div style={{ color:'#22c55e' }}>{'{'}</div>
+                                <div style={{ paddingLeft:'16px', color:'rgba(239,239,239,0.6)' }}>&quot;redacted_text&quot;: <span style={{ color:'#F5C400' }}>&quot;Aadhaar: [AADHAAR_1]&quot;</span>,</div>
+                                <div style={{ paddingLeft:'16px', color:'rgba(239,239,239,0.6)' }}>&quot;entities_found&quot;: <span style={{ color:'#60A5FA' }}>1</span>,</div>
+                                <div style={{ paddingLeft:'16px', color:'rgba(239,239,239,0.6)' }}>&quot;processing_ms&quot;: <span style={{ color:'#60A5FA' }}>38</span></div>
+                                <div style={{ color:'#22c55e' }}>{'}'}</div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                {/* Compliance */}
-                <section id="compliance" className="px-6 md:px-12 py-24 bg-[#0D0D0D]">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '-0.01em' }}>Built for regulatory compliance</h2>
-                        <p className="text-gray-400 mb-12 max-w-xl mx-auto">Hover each regulation to understand its requirements and how Ciphera addresses them.</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {compliance.map((card,i) => <ComplianceCard key={i} {...card} />)}
+                {/* ── Compliance (Task 5: nowrap labels) ──────────────────── */}
+                <section id="compliance" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'4fr 6fr', paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                        <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                            <RedEyebrow text="// REGULATORY CLEARANCE" />
+                            <AnimateOnScroll>
+                                <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4.5vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0' }}>
+                                    <span style={{ display:'block', color:'#EFEFEF' }}>EVERY REGULATION.</span>
+                                    <span style={{ display:'block' }}><RedactedReveal text="FULLY COVERED." /></span>
+                                </h2>
+                            </AnimateOnScroll>
+                            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
+                                Hover each clause to see exactly how Ciphera addresses it.
+                            </div>
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                            {[
+                                { code:'DPDP ACT 2023', name:'Digital Personal Data Protection Act', fullName:'DPDP Act 2023', fullDesc:"India's landmark data protection legislation requiring explicit consent before processing personal data of Indian citizens.", keyPoints:['Explicit consent required before data processing','Data minimization — collect only what is needed','Right to erasure and correction for data principals','Mandatory breach notification within 72 hours'], penalty:'Up to ₹250 crore per violation' },
+                                { code:'GDPR ART. 25', name:'Data protection by design and default', fullName:'GDPR Article 25', fullDesc:'EU regulation requiring privacy to be built into products from the ground up, not added as an afterthought.', keyPoints:['Privacy must be considered at design stage','Default settings must be most privacy-friendly','Pseudonymization and encryption required where appropriate',"Applies to any org processing EU residents' data"], penalty:'Up to €20M or 4% of global annual turnover' },
+                                { code:'ISO 27001', name:'Information security management', fullName:'ISO 27001', fullDesc:'International standard for establishing, implementing, and maintaining an information security management system.', keyPoints:['Risk-based approach to information security','Mandatory security controls across 14 domains','Requires documented policies and procedures','Annual surveillance audits and 3-year recertification'] },
+                                { code:'IT ACT 2000', name:'Section 43A sensitive data protection', fullName:'IT Act 2000', fullDesc:"India's IT Act Section 43A mandates compensation for failure to implement reasonable security practices for sensitive personal data.", keyPoints:['Applies to body corporates handling sensitive data','Sensitive data includes biometrics, financial info, health records','Must maintain a documented security policy','Negligence in data protection is a civil liability'], penalty:'Compensation to affected persons — no upper limit' },
+                            ].map((row, idx) => (
+                                <AnimateOnScroll key={row.code} delay={idx * 80} direction="right">
+                                    <ComplianceRow code={row.code} name={row.name} fullName={row.fullName} fullDesc={row.fullDesc} keyPoints={row.keyPoints} penalty={row.penalty} />
+                                </AnimateOnScroll>
+                            ))}
                         </div>
                     </div>
                 </section>
 
-                {/* CTA */}
-                <section className="px-6 md:px-12 py-24 relative overflow-hidden bg-[#0A0A0A]">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FFA500]/3 to-transparent pointer-events-none" />
-                    <div className="max-w-2xl mx-auto text-center relative z-10">
-                        <h2 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: '"Barlow Condensed", "Arial Black", sans-serif', fontWeight: 900, letterSpacing: '-0.01em' }}>Your documents.<br />Your infrastructure.<br />Your control.</h2>
-                        <p className="text-gray-400 mb-8 leading-relaxed">No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.</p>
-                        <Link href="/dashboard" className="inline-flex items-center gap-2 px-8 py-4 bg-[#FFA500] hover:bg-[#ffb733] text-black font-bold rounded-2xl transition-all text-base shadow-[0_0_40px_rgba(255,165,0,0.2)]">
-                            Open Mission Control <ArrowRight className="w-5 h-5" />
+                {/* ── CTA (Task 6: watermark fix) ─────────────────────────── */}
+                <section style={{ borderTop:'1px solid rgba(239,239,239,0.07)', position:'relative', overflow:'hidden' }}>
+                    {/* CLASSIFIED watermark — Task 6 */}
+                    <div style={{
+                        position:'absolute', right:'-60px', top:'50%', transform:'translateY(-50%) rotate(-90deg)',
+                        fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(80px, 10vw, 140px)',
+                        textTransform:'uppercase', color:'rgba(239,239,239,0.025)',
+                        pointerEvents:'none', userSelect:'none', whiteSpace:'nowrap', zIndex:0,
+                    }}>CLASSIFIED</div>
+
+                    <div className="content-wrap" style={{ position:'relative', zIndex:1, paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                        <AnimateOnScroll>
+                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(48px,7vw,80px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.88, margin:'0 0 24px 0' }}>
+                                <span style={{ display:'block', color:'#EFEFEF' }}>YOUR DOCUMENTS.</span>
+                                <span style={{ display:'block', color:'#EFEFEF' }}>YOUR INFRASTRUCTURE.</span>
+                                <span style={{ display:'block', color:'#F5C400' }}>YOUR CONTROL.</span>
+                            </h2>
+                        </AnimateOnScroll>
+                        <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', maxWidth:'400px', margin:'0 0 20px 0' }}>
+                            No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.
+                        </p>
+                        <Link href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'14px 28px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
+                            onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
+                            onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
+                        >
+                            OPEN MISSION CONTROL →
                         </Link>
                     </div>
                 </section>
 
-                {/* Footer */}
-                <footer className="px-6 md:px-12 py-8 border-t border-white/[0.04] bg-[#080808] flex flex-col md:flex-row items-center justify-between gap-4">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="p-1 rounded-md bg-[#FFA500] group-hover:bg-[#ffb733] transition-colors">
-                            <Shield className="w-3 h-3 text-black" />
+                {/* ── Footer (Task 8: terminal cursor) ────────────────────── */}
+                <footer style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                    <div className="content-wrap" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px clamp(24px, 4vw, 64px)', flexWrap:'wrap', gap:'12px' }}>
+                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
+                            CIPHERA · CLIENT-SIDE REDACTION ENGINE · V3
                         </div>
-                        <span className="font-semibold text-sm">Ciphera V3</span>
-                        <span className="text-xs text-gray-700 font-mono">· DJSCE IPD Project</span>
-                    </Link>
-                    <div className="text-xs text-gray-700 font-mono">Local inference · Zero telemetry · DPDP Act 2023 aligned</div>
-                    <div className="flex items-center gap-4 text-xs text-gray-600">
-                        <Link href="/dashboard" className="hover:text-gray-400 transition-colors">Dashboard</Link>
-                        <Link href="/redact"    className="hover:text-gray-400 transition-colors">Redact</Link>
-                        <Link href="/batch"     className="hover:text-gray-400 transition-colors">Batch</Link>
-                        <Link href="/settings"  className="hover:text-gray-400 transition-colors">Settings</Link>
+                        <div style={{ display:'flex', gap:'24px' }}>
+                            {[['Dashboard','/dashboard'],['Redact','/redact'],['Batch','/batch'],['Settings','/settings']].map(([label,href])=>(
+                                <Link key={href} href={href} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', textDecoration:'none', transition:'color 0.15s' }}
+                                    onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
+                                    onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.4)')}
+                                >{label}</Link>
+                            ))}
+                        </div>
+                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
+                            {'>'} SESSION TERMINATED · 0 BYTES RETAINED · AUDIT LOG CLOSED<span style={{ color:'#F5C400', animation:'blink 1s step-end infinite', marginLeft:'2px' }}>|</span>
+                            <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
+                        </div>
                     </div>
                 </footer>
+                </div>
             </div>
         </>
     );

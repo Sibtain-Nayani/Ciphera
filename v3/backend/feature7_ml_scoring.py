@@ -72,6 +72,9 @@ class ScoredEntity(BaseModel):
 
 
 class ScoringResponse(BaseModel):
+    model_config = {
+        "protected_namespaces": ()
+    }
     entities_in:   int
     entities_out:  int
     entities:      list[ScoredEntity]

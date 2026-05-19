@@ -205,7 +205,7 @@ export function ParserCard({ ruleKey }: { ruleKey: RuleType }) {
                     <div className="relative">
                         <input type="text" readOnly disabled={!isActive} value={meta.regex} spellCheck={false}
                             className={`w-full rounded-lg px-4 py-2.5 text-sm font-mono border border-border transition-all focus:outline-none ${isActive ? 'bg-input text-emerald-400' : 'bg-background text-gray-500 cursor-not-allowed opacity-60'}`}
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                         />
                         <span className={`absolute right-3 top-2.5 text-xs px-1 ${isActive ? 'text-muted-foreground bg-input' : 'text-muted-foreground bg-background opacity-60'}`}>
                             {meta.regexLabel}
