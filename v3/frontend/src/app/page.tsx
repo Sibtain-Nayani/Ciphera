@@ -131,9 +131,9 @@ function DeclassifySubtext() {
 // ─────────────────────────────────────────────────────────────────────────────
 const INIT_TEXT = '> initializing ciphera v3...';
 
-function TerminalInit() {
-    const [text, setText]       = useState('');
-    const [visible, setVisible] = useState(true);
+function TerminalInit({ onFinished }: { onFinished: () => void }) {
+    const [text, setText] = useState('');
+    const [opacity, setOpacity] = useState(1);
 
     useEffect(() => {
         let idx = 0;
@@ -142,13 +142,16 @@ function TerminalInit() {
             setText(INIT_TEXT.slice(0, idx));
             if (idx >= INIT_TEXT.length) {
                 clearInterval(type);
-                setTimeout(() => setVisible(false), 1200);
+                setTimeout(() => {
+                    setOpacity(0);
+                    setTimeout(() => {
+                        onFinished();
+                    }, 400);
+                }, 1200);
             }
         }, 38);
         return () => clearInterval(type);
-    }, []);
-
-    if (!visible) return null;
+    }, [onFinished]);
 
     return (
         <div style={{
@@ -159,6 +162,8 @@ function TerminalInit() {
             fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px',
             letterSpacing: '0.18em', color: '#F5C400',
             pointerEvents: 'none',
+            opacity: opacity,
+            transition: 'opacity 400ms ease',
         }}>
             {text}<span style={{ animation: 'blink 1s step-end infinite' }}>█</span>
             <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
@@ -394,12 +399,35 @@ function FeatureCell({ index, title, desc, noBorderRight, noBorderBottom, specia
                 padding:'20px 24px',
                 borderRight:  noBorderRight  ? 'none' : '1px solid rgba(239,239,239,0.07)',
                 borderBottom: noBorderBottom ? 'none' : '1px solid rgba(239,239,239,0.07)',
-                borderBottomColor: hovered ? '#F5C400' : 'rgba(239,239,239,0.07)',
-                transition:'border-color 0.2s',
+                transition:'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s',
+                backgroundColor: hovered ? 'rgba(245, 196, 0, 0.02)' : 'transparent',
+                transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
                 cursor:'default',
                 position:'relative',
             }}>
-            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:hovered?'#F5C400':'rgba(239,239,239,0.4)', marginBottom:'20px', transition:'color 0.2s' }}>
+            {/* Sweep border expansion on bottom */}
+            <div style={{
+                position: 'absolute',
+                bottom: -1,
+                left: 0,
+                height: '1px',
+                width: hovered ? '100%' : '0%',
+                background: '#F5C400',
+                transition: 'width 0.4s ease',
+                zIndex: 2,
+            }} />
+            <div style={{ 
+                fontFamily:"'IBM Plex Mono', monospace", 
+                fontSize:'12px', 
+                letterSpacing:'0.18em', 
+                textTransform:'uppercase', 
+                color: hovered ? '#F5C400' : 'rgba(239,239,239,0.4)', 
+                marginBottom:'20px', 
+                transition:'color 0.2s, transform 0.2s',
+                transform: hovered ? 'scale(1.05)' : 'scale(1)',
+                transformOrigin: 'left center',
+                display: 'inline-block'
+            }}>
                 {index} ——
             </div>
             {special ? (
@@ -542,11 +570,11 @@ function ComplianceRow({ code, name, fullName, fullDesc, keyPoints, penalty }: {
 
     return (
         <div onMouseEnter={onEnter} onMouseLeave={onLeave}
-            style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', position:'relative', cursor:'default', transition:'background 0.2s' }}>
+            style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', position:'relative', cursor:'default', transition:'background 0.2s', background: expanded ? 'rgba(245,196,0,0.15)' : 'transparent' }}>
             {/* Red annotation line on left edge */}
             <div style={{
                 position:'absolute', left:0, top:0, width:'2px',
-                background:'#B91C1C', height:`${redlineH}%`,
+                background:'rgba(185,28,28,0.8)', height:`${redlineH}%`,
                 transition:'none',
             }} />
 
@@ -571,7 +599,7 @@ function ComplianceRow({ code, name, fullName, fullDesc, keyPoints, penalty }: {
                     <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
                         {keyPoints.map((pt,i)=>(
                             <div key={i} style={{ display:'flex', gap:'8px' }}>
-                                <span style={{ color:'#B91C1C', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', flexShrink:0, marginTop:'2px' }}>—</span>
+                                <span style={{ color:'rgba(185,28,28,0.8)', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', flexShrink:0, marginTop:'2px' }}>—</span>
                                 <span style={{ fontFamily:'Barlow', fontSize:'12px', lineHeight:1.5, color:'rgba(239,239,239,0.42)' }}>{pt}</span>
                             </div>
                         ))}
@@ -625,8 +653,9 @@ const getDocumentStyle = (progress: number) => {
   return {
     transform: `perspective(1400px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`,
     opacity,
-    transition: 'none'
-  };
+    transition: 'none',
+    '--light-angle': `${135 - (rotY * 2)}deg`
+  } as React.CSSProperties;
 };
 
 const getBarStyle = (barIndex: number, progress: number) => {
@@ -675,6 +704,33 @@ function AnimateOnScroll({ children, delay = 0, direction = 'up', style: extStyl
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// WIPE-FROM-LEFT REVEAL COMPONENT (Effect 5)
+// ─────────────────────────────────────────────────────────────────────────────
+function ClipReveal({ children, delay = 0, duration = 0.8 }: { children: React.ReactNode; delay?: number; duration?: number }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
+        }, { threshold: 0.1 });
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref} style={{
+            clipPath: visible ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
+            transition: `clip-path ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
+        }}>
+            {children}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RED EYEBROW LINE (Task 7 — animated red line + label fade)
 // ─────────────────────────────────────────────────────────────────────────────
 function RedEyebrow({ text }: { text: string }) {
@@ -686,58 +742,398 @@ function RedEyebrow({ text }: { text: string }) {
         if (!el) return;
         const obs = new IntersectionObserver(([e]) => {
             if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
-        }, { threshold: 0.15 });
+        }, { threshold: 0.1 });
         obs.observe(el);
         return () => obs.disconnect();
     }, []);
 
     return (
-        <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ width: visible ? '18px' : '0px', height: '2px', background: '#B91C1C', flexShrink: 0, transition: 'width 0.3s ease' }} />
+        <div ref={ref} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '16px',
+            clipPath: visible ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
+            transition: 'clip-path 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}>
+            <div style={{ width: '18px', height: '2px', background: 'rgba(185,28,28,0.8)', flexShrink: 0 }} />
             <span style={{
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.26em', textTransform: 'uppercase', color: '#B91C1C',
-                opacity: visible ? 1 : 0, transition: 'opacity 0.2s ease 0.3s',
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.26em', textTransform: 'uppercase', color: 'rgba(185,28,28,0.8)',
             }}>{text}</span>
         </div>
     );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AMBIENT PARTICLES (Effect 1)
+// ─────────────────────────────────────────────────────────────────────────────
+function AmbientParticles({ scrollProgress }: { scrollProgress: number }) {
+    const isRedactingPhase = scrollProgress >= 0.45 && scrollProgress <= 0.70;
+    const opacity = isRedactingPhase ? 0.35 : 0.15;
+
+    return (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+            {Array.from({ length: 12 }).map((_, i) => {
+                const left = `${5 + ((i * 37) % 90)}%`;
+                const animationDuration = `${12 + ((i * 7) % 15)}s`;
+                const animationDelay = `-${(i * 3) % 15}s`;
+                const height = i % 4 === 0 ? '12px' : '8px';
+                
+                return (
+                    <div key={i} style={{
+                        position: 'absolute',
+                        left,
+                        bottom: '-20px',
+                        width: '2px',
+                        height,
+                        background: 'rgba(245,196,0,1)',
+                        opacity,
+                        transition: 'opacity 0.6s ease',
+                        animation: `floatUp ${animationDuration} linear infinite`,
+                        animationDelay,
+                    }} />
+                );
+            })}
+            <style>{`
+                @keyframes floatUp {
+                    0% { transform: translateY(20px); }
+                    100% { transform: translateY(-120vh); }
+                }
+            `}</style>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE COUNTER (Effect 6)
+// ─────────────────────────────────────────────────────────────────────────────
+function LiveCounter() {
+    const [count, setCount] = useState(2847);
+    
+    useEffect(() => {
+        setCount(Math.floor(Math.random() * (3200 - 2847 + 1)) + 2847);
+        
+        let timeoutId: NodeJS.Timeout;
+        const scheduleNext = () => {
+            const delay = Math.floor(Math.random() * (15000 - 8000 + 1)) + 8000;
+            timeoutId = setTimeout(() => {
+                setCount(c => c + 1);
+                scheduleNext();
+            }, delay);
+        };
+        scheduleNext();
+        return () => clearTimeout(timeoutId);
+    }, []);
+
+    return (
+        <div style={{
+            marginTop: '32px',
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '12px',
+            color: 'rgba(239,239,239,0.25)',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+        }}>
+            <div style={{ width: '6px', height: '6px', background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 8px rgba(74,222,128,0.4)', animation: 'pulse 2s infinite' }} />
+            {count.toLocaleString()} Documents secured today
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BAR (Effect 8)
+// ─────────────────────────────────────────────────────────────────────────────
+function StatusBar({ scrollProgress }: { scrollProgress: number }) {
+    const [displayedText, setDisplayedText] = useState('');
+    const [targetText, setTargetText] = useState('AWAITING INITIATION');
+    const typingIndex = useRef(0);
+
+    useEffect(() => {
+        if (scrollProgress < 0.15) setTargetText('AWAITING INITIATION');
+        else if (scrollProgress < 0.45) setTargetText('REDACTION PROTOCOL ACTIVE');
+        else if (scrollProgress < 0.70) setTargetText('SECURING SENSITIVE DATA...');
+        else if (scrollProgress < 0.85) setTargetText('DECLASSIFICATION COMPLETE');
+        else setTargetText('SECURE CONNECTION ESTABLISHED');
+    }, [scrollProgress]);
+
+    useEffect(() => {
+        setDisplayedText('');
+        typingIndex.current = 0;
+        const interval = setInterval(() => {
+            if (typingIndex.current < targetText.length) {
+                setDisplayedText(prev => prev + targetText.charAt(typingIndex.current));
+                typingIndex.current++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 30);
+        return () => clearInterval(interval);
+    }, [targetText]);
+
+    return (
+        <div style={{
+            position: 'absolute',
+            bottom: '40px',
+            left: 'clamp(36px, 5vw, 80px)',
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '11px',
+            color: 'rgba(239,239,239,0.42)',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+        }}>
+            <style>{`
+                @keyframes blinkCursor {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0; }
+                }
+            `}</style>
+            <span style={{ color: '#F5C400' }}>{'>'}</span>
+            <span>[{displayedText}]</span>
+            <span style={{ width: '6px', height: '12px', background: 'rgba(239,239,239,0.8)', animation: 'blinkCursor 1s step-end infinite' }} />
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAGNETIC BUTTON (Effect 4)
+// ─────────────────────────────────────────────────────────────────────────────
+function MagneticButton({ children, href, style, className }: { children: React.ReactNode, href: string, style?: React.CSSProperties, className?: string }) {
+    const buttonRef = useRef<HTMLAnchorElement>(null);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        const { clientX, clientY } = e;
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (rect) {
+            const x = clientX - (rect.left + rect.width / 2);
+            const y = clientY - (rect.top + rect.height / 2);
+            setPosition({ x: x * 0.2, y: y * 0.2 });
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setPosition({ x: 0, y: 0 });
+    };
+
+    return (
+        <Link 
+            href={href} 
+            className={className}
+            ref={buttonRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                ...style,
+                transform: `translate(${position.x}px, ${position.y}px)`,
+                transition: position.x === 0 && position.y === 0 
+                    ? 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), letter-spacing 0.2s, border-color 0.2s, color 0.2s' 
+                    : 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94), letter-spacing 0.2s, border-color 0.2s, color 0.2s',
+                display: 'inline-block'
+            }}
+        >
+            {children}
+        </Link>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RETRO DECLASSIFIED PAPERS SCROLL BAND (Effect 11)
+// ─────────────────────────────────────────────────────────────────────────────
+function DocumentBand() {
+    const papers = [
+        { title: "INTERNAL_MEMO_09.TXT", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 3 },
+        { title: "IN_GOVT_FINANCE_2023.PDF", stamp: "RESTRICTED", stampColor: "#F5C400", redactions: 5 },
+        { title: "PASSPORT_REDACT_V2.PNG", stamp: "DECLASSIFIED", stampColor: "#22C55E", redactions: 4 },
+        { title: "UIDAI_AUDIT_LOG_2024.LOG", stamp: "CLASSIFIED", stampColor: "#B91C1C", redactions: 6 },
+        { title: "PAN_CARD_VERIFY_TEMP.TMP", stamp: "CLEANSED", stampColor: "#22C55E", redactions: 2 },
+        { title: "GDPR_COMPLIANCE_EN_CORE.DOC", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 8 },
+    ];
+
+    return (
+        <div style={{
+            borderTop: '1px solid rgba(239,239,239,0.07)',
+            borderBottom: '1px solid rgba(239,239,239,0.07)',
+            padding: '28px 0',
+            overflow: 'hidden',
+            width: '100%',
+            background: 'rgba(8,8,8,0.3)',
+            position: 'relative',
+            boxSizing: 'border-box',
+            marginBottom: '40px'
+        }}>
+            <style>{`
+                @keyframes scrollBand {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+            `}</style>
+            <div style={{
+                display: 'flex',
+                width: 'max-content',
+                animation: 'scrollBand 40s linear infinite',
+                gap: '24px'
+            }}>
+                {[...papers, ...papers].map((paper, i) => (
+                    <div 
+                        key={i} 
+                        style={{
+                            width: '180px',
+                            height: '240px',
+                            background: 'rgba(239, 239, 239, 0.03)',
+                            border: '1px solid rgba(239, 239, 239, 0.07)',
+                            padding: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            position: 'relative',
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        {/* Stamp */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '45%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%) rotate(-15deg)',
+                            border: `2px solid ${paper.stampColor}`,
+                            color: paper.stampColor,
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            fontWeight: 'bold',
+                            fontSize: '10px',
+                            padding: '4px 8px',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            opacity: 0.75,
+                            pointerEvents: 'none'
+                        }}>
+                            {paper.stamp}
+                        </div>
+
+                        {/* Document Header */}
+                        <div>
+                            <div style={{ 
+                                fontFamily: "'IBM Plex Mono', monospace", 
+                                fontSize: '9px', 
+                                color: 'rgba(239, 239, 239, 0.35)',
+                                letterSpacing: '0.05em',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                marginBottom: '12px'
+                            }}>
+                                {paper.title}
+                            </div>
+                            {/* Dummy lines of text */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {[...Array(6)].map((_, lineIdx) => {
+                                    const hasRedaction = lineIdx % 2 === 1;
+                                    return (
+                                        <div key={lineIdx} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                            <div style={{
+                                                height: '4px',
+                                                background: 'rgba(239, 239, 239, 0.15)',
+                                                width: `${40 + (lineIdx * 7) % 35}%`,
+                                                borderRadius: '1px'
+                                            }} />
+                                            {hasRedaction && (
+                                                <div style={{
+                                                    height: '6px',
+                                                    background: lineIdx % 3 === 0 ? 'rgba(185,28,28,0.8)' : '#F5C400',
+                                                    width: '30px',
+                                                    borderRadius: '1px'
+                                                }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Document Footer */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: 'rgba(239,239,239,0.25)' }}>
+                                REDACTION_LOG
+                            </span>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: '#F5C400' }}>
+                                [{paper.redactions} SENSITIVE]
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
 // REBUILT 3D HERO SECTION CONTAINER (Task 2 + Task 3)
 // ─────────────────────────────────────────────────────────────────────────────
-function HeroSectionRebuild() {
+function HeroSectionRebuild({ active }: { active: boolean }) {
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const heroRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            setMousePos({
+                x: (e.clientX / window.innerWidth) - 0.5,
+                y: (e.clientY / window.innerHeight) - 0.5
+            });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
 
     useEffect(() => {
         const container = document.getElementById('hero-scroll-container');
         const mainEl = document.querySelector('main') || window;
 
+        let ticking = false;
         const handleScroll = () => {
-            if (!container) return;
-            let scrollTop = window.scrollY;
-            let containerTop = container.offsetTop;
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    if (!container) {
+                        ticking = false;
+                        return;
+                    }
+                    let scrollTop = window.scrollY;
+                    let containerTop = container.offsetTop;
 
-            if (mainEl instanceof HTMLElement) {
-                const containerRect = container.getBoundingClientRect();
-                const mainRect = mainEl.getBoundingClientRect();
-                scrollTop = mainRect.top - containerRect.top;
-                containerTop = 0;
+                    if (mainEl instanceof HTMLElement) {
+                        const containerRect = container.getBoundingClientRect();
+                        const mainRect = mainEl.getBoundingClientRect();
+                        scrollTop = mainRect.top - containerRect.top;
+                        containerTop = 0;
+                    }
+
+                    const containerHeight = container.offsetHeight - window.innerHeight;
+                    const progress = Math.max(0, Math.min(1,
+                        (scrollTop - containerTop) / containerHeight
+                    ));
+                    setScrollProgress(progress);
+                    ticking = false;
+                });
+                ticking = true;
             }
-
-            const containerHeight = container.offsetHeight - window.innerHeight;
-            const progress = Math.max(0, Math.min(1,
-                (scrollTop - containerTop) / containerHeight
-            ));
-            setScrollProgress(progress); // 0 at top, 1 at bottom of hero
         };
 
-        mainEl.addEventListener('scroll', handleScroll, { passive: true });
-        window.addEventListener('scroll', handleScroll, { passive: true });
+        const onScroll = () => handleScroll();
+
+        mainEl.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('scroll', onScroll, { passive: true });
         handleScroll();
         return () => {
-            mainEl.removeEventListener('scroll', handleScroll);
-            window.removeEventListener('scroll', handleScroll);
+            mainEl.removeEventListener('scroll', onScroll);
+            window.removeEventListener('scroll', onScroll);
         };
     }, []);
 
@@ -760,10 +1156,21 @@ function HeroSectionRebuild() {
                 overflow: 'hidden',
             }}>
                 {/* Left column: Hero text block */}
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', opacity: heroTextOpacity }}>
+                <div style={{
+                    transform: `translate(${mousePos.x * -2}vw, ${mousePos.y * -2}vh)`,
+                    transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                }}>
+                    <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    opacity: active ? heroTextOpacity : 0,
+                    transform: active ? 'translateY(0)' : 'translateY(12px)',
+                    transition: 'opacity 600ms ease, transform 600ms ease',
+                }}>
                     {/* Eyebrow */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <div style={{ width: '18px', height: '2px', background: '#B91C1C', flexShrink: 0 }} />
+                        <div style={{ width: '18px', height: '2px', background: 'rgba(185,28,28,0.8)', flexShrink: 0 }} />
                         <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)' }}>
                             DPDP Act 2023 · GDPR · Built for Indian enterprises
                         </span>
@@ -788,12 +1195,12 @@ function HeroSectionRebuild() {
 
                     {/* CTAs */}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '32px' }}>
-                        <Link href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', fontWeight: 700, borderRadius: 0, transition: 'letter-spacing 0.2s' }}>
+                        <MagneticButton href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', fontWeight: 700, borderRadius: 0 }}>
                             Start Redacting →
-                        </Link>
-                        <Link href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.42)', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', borderRadius: 0, transition: 'border-color 0.2s, color 0.2s' }}>
+                        </MagneticButton>
+                        <MagneticButton href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.42)', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', borderRadius: 0 }}>
                             Batch Processing
-                        </Link>
+                        </MagneticButton>
                     </div>
 
                     {/* Trust strip */}
@@ -805,22 +1212,43 @@ function HeroSectionRebuild() {
                             </div>
                         ))}
                     </div>
+
+                    {/* Live Counter */}
+                    <LiveCounter />
+                    </div>
                 </div>
 
                 {/* Right column: 3D document centered both axes */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
                     <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(239,239,239,0.02) 1px, transparent 1px)', backgroundSize: '16px 16px', pointerEvents: 'none' }} />
                     
-                    <div style={{perspective: '1400px', perspectiveOrigin: 'center center'}}>
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        transform: `translate(${mousePos.x * -7}vw, ${mousePos.y * -7}vh)`,
+                        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        pointerEvents: 'none'
+                    }}>
+                        <AmbientParticles scrollProgress={scrollProgress} />
+                    </div>
+                    
+                    <div style={{
+                        transform: `translate(${mousePos.x * -4}vw, ${mousePos.y * -4}vh)`,
+                        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                    }}>
+                        <div style={{perspective: '1400px', perspectiveOrigin: 'center center'}}>
                         <div id="doc-3d" style={getDocumentStyle(scrollProgress)}>
                             <div style={{
-                                width: 'clamp(300px, 38vw, 460px)',
-                                background: 'rgba(255,255,255,0.04)',
+                                width: 'clamp(320px, 28vw, 400px)',
+                                height: 'clamp(450px, 40vw, 560px)',
+                                background: 'linear-gradient(var(--light-angle, 135deg), rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.03) 100%), rgba(255,255,255,0.04)',
                                 border: '1px solid rgba(239,239,239,0.12)',
-                                padding: '32px 28px',
+                                padding: '36px 32px',
                                 fontFamily: 'IBM Plex Mono',
                                 position: 'relative',
                                 overflow: 'hidden',
+                                boxSizing: 'border-box',
+                                display: 'flex',
+                                flexDirection: 'column',
                                 boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
                             }}>
                                 {/* Scan Line for Phase 2 */}
@@ -850,25 +1278,25 @@ function HeroSectionRebuild() {
                                 `}</style>
 
                                 {/* Header */}
-                                <div style={{fontSize:'9px', color:'rgba(239,239,239,0.3)', marginBottom:'20px', display:'flex', justifyContent:'space-between'}}>
+                                <div style={{fontSize:'11px', color:'rgba(239,239,239,0.3)', marginBottom:'24px', display:'flex', justifyContent:'space-between'}}>
                                     <span>CLASSIFICATION: RESTRICTED</span>
                                     <span>REF: CPH-2025-001</span>
                                 </div>
 
                                 {/* 8 fields with redaction bars */}
                                 {['SUBJECT','AADHAAR','PAN','PHONE','EMAIL','DOB','BANK','ADDRESS'].map((field, i) => (
-                                    <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'12px', gap:'12px'}}>
-                                        <span style={{fontSize:'9px', color:'rgba(239,239,239,0.25)', minWidth:'64px'}}>{field}</span>
-                                        <div style={{position:'relative', flex:1, height:'14px', background:'rgba(239,239,239,0.05)'}}>
+                                    <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'15px', gap:'12px'}}>
+                                        <span style={{fontSize:'11px', color:'rgba(239,239,239,0.25)', minWidth:'76px'}}>{field}</span>
+                                        <div style={{position:'relative', flex:1, height:'17px', background:'rgba(239,239,239,0.05)'}}>
                                             <div style={{
                                                 position:'absolute', top:0, left:0, height:'100%',
                                                 background:'#EFEFEF',
                                                 ...getBarStyle(i, scrollProgress)
                                             }} />
                                             <span style={{
-                                                position:'absolute', left:'8px', top:'50%',
+                                                position:'absolute', left:'10px', top:'50%',
                                                 transform:'translateY(-50%)',
-                                                fontSize:'9px', color:'#F5C400',
+                                                fontSize:'11px', color:'#F5C400',
                                                 opacity: scrollProgress > (0.45 + i * 0.025 + 0.06) ? 1 : 0,
                                                 transition: 'opacity 0.3s'
                                             }}>[REDACTED]</span>
@@ -877,7 +1305,7 @@ function HeroSectionRebuild() {
                                 ))}
 
                                 {/* Status */}
-                                <div style={{marginTop:'20px', paddingTop:'16px', borderTop:'1px solid rgba(239,239,239,0.07)', fontSize:'9px', color: scrollProgress > 0.70 ? '#4ade80' : '#F5C400'}}>
+                                <div style={{marginTop:'auto', paddingTop:'16px', borderTop:'1px solid rgba(239,239,239,0.07)', fontSize:'11px', color: scrollProgress > 0.70 ? '#4ade80' : '#F5C400'}}>
                                     STATUS: {scrollProgress > 0.70 ? 'CLEAN' : 'AWAITING REDACTION'}
                                 </div>
 
@@ -886,10 +1314,10 @@ function HeroSectionRebuild() {
                                     <div style={{
                                         position:'absolute', top:'50%', left:'50%',
                                         transform:'translate(-50%, -50%) rotate(-12deg)',
-                                        border:'3px solid #B91C1C', color:'#B91C1C',
+                                        border:'4px solid #B91C1C', color:'#B91C1C',
                                         fontFamily:'IBM Plex Mono', fontWeight:'700',
-                                        fontSize:'clamp(18px, 2.5vw, 28px)',
-                                        padding:'8px 20px', letterSpacing:'0.2em',
+                                        fontSize:'clamp(22px, 3vw, 34px)',
+                                        padding:'10px 24px', letterSpacing:'0.2em',
                                         opacity: Math.min(1, (scrollProgress - 0.70) / 0.10),
                                         pointerEvents:'none'
                                     }}>
@@ -902,6 +1330,9 @@ function HeroSectionRebuild() {
                 </div>
             </div>
         </div>
+            
+            <StatusBar scrollProgress={scrollProgress} />
+        </div>
     );
 }
 
@@ -913,8 +1344,17 @@ export default function LandingPage() {
     const [loaderDone,  setLoaderDone]  = useState(false);
     const [pageVisible, setPageVisible] = useState(false);
     const [navScrolled, setNavScrolled] = useState(false);
+    const [showTerminal, setShowTerminal] = useState(true);
+    const [heroActive, setHeroActive] = useState(false);
 
     const handleLoaderComplete = () => { setLoaderDone(true); setTimeout(()=>setPageVisible(true),50); };
+
+    const handleTerminalFinished = () => {
+        setShowTerminal(false);
+        setTimeout(() => {
+            setHeroActive(true);
+        }, 200);
+    };
 
     // Task 8: Nav blur on scroll past 60px
     useEffect(() => {
@@ -931,9 +1371,17 @@ export default function LandingPage() {
             {!loaderDone && <SiteLoader onComplete={handleLoaderComplete} />}
 
             <div style={{ minHeight:'100vh', background:'#080808', color:'#EFEFEF', fontFamily:'Barlow, sans-serif', opacity:pageVisible?1:0, transition:'opacity 0.3s ease', cursor:'none' }}>
-
+                {/* SVG Noise Texture Overlay (Effect 2) */}
+                <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999, opacity: 0.025 }}>
+                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                        <filter id="noiseFilter">
+                            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+                        </filter>
+                        <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+                    </svg>
+                </div>
                 {/* Terminal init — types on load */}
-                {pageVisible && <TerminalInit />}
+                {pageVisible && showTerminal && <TerminalInit onFinished={handleTerminalFinished} />}
 
                 {/* ── Nav (Task 8: blur on scroll) ────────────────────────── */}
                 <nav style={{
@@ -974,14 +1422,22 @@ export default function LandingPage() {
                 </nav>
 
                 {/* ── 3D Sticky Hero Section Rebuild ────────────────────────── */}
-                <HeroSectionRebuild />
+                <HeroSectionRebuild active={heroActive} />
 
                 <div id="rest-of-page">
 
                 {/* ── PII Ticker + Stats ──────────────────────────────────── */}
-                <section style={{ borderTop:'1px solid rgba(239,239,239,0.07)', marginTop: 0 }}>
+                <section style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    marginTop: 0,
+                    width: '100%',
+                    position: 'relative',
+                    boxSizing: 'border-box',
+                }}>
                     {/* Ticker — 28s speed */}
-                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', overflow:'hidden', padding:'0', height:'28px', display:'flex', alignItems:'center' }}>
+                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', overflow:'hidden', padding:'0', height:'28px', display:'flex', alignItems:'center', marginTop:'calc(-1 * clamp(80px, 10vh, 120px))', marginBottom:'40px' }}>
                         <div style={{ animation:'ticker 28s linear infinite', whiteSpace:'nowrap', display:'inline-block' }}>
                             {Array(3).fill(['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE']).flat().map((item,i)=>(
                                 <span key={i} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(245,196,0,0.42)', margin:'0 20px' }}>
@@ -1004,7 +1460,14 @@ export default function LandingPage() {
                 </section>
 
                 {/* ── Features ─────────────────────────────────────────────── */}
-                <section id="features" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
+                <section id="features" style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    width: '100%',
+                    position: 'relative',
+                    boxSizing: 'border-box',
+                }}>
                     {/* Meta strip */}
                     <div className="content-wrap">
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 0', borderBottom:'1px solid rgba(239,239,239,0.07)', marginBottom:'40px' }}>
@@ -1014,15 +1477,15 @@ export default function LandingPage() {
                     </div>
 
                     {/* Heading */}
-                    <div className="content-wrap" style={{ paddingBottom:'clamp(64px, 8vh, 100px)' }}>
-                        <AnimateOnScroll>
+                    <div className="content-wrap" style={{ paddingBottom:'40px' }}>
+                        <ClipReveal delay={500} duration={0.8}>
                             <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(40px,5vw,64px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 16px 0' }}>
                                 <span style={{ display:'block', color:'#EFEFEF' }}>NOTHING LEAVES.</span>
                                 <span style={{ display:'block' }}>
                                     <RedactedReveal text="NOTHING ESCAPES." />
                                 </span>
                             </h2>
-                        </AnimateOnScroll>
+                        </ClipReveal>
                         <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginTop:'16px' }}>
                             09 modules. All running locally. All running now.
                         </div>
@@ -1053,19 +1516,27 @@ export default function LandingPage() {
                 </section>
 
                 {/* ── Pipeline (Task 8: scanbeam) ─────────────────────────── */}
-                <section id="pipeline" style={{ borderTop:'1px solid rgba(239,239,239,0.07)', position:'relative', overflow:'hidden' }}>
+                <section id="pipeline" style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                }}>
                     {/* Scan beam */}
                     <div style={{ position:'absolute', left:0, right:0, height:'1px', background:'#F5C400', opacity:0.15, animation:'scanbeam 4s ease-in-out infinite', pointerEvents:'none', zIndex:1 }} />
 
-                    <div className="content-wrap" style={{ paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                    <div className="content-wrap" style={{ paddingBottom: '40px' }}>
                         <RedEyebrow text="// DETECTION ENGINE · ACTIVE" />
-                        <AnimateOnScroll>
+                        <ClipReveal delay={500} duration={0.8}>
                             <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4vw,48px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0', display:'flex', flexWrap:'wrap', alignItems:'center', gap:'16px' }}>
                                 <span style={{ color:'#EFEFEF' }}>FOUR STAGES.</span>
                                 <span style={{ color:'rgba(239,239,239,0.07)' }}>·</span>
                                 <span style={{ color:'#F5C400' }}>ONE VERDICT.</span>
                             </h2>
-                        </AnimateOnScroll>
+                        </ClipReveal>
                         <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
                             Each entity is voted on. Confidence threshold: ≥0.80. Below that — flagged for human review.
                         </div>
@@ -1076,16 +1547,23 @@ export default function LandingPage() {
                 </section>
 
                 {/* ── API ──────────────────────────────────────────────────── */}
-                <section id="api" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
-                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                <section id="api" style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    width: '100%',
+                    position: 'relative',
+                    boxSizing: 'border-box',
+                }}>
+                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
                         <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)' }}>
                             <RedEyebrow text="// API ACCESS · AUTHENTICATED" />
-                            <AnimateOnScroll>
+                            <ClipReveal delay={500} duration={0.8}>
                                 <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(32px,4vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 8px 0' }}>
                                     <span style={{ display:'block', color:'#EFEFEF' }}>REDACT FROM</span>
                                     <span style={{ display:'block' }}><RedactedReveal text="ANYWHERE." /></span>
                                 </h2>
-                            </AnimateOnScroll>
+                            </ClipReveal>
                         <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', margin:'16px 0 32px' }}>
                             Any language. Any framework. Per-key rate limiting. Full audit trail.
                         </div>
@@ -1117,17 +1595,26 @@ export default function LandingPage() {
                     </div>
                 </section>
 
+                <DocumentBand />
+
                 {/* ── Compliance (Task 5: nowrap labels) ──────────────────── */}
-                <section id="compliance" style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
-                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'4fr 6fr', paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
+                <section id="compliance" style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    width: '100%',
+                    position: 'relative',
+                    boxSizing: 'border-box',
+                }}>
+                    <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'4fr 6fr' }}>
                         <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
                             <RedEyebrow text="// REGULATORY CLEARANCE" />
-                            <AnimateOnScroll>
+                            <ClipReveal delay={500} duration={0.8}>
                                 <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4.5vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0' }}>
                                     <span style={{ display:'block', color:'#EFEFEF' }}>EVERY REGULATION.</span>
                                     <span style={{ display:'block' }}><RedactedReveal text="FULLY COVERED." /></span>
                                 </h2>
-                            </AnimateOnScroll>
+                            </ClipReveal>
                             <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
                                 Hover each clause to see exactly how Ciphera addresses it.
                             </div>
@@ -1148,23 +1635,43 @@ export default function LandingPage() {
                 </section>
 
                 {/* ── CTA (Task 6: watermark fix) ─────────────────────────── */}
-                <section style={{ borderTop:'1px solid rgba(239,239,239,0.07)', position:'relative', overflow:'hidden' }}>
+                <section style={{
+                    paddingTop: 'clamp(80px, 10vh, 120px)',
+                    paddingBottom: 'clamp(80px, 10vh, 120px)',
+                    borderTop: '1px solid rgba(239,239,239,0.07)',
+                    minHeight: '520px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    alignItems: 'center',
+                }}>
                     {/* CLASSIFIED watermark — Task 6 */}
                     <div style={{
-                        position:'absolute', right:'-60px', top:'50%', transform:'translateY(-50%) rotate(-90deg)',
-                        fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(80px, 10vw, 140px)',
+                        position:'absolute', right:'-80px', top:'50%', transform:'translateY(-50%) rotate(-90deg)',
+                        fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(60px, 8vw, 100px)',
                         textTransform:'uppercase', color:'rgba(239,239,239,0.025)',
                         pointerEvents:'none', userSelect:'none', whiteSpace:'nowrap', zIndex:0,
                     }}>CLASSIFIED</div>
 
-                    <div className="content-wrap" style={{ position:'relative', zIndex:1, paddingTop:'clamp(64px, 8vh, 100px)', paddingBottom:'clamp(64px, 8vh, 100px)' }}>
-                        <AnimateOnScroll>
+                    {/* Giant "0" Watermark - Effect 12 */}
+                    <div style={{
+                        position:'absolute', left:'-20px', top:'20%',
+                        fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(180px, 20vw, 360px)',
+                        color:'rgba(239,239,239,0.018)',
+                        pointerEvents:'none', userSelect:'none', zIndex:0,
+                        lineHeight: 1
+                    }}>0</div>
+
+                    <div className="content-wrap" style={{ position:'relative', zIndex:1, width:'100%' }}>
+                        <ClipReveal delay={500} duration={0.8}>
                             <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(48px,7vw,80px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.88, margin:'0 0 24px 0' }}>
                                 <span style={{ display:'block', color:'#EFEFEF' }}>YOUR DOCUMENTS.</span>
                                 <span style={{ display:'block', color:'#EFEFEF' }}>YOUR INFRASTRUCTURE.</span>
                                 <span style={{ display:'block', color:'#F5C400' }}>YOUR CONTROL.</span>
                             </h2>
-                        </AnimateOnScroll>
+                        </ClipReveal>
                         <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', maxWidth:'400px', margin:'0 0 20px 0' }}>
                             No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.
                         </p>

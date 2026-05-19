@@ -129,11 +129,13 @@
     display: none !important;
   }
   html {
+    scroll-behavior: smooth;
     overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Apply Barlow Condensed to all h1/h2/h3 headings globally */

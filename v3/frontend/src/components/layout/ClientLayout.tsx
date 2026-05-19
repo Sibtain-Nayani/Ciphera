@@ -12,6 +12,7 @@ function GlobalCursor() {
     // RAF lerp-based smooth cursor tracking
     const mousePos = useRef({ x: -200, y: -200 });
     const cursorPos = useRef({ x: -200, y: -200 });
+    const trail = useRef(Array(6).fill(null).map(() => ({ x: -200, y: -200 })));
     const rafId = useRef<number>(0);
 
     useEffect(() => {
@@ -24,6 +25,22 @@ function GlobalCursor() {
             if (cursorRef.current) {
                 cursorRef.current.style.transform = `translate3d(${cursorPos.current.x}px, ${cursorPos.current.y}px, 0) translate(-50%, -50%)`;
             }
+
+            // Update lagging dots
+            let prevX = cursorPos.current.x;
+            let prevY = cursorPos.current.y;
+            trail.current.forEach((dot, index) => {
+                const delay = 0.35 - (index * 0.03); // Lag increases down the tail
+                dot.x += (prevX - dot.x) * delay;
+                dot.y += (prevY - dot.y) * delay;
+
+                const element = document.getElementById(`cursor-trail-dot-${index}`);
+                if (element) {
+                    element.style.transform = `translate3d(${dot.x}px, ${dot.y}px, 0) translate(-50%, -50%)`;
+                }
+                prevX = dot.x;
+                prevY = dot.y;
+            });
 
             rafId.current = requestAnimationFrame(animate);
         };
@@ -44,10 +61,8 @@ function GlobalCursor() {
             const target = e.target as HTMLElement;
             if (!target) return;
 
-            // Check if hovering a button/link/interactive
             const isButton = target.closest('button, a, input[type="submit"], input[type="button"], [role="button"]');
             
-            // Check if hovering text.
             const isText = !isButton && (
                 target.tagName.match(/^(H[1-6]|P|SPAN|LI|CODE|LABEL|TD|TH)$/i) ||
                 (target.childNodes.length > 0 && Array.from(target.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()))
@@ -78,7 +93,6 @@ function GlobalCursor() {
         };
     }, [visible]);
 
-    // Dimensions based on state
     let width = '16px';
     let height = '16px';
     let borderRadius = '50%';
@@ -88,7 +102,7 @@ function GlobalCursor() {
     if (cursorState === 'text') {
         width = '80px';
         height = '12px';
-        borderRadius = '0px'; // redaction bar shape
+        borderRadius = '0px';
     } else if (cursorState === 'button') {
         width = '16px';
         height = '16px';
@@ -97,25 +111,50 @@ function GlobalCursor() {
     }
 
     return (
-        <div
-            ref={cursorRef}
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: width,
-                height: height,
-                border: '1px solid #F5C400',
-                borderRadius: borderRadius,
-                background: background,
-                pointerEvents: 'none',
-                zIndex: 99999,
-                opacity: visible ? 1 : 0,
-                transform: 'translate3d(-200px, -200px, 0) translate(-50%, -50%)',
-                transition: 'width 0.15s ease, height 0.15s ease, background 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease',
-                mixBlendMode: mixBlendMode,
-            }}
-        />
+        <>
+            <div
+                ref={cursorRef}
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: width,
+                    height: height,
+                    border: '1px solid #F5C400',
+                    borderRadius: borderRadius,
+                    background: background,
+                    pointerEvents: 'none',
+                    zIndex: 99999,
+                    opacity: visible ? 1 : 0,
+                    transform: 'translate3d(-200px, -200px, 0) translate(-50%, -50%)',
+                    transition: 'width 0.15s ease, height 0.15s ease, background 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease',
+                    mixBlendMode: mixBlendMode,
+                }}
+            />
+            {trail.current.map((_, index) => {
+                const size = 6 - index; // 6px to 1px
+                return (
+                    <div
+                        key={index}
+                        id={`cursor-trail-dot-${index}`}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: `${size}px`,
+                            height: `${size}px`,
+                            background: '#F5C400',
+                            borderRadius: '50%',
+                            pointerEvents: 'none',
+                            zIndex: 99998,
+                            opacity: visible ? 0.7 - (index * 0.08) : 0,
+                            transform: 'translate3d(-200px, -200px, 0) translate(-50%, -50%)',
+                            transition: 'opacity 0.15s ease',
+                        }}
+                    />
+                );
+            })}
+        </>
     );
 }
 
