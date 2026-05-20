@@ -3,6 +3,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { SiteLoader } from '@/components/layout/SiteLoader';
+import dynamic from 'next/dynamic';
+
+
+import HeroDocument from '@/components/HeroDocument';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CIPHER CHARS
@@ -62,7 +66,7 @@ function EncryptWord({ word, mode, style: extStyle = {} }: {
 function RedactedReveal({ text, style: extStyle = {} }: { text: string; style?: React.CSSProperties }) {
     const [revealed, setRevealed] = useState(false);
     return (
-        <span style={{ display:'inline-block', whiteSpace: 'nowrap', width: 'max-content', ...extStyle }}>
+        <span style={{ display:'inline-flex', flexDirection: 'column', alignItems: 'flex-start', whiteSpace: 'nowrap', width: 'max-content', ...extStyle }}>
             <span
                 onMouseEnter={() => setRevealed(true)}
                 onMouseLeave={() => setRevealed(false)}
@@ -75,9 +79,18 @@ function RedactedReveal({ text, style: extStyle = {} }: { text: string; style?: 
                     fontSize:'inherit', lineHeight:'inherit',
                     letterSpacing:'inherit', textTransform:'inherit',
                     whiteSpace: 'nowrap',
-                    width: 'max-content',
                 }}
             >{text}</span>
+            <span style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: '8px',
+                letterSpacing: '0.16em',
+                color: 'rgba(239,239,239,0.18)',
+                textTransform: 'uppercase',
+                marginTop: '4px',
+                fontWeight: 400,
+                lineHeight: 1,
+            }}>HOVER TO REVEAL</span>
         </span>
     );
 }
@@ -404,6 +417,10 @@ function FeatureCell({ index, title, desc, noBorderRight, noBorderBottom, specia
                 transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
                 cursor:'default',
                 position:'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+                alignItems: 'flex-start'
             }}>
             {/* Sweep border expansion on bottom */}
             <div style={{
@@ -579,8 +596,8 @@ function ComplianceRow({ code, name, fullName, fullDesc, keyPoints, penalty }: {
             }} />
 
             {/* Main row */}
-            <div style={{ display:'grid', gridTemplateColumns:'130px 1fr auto', gap:'16px', padding:'0 24px', height:'56px', alignItems:'center' }}>
-                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'#F5C400', fontWeight:700 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'160px 1fr auto', gap:'16px', padding:'0 24px', height:'56px', alignItems:'center' }}>
+                <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'clamp(10px, 1.1vw, 13px)', letterSpacing:'0.18em', textTransform:'uppercase', color:'#F5C400', fontWeight:700, minWidth: '160px', width: '160px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                     [{code}]
                 </div>
                 <div style={{ minWidth: 0 }}>
@@ -848,30 +865,72 @@ function LiveCounter() {
 // ─────────────────────────────────────────────────────────────────────────────
 function StatusBar({ scrollProgress }: { scrollProgress: number }) {
     const [displayedText, setDisplayedText] = useState('');
-    const [targetText, setTargetText] = useState('AWAITING INITIATION');
-    const typingIndex = useRef(0);
+    const phaseRef = useRef(0);
+    const [phase, setPhase] = useState(0);
+    const typingIndexRef = useRef(0);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Phase transitions with hysteresis to prevent oscillation at scroll boundaries
     useEffect(() => {
-        if (scrollProgress < 0.15) setTargetText('AWAITING INITIATION');
-        else if (scrollProgress < 0.45) setTargetText('REDACTION PROTOCOL ACTIVE');
-        else if (scrollProgress < 0.70) setTargetText('SECURING SENSITIVE DATA...');
-        else if (scrollProgress < 0.85) setTargetText('DECLASSIFICATION COMPLETE');
-        else setTargetText('SECURE CONNECTION ESTABLISHED');
+        const current = phaseRef.current;
+        let next = current;
+
+        // Forward thresholds
+        if (current < 1 && scrollProgress >= 0.15) next = 1;
+        if (current < 2 && scrollProgress >= 0.45) next = 2;
+        if (current < 3 && scrollProgress >= 0.70) next = 3;
+        if (current < 4 && scrollProgress >= 0.85) next = 4;
+
+        // Backward thresholds (3% hysteresis band prevents flip-flopping)
+        if (current >= 4 && scrollProgress < 0.82) next = 3;
+        if (current >= 3 && scrollProgress < 0.67) next = 2;
+        if (current >= 2 && scrollProgress < 0.42) next = 1;
+        if (current >= 1 && scrollProgress < 0.12) next = 0;
+
+        if (next !== current) {
+            phaseRef.current = next;
+            setPhase(next);
+        }
     }, [scrollProgress]);
 
+    // Typewriter effect — only re-runs when phase actually changes
     useEffect(() => {
+        const TEXTS = [
+            'AWAITING INITIATION',
+            'REDACTION PROTOCOL ACTIVE',
+            'SECURING SENSITIVE DATA...',
+            'DECLASSIFICATION COMPLETE',
+            'SECURE CONNECTION ESTABLISHED',
+        ];
+        const target = TEXTS[phase];
+
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        typingIndexRef.current = 0;
         setDisplayedText('');
-        typingIndex.current = 0;
-        const interval = setInterval(() => {
-            if (typingIndex.current < targetText.length) {
-                setDisplayedText(prev => prev + targetText.charAt(typingIndex.current));
-                typingIndex.current++;
+
+        intervalRef.current = setInterval(() => {
+            if (typingIndexRef.current < target.length) {
+                typingIndexRef.current++;
+                setDisplayedText(target.substring(0, typingIndexRef.current));
             } else {
-                clearInterval(interval);
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
             }
         }, 30);
-        return () => clearInterval(interval);
-    }, [targetText]);
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [phase]);
 
     return (
         <div style={{
@@ -947,29 +1006,28 @@ function MagneticButton({ children, href, style, className }: { children: React.
 // RETRO DECLASSIFIED PAPERS SCROLL BAND (Effect 11)
 // ─────────────────────────────────────────────────────────────────────────────
 function DocumentBand() {
-    const papers = [
-        { title: "INTERNAL_MEMO_09.TXT", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 3 },
-        { title: "IN_GOVT_FINANCE_2023.PDF", stamp: "RESTRICTED", stampColor: "#F5C400", redactions: 5 },
-        { title: "PASSPORT_REDACT_V2.PNG", stamp: "DECLASSIFIED", stampColor: "#22C55E", redactions: 4 },
-        { title: "UIDAI_AUDIT_LOG_2024.LOG", stamp: "CLASSIFIED", stampColor: "#B91C1C", redactions: 6 },
-        { title: "PAN_CARD_VERIFY_TEMP.TMP", stamp: "CLEANSED", stampColor: "#22C55E", redactions: 2 },
-        { title: "GDPR_COMPLIANCE_EN_CORE.DOC", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 8 },
+    const list = [
+        "AADHAAR", "PAN", "GSTIN", "VOTER ID", "PASSPORT", "IFSC", 
+        "VEHICLE REG", "BIOMETRIC", "EMAIL", "PHONE", "BANK ACCOUNT", 
+        "MEDICAL ID", "EMPLOYEE ID", "ADDRESS", "CREDIT CARD"
     ];
-
+    const marqueeLine = list.join(' · ') + ' · ';
     return (
         <div style={{
-            borderTop: '1px solid rgba(239,239,239,0.07)',
-            borderBottom: '1px solid rgba(239,239,239,0.07)',
-            padding: '28px 0',
+            height: '56px',
+            background: 'rgba(245,196,0,0.03)',
+            borderTop: '1px solid rgba(245,196,0,0.08)',
+            borderBottom: '1px solid rgba(245,196,0,0.08)',
             overflow: 'hidden',
             width: '100%',
-            background: 'rgba(8,8,8,0.3)',
             position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
             boxSizing: 'border-box',
-            marginBottom: '40px'
+            marginBottom: '40px',
         }}>
             <style>{`
-                @keyframes scrollBand {
+                @keyframes marqueeScroll {
                     0% { transform: translateX(0); }
                     100% { transform: translateX(-50%); }
                 }
@@ -977,95 +1035,117 @@ function DocumentBand() {
             <div style={{
                 display: 'flex',
                 width: 'max-content',
-                animation: 'scrollBand 40s linear infinite',
-                gap: '24px'
+                animation: 'marqueeScroll 32s linear infinite',
+                whiteSpace: 'nowrap',
             }}>
-                {[...papers, ...papers].map((paper, i) => (
-                    <div 
-                        key={i} 
-                        style={{
-                            width: '180px',
-                            height: '240px',
-                            background: 'rgba(239, 239, 239, 0.03)',
-                            border: '1px solid rgba(239, 239, 239, 0.07)',
-                            padding: '16px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            position: 'relative',
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        {/* Stamp */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '45%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%) rotate(-15deg)',
-                            border: `2px solid ${paper.stampColor}`,
-                            color: paper.stampColor,
-                            fontFamily: "'IBM Plex Mono', monospace",
-                            fontWeight: 'bold',
-                            fontSize: '10px',
-                            padding: '4px 8px',
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            opacity: 0.75,
-                            pointerEvents: 'none'
-                        }}>
-                            {paper.stamp}
-                        </div>
+                <span style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '10px',
+                    letterSpacing: '0.28em',
+                    color: 'rgba(245,196,0,0.3)',
+                    textTransform: 'uppercase',
+                }}>
+                    {marqueeLine}{marqueeLine}
+                </span>
+            </div>
+        </div>
+    );
+}
 
-                        {/* Document Header */}
-                        <div>
-                            <div style={{ 
-                                fontFamily: "'IBM Plex Mono', monospace", 
-                                fontSize: '9px', 
-                                color: 'rgba(239, 239, 239, 0.35)',
-                                letterSpacing: '0.05em',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                marginBottom: '12px'
-                            }}>
-                                {paper.title}
-                            </div>
-                            {/* Dummy lines of text */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {[...Array(6)].map((_, lineIdx) => {
-                                    const hasRedaction = lineIdx % 2 === 1;
-                                    return (
-                                        <div key={lineIdx} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                            <div style={{
-                                                height: '4px',
-                                                background: 'rgba(239, 239, 239, 0.15)',
-                                                width: `${40 + (lineIdx * 7) % 35}%`,
-                                                borderRadius: '1px'
-                                            }} />
-                                            {hasRedaction && (
-                                                <div style={{
-                                                    height: '6px',
-                                                    background: lineIdx % 3 === 0 ? 'rgba(185,28,28,0.8)' : '#F5C400',
-                                                    width: '30px',
-                                                    borderRadius: '1px'
-                                                }} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+// ─────────────────────────────────────────────────────────────────────────────
 
-                        {/* Document Footer */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: 'rgba(239,239,239,0.25)' }}>
-                                REDACTION_LOG
-                            </span>
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: '#F5C400' }}>
-                                [{paper.redactions} SENSITIVE]
-                            </span>
-                        </div>
-                    </div>
+function ScrollTicker() {
+    const trackRef = useRef<HTMLDivElement>(null);
+    const [offset, setOffset] = useState(0);
+    const velocity = useRef(0.6); // Base speed/direction (positive = right, negative = left)
+    const lastScrollY = useRef(0);
+    const frameId = useRef<number>(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            const delta = currentScrollY - lastScrollY.current;
+            lastScrollY.current = currentScrollY;
+
+            // Add scroll delta to velocity (scale factor 0.08)
+            // positive delta (scrolling down) -> moves ticker right (positive velocity)
+            // negative delta (scrolling up) -> moves ticker left (negative velocity)
+            velocity.current += delta * 0.08;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        lastScrollY.current = window.scrollY;
+
+        const update = () => {
+            // Decay velocity towards target base speed
+            const targetBaseSpeed = velocity.current >= 0 ? 0.6 : -0.6;
+            velocity.current = velocity.current * 0.95 + targetBaseSpeed * 0.05;
+
+            // Cap the maximum velocity
+            const maxVel = 8;
+            if (velocity.current > maxVel) velocity.current = maxVel;
+            if (velocity.current < -maxVel) velocity.current = -maxVel;
+
+            setOffset(prev => {
+                let next = prev + velocity.current;
+                
+                if (trackRef.current) {
+                    const thirdWidth = trackRef.current.scrollWidth / 3;
+                    if (next <= -thirdWidth) {
+                        next += thirdWidth;
+                    } else if (next >= 0) {
+                        next -= thirdWidth;
+                    }
+                }
+                return next;
+            });
+
+            frameId.current = requestAnimationFrame(update);
+        };
+
+        frameId.current = requestAnimationFrame(update);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            cancelAnimationFrame(frameId.current);
+        };
+    }, []);
+
+    const items = ['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE'];
+
+    return (
+        <div id="pii-ticker" style={{ 
+            borderBottom: '1px solid rgba(239,239,239,0.07)', 
+            overflow: 'hidden', 
+            padding: 0, 
+            height: '28px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            marginTop: 'calc(-1 * clamp(80px, 10vh, 120px))', 
+            marginBottom: '40px',
+            width: '100%'
+        }}>
+            <div 
+                ref={trackRef} 
+                style={{ 
+                    transform: `translate3d(${offset}px, 0, 0)`, 
+                    whiteSpace: 'nowrap', 
+                    display: 'inline-block',
+                    willChange: 'transform'
+                }}
+            >
+                {Array(3).fill(items).flat().map((item, i) => (
+                    <span key={i} style={{ 
+                        fontFamily: "'IBM Plex Mono', monospace", 
+                        fontSize: '12px', 
+                        letterSpacing: '0.18em', 
+                        textTransform: 'uppercase', 
+                        color: 'rgba(245,196,0,0.42)', 
+                        margin: '0 20px',
+                        display: 'inline-block'
+                    }}>
+                        {item} ·
+                    </span>
                 ))}
             </div>
         </div>
@@ -1073,6 +1153,7 @@ function DocumentBand() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REBUILT 3D HERO SECTION CONTAINER (Task 2 + Task 3)
@@ -1137,12 +1218,10 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
         };
     }, []);
 
-    const heroTextOpacity = scrollProgress > 0.85
-        ? 1 - ((scrollProgress - 0.85) / 0.15)
-        : 1;
+    const heroTextOpacity = 1;
 
     return (
-        <div id="hero-scroll-container" style={{ height: '800vh', position: 'relative' }}>
+        <div id="hero-scroll-container" style={{ height: '700vh', position: 'relative' }}>
             <div id="hero-sticky" style={{
                 position: 'sticky',
                 top: 0,
@@ -1179,11 +1258,8 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
                     {/* Headline */}
                     <h1 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 'clamp(64px,9vw,120px)', lineHeight: 0.85, textTransform: 'uppercase', letterSpacing: '-0.01em', margin: '0' }}>
                         <span style={{ display: 'block', color: '#EFEFEF' }}>YOUR DATA</span>
-                        <span style={{ display: 'flex', flexDirection: 'column', width: 'max-content' }}>
+                        <span style={{ display: 'block' }}>
                             <RedactedReveal text="STAYS YOURS" />
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)', fontWeight: 400, marginTop: '6px', whiteSpace: 'nowrap' }}>
-                                hover to reveal
-                            </span>
                         </span>
                         <span style={{ display: 'block', color: '#F5C400' }}>ALWAYS.</span>
                     </h1>
@@ -1219,116 +1295,17 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
                 </div>
 
                 {/* Right column: 3D document centered both axes */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(239,239,239,0.02) 1px, transparent 1px)', backgroundSize: '16px 16px', pointerEvents: 'none' }} />
-                    
-                    <div style={{
-                        position: 'absolute', inset: 0,
-                        transform: `translate(${mousePos.x * -7}vw, ${mousePos.y * -7}vh)`,
-                        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                        pointerEvents: 'none'
-                    }}>
-                        <AmbientParticles scrollProgress={scrollProgress} />
-                    </div>
-                    
-                    <div style={{
-                        transform: `translate(${mousePos.x * -4}vw, ${mousePos.y * -4}vh)`,
-                        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-                    }}>
-                        <div style={{perspective: '1400px', perspectiveOrigin: 'center center'}}>
-                        <div id="doc-3d" style={getDocumentStyle(scrollProgress)}>
-                            <div style={{
-                                width: 'clamp(320px, 28vw, 400px)',
-                                height: 'clamp(450px, 40vw, 560px)',
-                                background: 'linear-gradient(var(--light-angle, 135deg), rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.03) 100%), rgba(255,255,255,0.04)',
-                                border: '1px solid rgba(239,239,239,0.12)',
-                                padding: '36px 32px',
-                                fontFamily: 'IBM Plex Mono',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                boxSizing: 'border-box',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
-                            }}>
-                                {/* Scan Line for Phase 2 */}
-                                {scrollProgress >= 0.15 && scrollProgress < 0.45 && (
-                                    <div 
-                                        className="scanline-element"
-                                        style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            width: '100%',
-                                            height: '3px',
-                                            background: 'linear-gradient(90deg, transparent, #F5C400, transparent)',
-                                            boxShadow: '0 0 12px #F5C400',
-                                            zIndex: 3,
-                                            animation: 'scanline 2s linear infinite',
-                                        }} 
-                                    />
-                                )}
-                                
-                                <style>{`
-                                    @keyframes scanline {
-                                        0% { top: 0%; opacity: 0; }
-                                        10% { opacity: 1; }
-                                        90% { opacity: 1; }
-                                        100% { top: 100%; opacity: 0; }
-                                    }
-                                `}</style>
-
-                                {/* Header */}
-                                <div style={{fontSize:'11px', color:'rgba(239,239,239,0.3)', marginBottom:'24px', display:'flex', justifyContent:'space-between'}}>
-                                    <span>CLASSIFICATION: RESTRICTED</span>
-                                    <span>REF: CPH-2025-001</span>
-                                </div>
-
-                                {/* 8 fields with redaction bars */}
-                                {['SUBJECT','AADHAAR','PAN','PHONE','EMAIL','DOB','BANK','ADDRESS'].map((field, i) => (
-                                    <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'15px', gap:'12px'}}>
-                                        <span style={{fontSize:'11px', color:'rgba(239,239,239,0.25)', minWidth:'76px'}}>{field}</span>
-                                        <div style={{position:'relative', flex:1, height:'17px', background:'rgba(239,239,239,0.05)'}}>
-                                            <div style={{
-                                                position:'absolute', top:0, left:0, height:'100%',
-                                                background:'#EFEFEF',
-                                                ...getBarStyle(i, scrollProgress)
-                                            }} />
-                                            <span style={{
-                                                position:'absolute', left:'10px', top:'50%',
-                                                transform:'translateY(-50%)',
-                                                fontSize:'11px', color:'#F5C400',
-                                                opacity: scrollProgress > (0.45 + i * 0.025 + 0.06) ? 1 : 0,
-                                                transition: 'opacity 0.3s'
-                                            }}>[REDACTED]</span>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {/* Status */}
-                                <div style={{marginTop:'auto', paddingTop:'16px', borderTop:'1px solid rgba(239,239,239,0.07)', fontSize:'11px', color: scrollProgress > 0.70 ? '#4ade80' : '#F5C400'}}>
-                                    STATUS: {scrollProgress > 0.70 ? 'CLEAN' : 'AWAITING REDACTION'}
-                                </div>
-
-                                {/* DECLASSIFIED stamp */}
-                                {scrollProgress > 0.70 && (
-                                    <div style={{
-                                        position:'absolute', top:'50%', left:'50%',
-                                        transform:'translate(-50%, -50%) rotate(-12deg)',
-                                        border:'4px solid #B91C1C', color:'#B91C1C',
-                                        fontFamily:'IBM Plex Mono', fontWeight:'700',
-                                        fontSize:'clamp(22px, 3vw, 34px)',
-                                        padding:'10px 24px', letterSpacing:'0.2em',
-                                        opacity: Math.min(1, (scrollProgress - 0.70) / 0.10),
-                                        pointerEvents:'none'
-                                    }}>
-                                        DECLASSIFIED
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                <div style={{
+                  position: 'relative',
+                  height: '100vh',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'visible'
+                }}>
+                  <HeroDocument scrollProgress={scrollProgress} />
                 </div>
-            </div>
         </div>
             
             <StatusBar scrollProgress={scrollProgress} />
@@ -1347,7 +1324,8 @@ export default function LandingPage() {
     const [showTerminal, setShowTerminal] = useState(true);
     const [heroActive, setHeroActive] = useState(false);
 
-    const handleLoaderComplete = () => { setLoaderDone(true); setTimeout(()=>setPageVisible(true),50); };
+    const handleLoaderComplete = () => { setLoaderDone(true); };
+    const handleRevealPage = () => { setPageVisible(true); };
 
     const handleTerminalFinished = () => {
         setShowTerminal(false);
@@ -1368,7 +1346,12 @@ export default function LandingPage() {
 
     return (
         <>
-            {!loaderDone && <SiteLoader onComplete={handleLoaderComplete} />}
+            {!loaderDone && (
+                <SiteLoader 
+                    onComplete={handleLoaderComplete} 
+                    onRevealPage={handleRevealPage} 
+                />
+            )}
 
             <div style={{ minHeight:'100vh', background:'#080808', color:'#EFEFEF', fontFamily:'Barlow, sans-serif', opacity:pageVisible?1:0, transition:'opacity 0.3s ease', cursor:'none' }}>
                 {/* SVG Noise Texture Overlay (Effect 2) */}
@@ -1412,7 +1395,7 @@ export default function LandingPage() {
                                 >{l}</a>
                             ))}
                         </div>
-                        <Link href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'10px 20px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
+                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'10px 20px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
                             onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
                             onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
                         >
@@ -1436,17 +1419,7 @@ export default function LandingPage() {
                     position: 'relative',
                     boxSizing: 'border-box',
                 }}>
-                    {/* Ticker — 28s speed */}
-                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', overflow:'hidden', padding:'0', height:'28px', display:'flex', alignItems:'center', marginTop:'calc(-1 * clamp(80px, 10vh, 120px))', marginBottom:'40px' }}>
-                        <div style={{ animation:'ticker 28s linear infinite', whiteSpace:'nowrap', display:'inline-block' }}>
-                            {Array(3).fill(['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE']).flat().map((item,i)=>(
-                                <span key={i} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(245,196,0,0.42)', margin:'0 20px' }}>
-                                    {item} ·
-                                </span>
-                            ))}
-                        </div>
-                        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
-                    </div>
+                    <ScrollTicker />
 
                     {/* Stats grid */}
                     <div className="content-wrap">
@@ -1476,24 +1449,31 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Heading */}
-                    <div className="content-wrap" style={{ paddingBottom:'40px' }}>
-                        <ClipReveal delay={500} duration={0.8}>
-                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(40px,5vw,64px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 16px 0' }}>
-                                <span style={{ display:'block', color:'#EFEFEF' }}>NOTHING LEAVES.</span>
-                                <span style={{ display:'block' }}>
-                                    <RedactedReveal text="NOTHING ESCAPES." />
-                                </span>
-                            </h2>
-                        </ClipReveal>
-                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', marginTop:'16px' }}>
-                            09 modules. All running locally. All running now.
+                    {/* Headline Block */}
+                    <div className="content-wrap">
+                      <div style={{marginBottom:'48px'}}>
+                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
+                          NOTHING ESCAPES DETECTION
+                        </p>
+                        <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
+                          <div style={{color:'#EFEFEF'}}>NOTHING LEAVES.</div>
+                          <div>
+                            <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap'}}
+                              onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
+                              onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                              NOTHING ESCAPES.
+                            </span>
+                          </div>
+                          <div style={{fontFamily:'IBM Plex Mono',fontSize:'8px',letterSpacing:'0.16em',color:'rgba(239,239,239,0.18)',marginTop:'6px'}}>HOVER TO REVEAL</div>
                         </div>
+                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>09 MODULES. ALL RUNNING LOCALLY. ALL RUNNING NOW.</p>
+                      </div>
                     </div>
 
                     {/* Grid */}
                     <div className="content-wrap">
-                        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)' }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', alignItems: 'start' }}>
                             {[
                                 { index:'01', title:'Indian PII Detection',    desc:'Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration — format-validated, not just pattern-matched.' },
                                 { index:'02', title:'Four-Stage Pipeline',     desc:'Regex → Presidio → spaCy NER → Voting ensemble. Weighted scoring with type-lock at ≥0.80 confidence prevents misclassification.' },
@@ -1528,18 +1508,19 @@ export default function LandingPage() {
                     {/* Scan beam */}
                     <div style={{ position:'absolute', left:0, right:0, height:'1px', background:'#F5C400', opacity:0.15, animation:'scanbeam 4s ease-in-out infinite', pointerEvents:'none', zIndex:1 }} />
 
-                    <div className="content-wrap" style={{ paddingBottom: '40px' }}>
-                        <RedEyebrow text="// DETECTION ENGINE · ACTIVE" />
-                        <ClipReveal delay={500} duration={0.8}>
-                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4vw,48px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0', display:'flex', flexWrap:'wrap', alignItems:'center', gap:'16px' }}>
-                                <span style={{ color:'#EFEFEF' }}>FOUR STAGES.</span>
-                                <span style={{ color:'rgba(239,239,239,0.07)' }}>·</span>
-                                <span style={{ color:'#F5C400' }}>ONE VERDICT.</span>
-                            </h2>
-                        </ClipReveal>
-                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
-                            Each entity is voted on. Confidence threshold: ≥0.80. Below that — flagged for human review.
+                    {/* Headline Block */}
+                    <div className="content-wrap">
+                      <div style={{marginBottom:'48px'}}>
+                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
+                          DETECTION ENGINE · ACTIVE
+                        </p>
+                        <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
+                          <div style={{color:'#EFEFEF'}}>FOUR STAGES.</div>
+                          <div style={{color:'#F5C400'}}>ONE VERDICT.</div>
                         </div>
+                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>EACH ENTITY IS VOTED ON. CONFIDENCE THRESHOLD: ≥0.80. BELOW THAT — FLAGGED FOR HUMAN REVIEW.</p>
+                      </div>
                     </div>
                     <div className="content-wrap">
                         <PipelineTable />
@@ -1555,18 +1536,30 @@ export default function LandingPage() {
                     position: 'relative',
                     boxSizing: 'border-box',
                 }}>
+                    {/* Headline Block */}
+                    <div className="content-wrap">
+                      <div style={{marginBottom:'48px'}}>
+                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
+                          API ACCESS · AUTHENTICATED
+                        </p>
+                        <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
+                          <div style={{color:'#EFEFEF'}}>REDACT FROM</div>
+                          <div>
+                            <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap',width:'max-content'}}
+                              onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
+                              onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                              ANYWHERE.
+                            </span>
+                          </div>
+                          <div style={{fontFamily:'IBM Plex Mono',fontSize:'8px',letterSpacing:'0.16em',color:'rgba(239,239,239,0.18)',marginTop:'6px'}}>HOVER TO REVEAL</div>
+                          <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>ANY LANGUAGE. ANY FRAMEWORK. PER-KEY RATE LIMITING. FULL AUDIT TRAIL.</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
                         <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)' }}>
-                            <RedEyebrow text="// API ACCESS · AUTHENTICATED" />
-                            <ClipReveal delay={500} duration={0.8}>
-                                <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(32px,4vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 8px 0' }}>
-                                    <span style={{ display:'block', color:'#EFEFEF' }}>REDACT FROM</span>
-                                    <span style={{ display:'block' }}><RedactedReveal text="ANYWHERE." /></span>
-                                </h2>
-                            </ClipReveal>
-                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', margin:'16px 0 32px' }}>
-                            Any language. Any framework. Per-key rate limiting. Full audit trail.
-                        </div>
                         <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
                             <ApiEndpointRow path="POST /api/v3/public/redact"   desc="sanitize and return" />
                             <ApiEndpointRow path="POST /api/v3/public/analyze"  desc="detect, don't redact" />
@@ -1608,16 +1601,24 @@ export default function LandingPage() {
                 }}>
                     <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'4fr 6fr' }}>
                         <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-                            <RedEyebrow text="// REGULATORY CLEARANCE" />
-                            <ClipReveal delay={500} duration={0.8}>
-                                <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4.5vw,56px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0' }}>
-                                    <span style={{ display:'block', color:'#EFEFEF' }}>EVERY REGULATION.</span>
-                                    <span style={{ display:'block' }}><RedactedReveal text="FULLY COVERED." /></span>
-                                </h2>
-                            </ClipReveal>
-                            <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
-                                Hover each clause to see exactly how Ciphera addresses it.
+                          <div style={{marginBottom:'48px'}}>
+                            <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                              <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
+                              REGULATORY CLEARANCE
+                            </p>
+                            <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
+                              <div style={{color:'#EFEFEF'}}>EVERY REGULATION.</div>
+                              <div>
+                                <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap'}}
+                                  onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
+                                  onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                                  FULLY COVERED.
+                                </span>
+                              </div>
+                              <div style={{fontFamily:'IBM Plex Mono',fontSize:'8px',letterSpacing:'0.16em',color:'rgba(239,239,239,0.18)',marginTop:'6px'}}>HOVER TO REVEAL</div>
                             </div>
+                            <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>HOVER EACH CLAUSE TO SEE EXACTLY HOW CIPHERA ADDRESSES IT.</p>
+                          </div>
                         </div>
                         <div style={{ display:'flex', flexDirection:'column', justifyContent:'center' }}>
                             {[
@@ -1657,7 +1658,10 @@ export default function LandingPage() {
 
                     {/* Giant "0" Watermark - Effect 12 */}
                     <div style={{
-                        position:'absolute', left:'-20px', top:'20%',
+                        position: 'absolute',
+                        left: 'clamp(40px, 5vw, 80px)',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
                         fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(180px, 20vw, 360px)',
                         color:'rgba(239,239,239,0.018)',
                         pointerEvents:'none', userSelect:'none', zIndex:0,
@@ -1665,13 +1669,14 @@ export default function LandingPage() {
                     }}>0</div>
 
                     <div className="content-wrap" style={{ position:'relative', zIndex:1, width:'100%' }}>
-                        <ClipReveal delay={500} duration={0.8}>
-                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(48px,7vw,80px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.88, margin:'0 0 24px 0' }}>
-                                <span style={{ display:'block', color:'#EFEFEF' }}>YOUR DOCUMENTS.</span>
-                                <span style={{ display:'block', color:'#EFEFEF' }}>YOUR INFRASTRUCTURE.</span>
-                                <span style={{ display:'block', color:'#F5C400' }}>YOUR CONTROL.</span>
-                            </h2>
-                        </ClipReveal>
+                        {/* Headline Block */}
+                        <div style={{marginBottom:'32px'}}>
+                          <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(56px,7vw,96px)',lineHeight:0.88,textTransform:'uppercase'}}>
+                            <div style={{color:'#EFEFEF'}}>YOUR DOCUMENTS.</div>
+                            <div style={{color:'#EFEFEF'}}>YOUR INFRASTRUCTURE.</div>
+                            <div style={{color:'#F5C400'}}>YOUR CONTROL.</div>
+                          </div>
+                        </div>
                         <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', maxWidth:'400px', margin:'0 0 20px 0' }}>
                             No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.
                         </p>

@@ -7,9 +7,12 @@ const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
 const rg     = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
 const sleep  = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
-interface SiteLoaderProps { onComplete: () => void; }
+interface SiteLoaderProps {
+    onComplete: () => void;
+    onRevealPage?: () => void;
+}
 
-export function SiteLoader({ onComplete }: SiteLoaderProps) {
+export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
     const [letterStates, setLetterStates] = useState<string[]>(Array(7).fill(''));
     const [letterColors, setLetterColors] = useState<string[]>(Array(7).fill('transparent'));
     const [statusText,   setStatusText]   = useState('');
@@ -19,6 +22,9 @@ export function SiteLoader({ onComplete }: SiteLoaderProps) {
     const [edgeGlow,     setEdgeGlow]     = useState(false);
     const [wipeUp,       setWipeUp]       = useState(false);
     const [isDone,       setIsDone]       = useState(false);
+    const [fadeContent,  setFadeContent]  = useState(false);
+    const [sweepActive,  setSweepActive]  = useState(false);
+    const [sweepStyle,   setSweepStyle]   = useState<React.CSSProperties>({});
     const abortRef = useRef(false);
 
     useEffect(() => {
@@ -108,10 +114,59 @@ export function SiteLoader({ onComplete }: SiteLoaderProps) {
         setRuleWidth(280);
         await sleep(650);
 
-        // Phase 7 — wipe up to reveal landing page
+        // Phase 7 — yellow sweep transition into landing page
         setStageText('');
-        setWipeUp(true);
-        await sleep(680);
+        setFadeContent(true);
+        if (onRevealPage) onRevealPage();
+
+        setSweepActive(true);
+        setSweepStyle({
+            position: 'fixed',
+            background: '#F5C400',
+            top: 0,
+            left: '-60vw',
+            width: '50vw',
+            height: '100vh',
+            transform: 'skewX(-20deg)',
+            zIndex: 10000,
+            opacity: 1,
+            transition: 'none',
+        });
+
+        await sleep(50);
+
+        setSweepStyle(prev => ({
+            ...prev,
+            left: '120vw',
+            transition: 'left 0.85s cubic-bezier(0.25, 1, 0.5, 1)',
+        }));
+
+        await sleep(400);
+
+        const btn = document.getElementById('nav-cta-button');
+        if (btn) {
+            const rect = btn.getBoundingClientRect();
+            setSweepStyle({
+                position: 'fixed',
+                background: '#F5C400',
+                top: `${rect.top}px`,
+                left: `${rect.left}px`,
+                width: `${rect.width}px`,
+                height: `${rect.height}px`,
+                transform: 'skewX(0deg)',
+                zIndex: 10000,
+                opacity: 1,
+                transition: 'all 0.55s cubic-bezier(0.16, 1, 0.3, 1)',
+            });
+            
+            await sleep(550);
+            
+            btn.classList.add('animate-nav-glow');
+            setTimeout(() => btn.classList.remove('animate-nav-glow'), 1000);
+        } else {
+            await sleep(450);
+        }
+
         setIsDone(true);
         onComplete();
     };
@@ -120,56 +175,75 @@ export function SiteLoader({ onComplete }: SiteLoaderProps) {
 
     return (
         <div
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#080808] overflow-hidden"
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
             style={{
-                transform:  wipeUp ? 'translateY(-100%)' : 'translateY(0)',
-                transition: wipeUp ? 'transform 0.65s cubic-bezier(0.76, 0, 0.24, 1)' : 'none',
+                background: fadeContent ? 'rgba(8,8,8,0)' : '#080808',
+                transition: 'background 0.5s ease',
+                pointerEvents: fadeContent ? 'none' : 'auto',
             }}
         >
-            {/* Scan line */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-white/[0.04] pointer-events-none"
-                style={{ animation: 'scanPass 2.5s ease-out forwards' }} />
+            <div 
+                className="flex flex-col items-center justify-center w-full h-full relative"
+                style={{
+                    opacity: fadeContent ? 0 : 1,
+                    transition: 'opacity 0.4s ease',
+                }}
+            >
+                {/* Scan line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-white/[0.04] pointer-events-none"
+                    style={{ animation: 'scanPass 2.5s ease-out forwards' }} />
 
-            {/* Edge glow */}
-            <div className="absolute inset-0 pointer-events-none transition-all duration-500"
-                style={{ boxShadow: edgeGlow ? 'inset 0 0 80px rgba(185,28,28,0.1)' : 'none' }} />
+                {/* Edge glow */}
+                <div className="absolute inset-0 pointer-events-none transition-all duration-500"
+                    style={{ boxShadow: edgeGlow ? 'inset 0 0 80px rgba(185,28,28,0.1)' : 'none' }} />
 
-            {/* Grid dots */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.02]"
-                style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                {/* Grid dots */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.02]"
+                    style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-            {/* Status */}
-            <div className="mb-8 h-4 flex items-center justify-center">
-                <span className="font-mono text-[10px] tracking-[0.22em] text-[#b91c1c] uppercase transition-opacity duration-300"
-                    style={{ opacity: showStatus ? 1 : 0 }}>
-                    {statusText}
-                </span>
-            </div>
-
-            {/* Wordmark */}
-            <div className="flex items-center gap-0.5 select-none">
-                {letterStates.map((ch, i) => (
-                    <span key={i}
-                        className="font-black text-[72px] md:text-[88px] leading-none tracking-[0.05em] transition-colors duration-75"
-                        style={{ color: letterColors[i], fontFamily: '"Arial Black","Helvetica Neue",sans-serif' }}>
-                        {ch || '\u00A0'}
+                {/* Status */}
+                <div className="mb-8 h-4 flex items-center justify-center">
+                    <span className="font-mono text-[10px] tracking-[0.22em] text-[#b91c1c] uppercase transition-opacity duration-300"
+                        style={{ opacity: showStatus ? 1 : 0 }}>
+                        {statusText}
                     </span>
-                ))}
+                </div>
+
+                {/* Wordmark */}
+                <div className="flex items-center gap-0.5 select-none">
+                    {letterStates.map((ch, i) => (
+                        <span key={i}
+                            className="font-black text-[72px] md:text-[88px] leading-none tracking-[0.05em] transition-colors duration-75"
+                            style={{ color: letterColors[i], fontFamily: '"Arial Black","Helvetica Neue",sans-serif' }}>
+                            {ch || '\u00A0'}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Rule */}
+                <div className="mt-6 h-px bg-white/20 transition-all duration-[1100ms] ease-out"
+                    style={{ width: `${ruleWidth}px` }} />
+
+                {/* Stage label */}
+                <div className="mt-5 font-mono text-[9px] tracking-[0.22em] text-white/20 uppercase h-4 flex items-center">
+                    {stageText}
+                </div>
+
+                {/* Bottom brand */}
+                <div className="absolute bottom-6 font-mono text-[9px] tracking-[0.18em] text-white/10 uppercase">
+                    Ciphera V3 · PII Anonymization Engine
+                </div>
             </div>
 
-            {/* Rule */}
-            <div className="mt-6 h-px bg-white/20 transition-all duration-[1100ms] ease-out"
-                style={{ width: `${ruleWidth}px` }} />
-
-            {/* Stage label */}
-            <div className="mt-5 font-mono text-[9px] tracking-[0.22em] text-white/20 uppercase h-4 flex items-center">
-                {stageText}
-            </div>
-
-            {/* Bottom brand */}
-            <div className="absolute bottom-6 font-mono text-[9px] tracking-[0.18em] text-white/10 uppercase">
-                Ciphera V3 · PII Anonymization Engine
-            </div>
+            {/* Sweep block */}
+            {sweepActive && (
+                <div
+                    style={{
+                        ...sweepStyle,
+                        pointerEvents: 'none',
+                    }}
+                />
+            )}
 
             <style>{`
                 @keyframes scanPass {

@@ -1,0 +1,229 @@
+diff --git a/v3/frontend/src/app/page.tsx b/v3/frontend/src/app/page.tsx
+index c7dde81..5068f46 100644
+--- a/v3/frontend/src/app/page.tsx
++++ b/v3/frontend/src/app/page.tsx
+@@ -62,7 +62,7 @@ function EncryptWord({ word, mode, style: extStyle = {} }: {
+ function RedactedReveal({ text, style: extStyle = {} }: { text: string; style?: React.CSSProperties }) {
+     const [revealed, setRevealed] = useState(false);
+     return (
+-        <span style={{ display:'inline-block', whiteSpace: 'nowrap', width: 'max-content', ...extStyle }}>
++        <span style={{ display:'inline-flex', flexDirection: 'column', alignItems: 'flex-start', whiteSpace: 'nowrap', width: 'max-content', ...extStyle }}>
+             <span
+                 onMouseEnter={() => setRevealed(true)}
+                 onMouseLeave={() => setRevealed(false)}
+@@ -75,9 +75,18 @@ function RedactedReveal({ text, style: extStyle = {} }: { text: string; style?:
+                     fontSize:'inherit', lineHeight:'inherit',
+                     letterSpacing:'inherit', textTransform:'inherit',
+                     whiteSpace: 'nowrap',
+-                    width: 'max-content',
+                 }}
+             >{text}</span>
++            <span style={{
++                fontFamily: "'IBM Plex Mono', monospace",
++                fontSize: '8px',
++                letterSpacing: '0.16em',
++                color: 'rgba(239,239,239,0.18)',
++                textTransform: 'uppercase',
++                marginTop: '4px',
++                fontWeight: 400,
++                lineHeight: 1,
++            }}>HOVER TO REVEAL</span>
+         </span>
+     );
+ }
+@@ -947,29 +956,28 @@ function MagneticButton({ children, href, style, className }: { children: React.
+ // RETRO DECLASSIFIED PAPERS SCROLL BAND (Effect 11)
+ // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ function DocumentBand() {
+-    const papers = [
+-        { title: "INTERNAL_MEMO_09.TXT", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 3 },
+-        { title: "IN_GOVT_FINANCE_2023.PDF", stamp: "RESTRICTED", stampColor: "#F5C400", redactions: 5 },
+-        { title: "PASSPORT_REDACT_V2.PNG", stamp: "DECLASSIFIED", stampColor: "#22C55E", redactions: 4 },
+-        { title: "UIDAI_AUDIT_LOG_2024.LOG", stamp: "CLASSIFIED", stampColor: "#B91C1C", redactions: 6 },
+-        { title: "PAN_CARD_VERIFY_TEMP.TMP", stamp: "CLEANSED", stampColor: "#22C55E", redactions: 2 },
+-        { title: "GDPR_COMPLIANCE_EN_CORE.DOC", stamp: "TOP SECRET", stampColor: "#B91C1C", redactions: 8 },
++    const list = [
++        "AADHAAR", "PAN", "GSTIN", "VOTER ID", "PASSPORT", "IFSC", 
++        "VEHICLE REG", "BIOMETRIC", "EMAIL", "PHONE", "BANK ACCOUNT", 
++        "MEDICAL ID", "EMPLOYEE ID", "ADDRESS", "CREDIT CARD"
+     ];
+-
++    const marqueeLine = list.join(' ┬╖ ') + ' ┬╖ ';
+     return (
+         <div style={{
+-            borderTop: '1px solid rgba(239,239,239,0.07)',
+-            borderBottom: '1px solid rgba(239,239,239,0.07)',
+-            padding: '28px 0',
++            height: '56px',
++            background: 'rgba(245,196,0,0.03)',
++            borderTop: '1px solid rgba(245,196,0,0.08)',
++            borderBottom: '1px solid rgba(245,196,0,0.08)',
+             overflow: 'hidden',
+             width: '100%',
+-            background: 'rgba(8,8,8,0.3)',
+             position: 'relative',
++            display: 'flex',
++            alignItems: 'center',
+             boxSizing: 'border-box',
+-            marginBottom: '40px'
++            marginBottom: '40px',
+         }}>
+             <style>{`
+-                @keyframes scrollBand {
++                @keyframes marqueeScroll {
+                     0% { transform: translateX(0); }
+                     100% { transform: translateX(-50%); }
+                 }
+@@ -977,96 +985,18 @@ function DocumentBand() {
+             <div style={{
+                 display: 'flex',
+                 width: 'max-content',
+-                animation: 'scrollBand 40s linear infinite',
+-                gap: '24px'
++                animation: 'marqueeScroll 32s linear infinite',
++                whiteSpace: 'nowrap',
+             }}>
+-                {[...papers, ...papers].map((paper, i) => (
+-                    <div 
+-                        key={i} 
+-                        style={{
+-                            width: '180px',
+-                            height: '240px',
+-                            background: 'rgba(239, 239, 239, 0.03)',
+-                            border: '1px solid rgba(239, 239, 239, 0.07)',
+-                            padding: '16px',
+-                            display: 'flex',
+-                            flexDirection: 'column',
+-                            justifyContent: 'space-between',
+-                            position: 'relative',
+-                            boxSizing: 'border-box',
+-                        }}
+-                    >
+-                        {/* Stamp */}
+-                        <div style={{
+-                            position: 'absolute',
+-                            top: '45%',
+-                            left: '50%',
+-                            transform: 'translate(-50%, -50%) rotate(-15deg)',
+-                            border: `2px solid ${paper.stampColor}`,
+-                            color: paper.stampColor,
+-                            fontFamily: "'IBM Plex Mono', monospace",
+-                            fontWeight: 'bold',
+-                            fontSize: '10px',
+-                            padding: '4px 8px',
+-                            letterSpacing: '0.1em',
+-                            textTransform: 'uppercase',
+-                            opacity: 0.75,
+-                            pointerEvents: 'none'
+-                        }}>
+-                            {paper.stamp}
+-                        </div>
+-
+-                        {/* Document Header */}
+-                        <div>
+-                            <div style={{ 
+-                                fontFamily: "'IBM Plex Mono', monospace", 
+-                                fontSize: '9px', 
+-                                color: 'rgba(239, 239, 239, 0.35)',
+-                                letterSpacing: '0.05em',
+-                                overflow: 'hidden',
+-                                textOverflow: 'ellipsis',
+-                                whiteSpace: 'nowrap',
+-                                marginBottom: '12px'
+-                            }}>
+-                                {paper.title}
+-                            </div>
+-                            {/* Dummy lines of text */}
+-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+-                                {[...Array(6)].map((_, lineIdx) => {
+-                                    const hasRedaction = lineIdx % 2 === 1;
+-                                    return (
+-                                        <div key={lineIdx} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+-                                            <div style={{
+-                                                height: '4px',
+-                                                background: 'rgba(239, 239, 239, 0.15)',
+-                                                width: `${40 + (lineIdx * 7) % 35}%`,
+-                                                borderRadius: '1px'
+-                                            }} />
+-                                            {hasRedaction && (
+-                                                <div style={{
+-                                                    height: '6px',
+-                                                    background: lineIdx % 3 === 0 ? 'rgba(185,28,28,0.8)' : '#F5C400',
+-                                                    width: '30px',
+-                                                    borderRadius: '1px'
+-                                                }} />
+-                                            )}
+-                                        </div>
+-                                    );
+-                                })}
+-                            </div>
+-                        </div>
+-
+-                        {/* Document Footer */}
+-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: 'rgba(239,239,239,0.25)' }}>
+-                                REDACTION_LOG
+-                            </span>
+-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: '#F5C400' }}>
+-                                [{paper.redactions} SENSITIVE]
+-                            </span>
+-                        </div>
+-                    </div>
+-                ))}
++                <span style={{
++                    fontFamily: "'IBM Plex Mono', monospace",
++                    fontSize: '10px',
++                    letterSpacing: '0.28em',
++                    color: 'rgba(245,196,0,0.3)',
++                    textTransform: 'uppercase',
++                }}>
++                    {marqueeLine}{marqueeLine}
++                </span>
+             </div>
+         </div>
+     );
+@@ -1179,11 +1109,8 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
+                     {/* Headline */}
+                     <h1 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 'clamp(64px,9vw,120px)', lineHeight: 0.85, textTransform: 'uppercase', letterSpacing: '-0.01em', margin: '0' }}>
+                         <span style={{ display: 'block', color: '#EFEFEF' }}>YOUR DATA</span>
+-                        <span style={{ display: 'flex', flexDirection: 'column', width: 'max-content' }}>
++                        <span style={{ display: 'block' }}>
+                             <RedactedReveal text="STAYS YOURS" />
+-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)', fontWeight: 400, marginTop: '6px', whiteSpace: 'nowrap' }}>
+-                                hover to reveal
+-                            </span>
+                         </span>
+                         <span style={{ display: 'block', color: '#F5C400' }}>ALWAYS.</span>
+                     </h1>
+@@ -1436,17 +1363,6 @@ export default function LandingPage() {
+                     position: 'relative',
+                     boxSizing: 'border-box',
+                 }}>
+-                    {/* Ticker ΓÇö 28s speed */}
+-                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', overflow:'hidden', padding:'0', height:'28px', display:'flex', alignItems:'center', marginTop:'calc(-1 * clamp(80px, 10vh, 120px))', marginBottom:'40px' }}>
+-                        <div style={{ animation:'ticker 28s linear infinite', whiteSpace:'nowrap', display:'inline-block' }}>
+-                            {Array(3).fill(['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE']).flat().map((item,i)=>(
+-                                <span key={i} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(245,196,0,0.42)', margin:'0 20px' }}>
+-                                    {item} ┬╖
+-                                </span>
+-                            ))}
+-                        </div>
+-                        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+-                    </div>
+ 
+                     {/* Stats grid */}
+                     <div className="content-wrap">
+@@ -1531,10 +1447,9 @@ export default function LandingPage() {
+                     <div className="content-wrap" style={{ paddingBottom: '40px' }}>
+                         <RedEyebrow text="// DETECTION ENGINE ┬╖ ACTIVE" />
+                         <ClipReveal delay={500} duration={0.8}>
+-                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4vw,48px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0', display:'flex', flexWrap:'wrap', alignItems:'center', gap:'16px' }}>
+-                                <span style={{ color:'#EFEFEF' }}>FOUR STAGES.</span>
+-                                <span style={{ color:'rgba(239,239,239,0.07)' }}>┬╖</span>
+-                                <span style={{ color:'#F5C400' }}>ONE VERDICT.</span>
++                            <h2 style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(36px,4vw,48px)', textTransform:'uppercase', letterSpacing:'-0.01em', lineHeight:0.92, margin:'0 0 12px 0' }}>
++                                <span style={{ display:'block', color:'#EFEFEF' }}>FOUR STAGES.</span>
++                                <span style={{ display:'block', color:'#F5C400' }}>ONE VERDICT.</span>
+                             </h2>
+                         </ClipReveal>
+                         <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
