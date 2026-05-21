@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 const FIELDS = [
   { label: 'SUBJECT',  barW: 55 },
@@ -9,10 +9,73 @@ const FIELDS = [
   { label: 'EMAIL',    barW: 58 },
   { label: 'DOB',      barW: 32 },
   { label: 'BANK A/C', barW: 55 },
-  { label: 'ADDRESS',  barW: 78 },
+  { label: 'ADDRESS 1',barW: 78 },
+  { label: 'ADDRESS 2',barW: 60 },
+  { label: 'CITY',     barW: 40 },
+  { label: 'STATE',    barW: 45 },
+  { label: 'PINCODE',  barW: 30 },
+  { label: 'COUNTRY',  barW: 35 },
+  { label: 'RELIGION', barW: 45 },
+  { label: 'CASTE',    barW: 50 },
 ]
 
+const WORD = 'CIPHERA';
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
+const rg = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+
+function DecryptCiphera({ trigger }: { trigger: boolean }) {
+    const [letters, setLetters] = useState<string[]>(Array(7).fill(''));
+    const [colors, setColors] = useState<string[]>(Array(7).fill('transparent'));
+
+    useEffect(() => {
+        if (!trigger) {
+            setLetters(Array(7).fill(''));
+            setColors(Array(7).fill('transparent'));
+            return;
+        }
+
+        let aborted = false;
+        const run = async () => {
+            const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+            for (let i = 0; i < 7; i++) {
+                if (aborted) return;
+                for (let s = 0; s < 3; s++) {
+                    if (aborted) return;
+                    setLetters(prev => { const n = [...prev]; n[i] = rg(); return n; });
+                    setColors(prev => { const n = [...prev]; n[i] = 'rgba(255,255,255,0.35)'; return n; });
+                    await sleep(45);
+                }
+                setLetters(prev => { const n = [...prev]; n[i] = WORD[i]; return n; });
+                setColors(prev => { const n = [...prev]; n[i] = 'rgba(255,255,255,0.92)'; return n; });
+                await sleep(85 + Math.random() * 35);
+            }
+        };
+        run();
+        return () => { aborted = true; };
+    }, [trigger]);
+
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1px',
+            fontFamily: "'Arial Black', 'Helvetica', sans-serif",
+            fontWeight: 900,
+            fontSize: 'clamp(48px, 6vw, 72px)',
+            letterSpacing: '0.01em',
+            transform: 'scaleY(1.15)', // Give it that slightly tall, impactful look
+        }}>
+            {letters.map((ch, i) => (
+                <span key={i} className="ciphera-decrypt-letter" style={{ color: colors[i] }}>
+                    {ch || '\u00A0'}
+                </span>
+            ))}
+        </div>
+    );
+}
+
 export default function HeroDocument({ scrollProgress }: { scrollProgress: number }) {
+  const groupRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [paperTexture, setPaperTexture] = useState<string>('')
   const rafRef = useRef(0)
@@ -43,37 +106,37 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
   /* ── Generate Canvas Paper Texture ── */
   useEffect(() => {
     const canvas = document.createElement('canvas')
-    canvas.width = 512
-    canvas.height = 712
+    canvas.width = 1024
+    canvas.height = 1424
     const ctx = canvas.getContext('2d')
     if (ctx) {
-      // Base paper color
-      ctx.fillStyle = '#ebe4d8'
-      ctx.fillRect(0, 0, 512, 712)
+      // Base paper color (dark greyish)
+      ctx.fillStyle = '#141414'
+      ctx.fillRect(0, 0, 1024, 1424)
 
       // Paper grain — random dots
-      for (let i = 0; i < 12000; i++) {
-        const x = Math.random() * 512
-        const y = Math.random() * 712
-        const opacity = Math.random() * 0.05
-        ctx.fillStyle = `rgba(0,0,0,${opacity})`
+      for (let i = 0; i < 24000; i++) {
+        const x = Math.random() * 1024
+        const y = Math.random() * 1424
+        const opacity = Math.random() * 0.04
+        ctx.fillStyle = `rgba(255,255,255,${opacity})`
         ctx.fillRect(x, y, 1, 1)
       }
 
       // Slight vignette edges
-      const gradient = ctx.createRadialGradient(256, 356, 200, 256, 356, 380)
+      const gradient = ctx.createRadialGradient(512, 712, 400, 512, 712, 760)
       gradient.addColorStop(0, 'rgba(0,0,0,0)')
-      gradient.addColorStop(1, 'rgba(0,0,0,0.08)')
+      gradient.addColorStop(1, 'rgba(0,0,0,0.3)')
       ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, 512, 712)
+      ctx.fillRect(0, 0, 1024, 1424)
 
       // Printed text lines — barely visible
-      ctx.strokeStyle = 'rgba(0,0,0,0.05)'
-      ctx.lineWidth = 0.5
-      for (let y = 80; y < 680; y += 28) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)'
+      ctx.lineWidth = 1
+      for (let y = 160; y < 1360; y += 56) {
         ctx.beginPath()
-        ctx.moveTo(48, y)
-        ctx.lineTo(464, y)
+        ctx.moveTo(96, y)
+        ctx.lineTo(928, y)
         ctx.stroke()
       }
 
@@ -82,19 +145,14 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
   }, [])
 
   /* ── Scroll-driven 3D rotation ── */
-  let rotY: number, rotX: number
-  if (scrollProgress < 0.15) {
-    rotY = -14; rotX = 5
-  } else if (scrollProgress < 0.65) {
-    const p = (scrollProgress - 0.15) / 0.50
-    rotY = -14 + 14 * p
-    rotX = 5 - 5 * p
-  } else {
-    rotY = 0; rotX = 0
-  }
+  // Smooth, completely stable single-axis rotation across the entire page
+  const rotY = scrollProgress * 180;
+  const rotX = 0;
+  const rotZ = 0;
+
   // Mouse parallax on top
-  rotY += mousePos.x * 6
-  rotX += mousePos.y * -4
+  const finalRotY = rotY + (mousePos.x * 6)
+  const finalRotX = rotX + (mousePos.y * -4)
 
   /* ── Phase logic ── */
   const isDeclassified = scrollProgress > 0.70
@@ -107,11 +165,13 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
 
   /* ── Fade in / out ── */
   const fadeIn  = Math.min(1, scrollProgress / 0.08)
-  const fadeOut = scrollProgress > 0.85 ? 1 - (scrollProgress - 0.85) / 0.15 : 1
-  const opacity = fadeIn * fadeOut
+  const fadeOut = 1;
+  const opacity = fadeIn * fadeOut;
+
+  const extraTransform = `rotateZ(${rotZ}deg)`
 
   // Fades classification overlay hologram as clearance is granted
-  const holoOpacity = Math.max(0, 1 - (scrollProgress / 0.70))
+  const holoOpacity = 0;
 
   return (
     <div style={{
@@ -121,45 +181,49 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
       perspective: '1600px',
     }}>
       <style>{`
-        @keyframes heroDocFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-10px); }
+        .ciphera-decrypt-letter {
+           display: inline-block;
+           width: 0.8em;
+           text-align: center;
         }
       `}</style>
 
       {/* Float wrapper */}
       <div style={{
-        animation: 'heroDocFloat 5s ease-in-out infinite',
         opacity,
         transition: 'opacity 0.3s',
         transformStyle: 'preserve-3d',
+        WebkitFontSmoothing: 'antialiased', // Sharpen text rendering
+        MozOsxFontSmoothing: 'grayscale',
       }}>
         {/* 3D rotation wrapper */}
-        <div style={{
-          transform: `rotateY(${rotY}deg) rotateX(${rotX}deg)`,
+        <div ref={groupRef} style={{
+          transform: `rotateX(${finalRotX}deg) rotateY(${finalRotY}deg) ${extraTransform}`,
           transformStyle: 'preserve-3d',
           willChange: 'transform',
+          width: 'clamp(380px, 30vw, 480px)', // 23% larger dimension
+          aspectRatio: '210 / 297',
         }}>
           {/* ═══════════ THE PAPER ═══════════ */}
           <div style={{
-            width: 'clamp(344px, 27vw, 442px)', // 23% larger dimension
-            aspectRatio: '210 / 297',
-            background: paperTexture ? `url(${paperTexture})` : 'linear-gradient(170deg, #f2ede4 0%, #ebe5da 45%, #e8e0d2 100%)',
+            position: 'absolute',
+            inset: 0,
+            background: paperTexture ? `url(${paperTexture})` : '#141414',
             backgroundSize: '100% 100%',
-            position: 'relative',
             fontFamily: "'IBM Plex Mono', monospace",
             transformStyle: 'preserve-3d', // Enable nested 3D elements (preserve-3d)
+            backfaceVisibility: 'hidden',
             boxShadow:
               '6px 12px 32px rgba(0,0,0,0.5), ' +
               '14px 28px 80px rgba(0,0,0,0.4), ' +
-              'inset 0 0 80px rgba(0,0,0,0.03)',
+              'inset 0 0 80px rgba(0,0,0,0.5)',
           }}>
 
             {/* Layer 1 (specular light catch overlay) */}
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: `radial-gradient(circle at ${50 + mousePos.x * 30}% ${50 + mousePos.y * 30}%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)`,
+              background: `radial-gradient(circle at ${50 + mousePos.x * 30}% ${50 + mousePos.y * 30}%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 60%)`,
               pointerEvents: 'none',
               zIndex: 9,
               mixBlendMode: 'overlay',
@@ -198,7 +262,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
               <div style={{
                 margin: '5% 5% 0 14%',
                 padding: '3% 4%',
-                border: `1.5px solid ${isDeclassified ? 'rgba(34,197,94,0.6)' : 'rgba(185,28,28,0.5)'}`,
+                border: `1.5px solid ${isDeclassified ? 'rgba(34,197,94,0.6)' : 'rgba(245,196,0,0.5)'}`,
                 position: 'relative',
                 transition: 'border-color 0.6s',
               }}>
@@ -206,7 +270,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                   fontSize: 'clamp(7px, 0.65vw, 9px)',
                   fontWeight: 700,
                   letterSpacing: '0.16em',
-                  color: isDeclassified ? '#15803d' : '#b91c1c',
+                  color: isDeclassified ? '#4ade80' : '#F5C400',
                   transition: 'color 0.6s',
                   lineHeight: 1.4,
                 }}>
@@ -216,7 +280,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                   fontSize: 'clamp(9px, 0.85vw, 12px)',
                   fontWeight: 700,
                   letterSpacing: '0.10em',
-                  color: isDeclassified ? '#15803d' : '#b91c1c',
+                  color: isDeclassified ? '#4ade80' : '#F5C400',
                   transition: 'color 0.6s',
                 }}>
                   {isDeclassified ? 'DECLASSIFIED' : 'RESTRICTED'}
@@ -226,7 +290,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                 <div style={{
                   position: 'absolute', top: '12%', right: '5%',
                   fontSize: 'clamp(5px, 0.5vw, 7px)',
-                  color: 'rgba(0,0,0,0.28)',
+                  color: 'rgba(255,255,255,0.28)',
                   letterSpacing: '0.08em',
                   textAlign: 'right',
                   lineHeight: 1.5,
@@ -239,7 +303,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
               <div style={{
                 margin: '3.5% 5% 0 14%',
                 height: '1px',
-                background: 'rgba(0,0,0,0.08)',
+                background: 'rgba(255,255,255,0.08)',
               }} />
 
               {/* FIELD ROWS */}
@@ -263,7 +327,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                       {/* Line number */}
                       <div style={{
                         fontSize: 'clamp(6px, 0.5vw, 8px)',
-                        color: 'rgba(0,0,0,0.18)',
+                        color: 'rgba(255,255,255,0.18)',
                         textAlign: 'right',
                         paddingRight: '8%',
                         alignSelf: 'center',
@@ -283,7 +347,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                         <div style={{
                           fontSize: 'clamp(7px, 0.65vw, 10px)',
                           fontWeight: 600,
-                          color: 'rgba(0,0,0,0.50)',
+                          color: 'rgba(255,255,255,0.60)',
                           letterSpacing: '0.06em',
                           whiteSpace: 'nowrap',
                           minWidth: 'clamp(45px, 4.5vw, 65px)',
@@ -305,10 +369,10 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                             <div style={{
                               width: `${barW}%`,
                               height: '100%',
-                              background: '#1a1a1a',
+                              background: '#F5C400', // Yellow tape
                               borderRadius: '1px',
                               transform: 'translateZ(8px)', // Floats 8px higher than text (16px total from paper!)
-                              boxShadow: '0 2px 5px rgba(0, 0, 0, 0.35)', // Shadow under redaction tape
+                              boxShadow: '0 2px 5px rgba(0, 0, 0, 0.65)', // Shadow under redaction tape
                               transition: 'width 0.1s ease',
                             }} />
                           )}
@@ -320,7 +384,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                               transform: 'translateY(-50%) translateZ(4px)',
                               fontSize: 'clamp(5px, 0.48vw, 7px)',
                               fontWeight: 700,
-                              color: '#b91c1c',
+                              color: '#F5C400',
                               letterSpacing: '0.12em',
                               opacity: Math.min(1, (barProg - 0.65) / 0.35),
                             }}>
@@ -339,7 +403,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                 position: 'absolute',
                 bottom: 0, left: 0, right: 0,
                 padding: '3% 5% 3.5% 14%',
-                borderTop: '1px solid rgba(0,0,0,0.08)',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -347,7 +411,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                 <div style={{
                   fontSize: 'clamp(6px, 0.55vw, 8px)',
                   fontWeight: 600,
-                  color: isDeclassified ? '#15803d' : 'rgba(0,0,0,0.35)',
+                  color: isDeclassified ? '#4ade80' : 'rgba(255,255,255,0.35)',
                   letterSpacing: '0.10em',
                   transition: 'color 0.6s',
                 }}>
@@ -355,7 +419,7 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                 </div>
                 <div style={{
                   fontSize: 'clamp(5px, 0.45vw, 7px)',
-                  color: 'rgba(0,0,0,0.22)',
+                  color: 'rgba(255,255,255,0.22)',
                   letterSpacing: '0.08em',
                 }}>
                   PAGE 1 OF 1
@@ -374,62 +438,40 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
                 fontWeight: 900,
                 color: 'transparent',
                 letterSpacing: '0.08em',
-                border: '3px solid rgba(185,28,28,0.45)',
+                border: '3px solid rgba(74,222,128,0.45)',
                 padding: '2% 5%',
                 opacity: stampOpacity,
                 zIndex: 8,
                 pointerEvents: 'none',
-                WebkitTextStroke: '1.5px rgba(185,28,28,0.45)',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.15)', // Shadow cast onto lower layers
+                WebkitTextStroke: '1.5px rgba(74,222,128,0.45)',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.5)', // Shadow cast onto lower layers
               }}>
                 DECLASSIFIED
               </div>
             )}
 
-            {/* Layer 4: semi-transparent holographic classification overlay */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              // Iridescent holographic sheen
-              background: 'linear-gradient(135deg, rgba(185, 28, 28, 0.08) 0%, rgba(255, 154, 0, 0.05) 20%, rgba(208, 222, 33, 0.04) 40%, rgba(79, 220, 74, 0.04) 60%, rgba(63, 218, 216, 0.05) 80%, rgba(185, 28, 28, 0.08) 100%)',
-              mixBlendMode: 'color-burn',
-              pointerEvents: 'none',
-              zIndex: 10,
-              transform: 'translateZ(28px)', // Floats at the very front like an acetate/plastic security sleeve
-              opacity: holoOpacity,
-              transition: 'opacity 0.6s ease',
-              border: '1px solid rgba(185,28,28,0.15)',
-              boxShadow: 'inset 0 0 24px rgba(255, 255, 255, 0.06)',
-            }} />
-
-            {/* ─── YELLOW SCAN LINE ─── */}
-            {showScan && (
-              <div style={{
-                position: 'absolute',
-                left: 0, right: 0,
-                top: `${scanY}%`,
-                height: '2px',
-                background: 'linear-gradient(to right, transparent 5%, rgba(245,196,0,0.55) 25%, rgba(245,196,0,0.55) 75%, transparent 95%)',
-                boxShadow: '0 0 10px rgba(245,196,0,0.25)',
-                pointerEvents: 'none',
-                zIndex: 6,
-                transform: 'translateZ(18px)', // sits above redaction bars
-              }} />
-            )}
-
-            {/* Yellow accent line at bottom edge */}
-            <div style={{
-              position: 'absolute',
-              bottom: 0, left: 0, right: 0,
-              height: '2px',
-              background: 'linear-gradient(to right, transparent, #F5C400, transparent)',
-              opacity: 0.35,
-              zIndex: 4,
-              transform: 'translateZ(1px)',
-            }} />
-
           </div>
-          {/* ═══════════ END PAPER ═══════════ */}
+          {/* ═══════════ END FRONT PAPER ═══════════ */}
+
+          {/* ═══════════ THE BACK PAPER ═══════════ */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: paperTexture ? `url(${paperTexture})` : '#141414', // Texture applied to back too
+            backgroundSize: '100% 100%',
+            border: '1px solid rgba(255,255,255,0.05)',
+            transform: 'rotateY(180deg)',
+            backfaceVisibility: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow:
+              '-6px 12px 32px rgba(0,0,0,0.5), ' +
+              '-14px 28px 80px rgba(0,0,0,0.4)',
+          }}>
+            <DecryptCiphera trigger={scrollProgress > 0.50} />
+          </div>
+
         </div>
       </div>
     </div>

@@ -1037,35 +1037,49 @@ function PiiTickerStrip() {
     const tickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        let lastScrollY = window.scrollY;
-        let tickerVelocity = 0;
+        const mainEl = document.querySelector('main');
+        const getScroll = () => mainEl ? mainEl.scrollTop : window.scrollY;
+        
+        let lastScrollY = getScroll();
         let tickerOffset = 0;
+        let currentVelocity = -1; // start moving left
         let initialized = false;
         let animationId: number;
+        const BASE_SPEED = 0.8; // Slower base speed
 
         const updateTicker = () => {
-            const currentScrollY = window.scrollY;
+            const currentScrollY = getScroll();
             const delta = currentScrollY - lastScrollY;
-            
-            // Scrolling down = ticker moves left (negative translateX)
-            // Scrolling up = ticker moves right (positive translateX)
-            tickerVelocity -= delta * 0.4;
-            tickerVelocity *= 0.88; // friction/decay
-            tickerOffset += tickerVelocity;
             lastScrollY = currentScrollY;
+
+            // Target velocity based on scroll
+            let targetVelocity = currentVelocity;
+            if (delta > 0) targetVelocity = -BASE_SPEED - (delta * 0.15); // scroll down -> left
+            else if (delta < 0) targetVelocity = BASE_SPEED - (delta * 0.15); // scroll up -> right
+            else {
+                // Return to base speed in the current direction
+                targetVelocity = currentVelocity > 0 ? BASE_SPEED : -BASE_SPEED;
+            }
+
+            // Smooth interpolation for velocity
+            currentVelocity += (targetVelocity - currentVelocity) * 0.05;
+
+            tickerOffset += currentVelocity;
 
             const ticker = document.getElementById('pii-ticker');
             if (ticker && tickerRef.current) {
-                const thirdWidth = tickerRef.current.scrollWidth / 3;
-                if (thirdWidth > 0) {
+                // We use 5 copies, so one chunk is scrollWidth / 5
+                const chunkWidth = tickerRef.current.scrollWidth / 5;
+                if (chunkWidth > 0) {
                     if (!initialized) {
-                        tickerOffset = -thirdWidth;
+                        tickerOffset = -chunkWidth * 2;
                         initialized = true;
                     }
-                    if (tickerOffset <= -thirdWidth * 2) {
-                        tickerOffset += thirdWidth;
-                    } else if (tickerOffset >= 0) {
-                        tickerOffset -= thirdWidth;
+                    // Seamless wrap
+                    if (tickerOffset <= -chunkWidth * 3) {
+                        tickerOffset += chunkWidth;
+                    } else if (tickerOffset >= -chunkWidth) {
+                        tickerOffset -= chunkWidth;
                     }
                 }
                 ticker.style.transform = `translateX(${tickerOffset}px)`;
@@ -1098,7 +1112,7 @@ function PiiTickerStrip() {
                 ref={tickerRef}
                 style={{  whiteSpace: 'nowrap', display: 'inline-block', willChange: 'transform' }}
             >
-                {Array(3).fill(tickerText).map((text, i) => (
+                {Array(5).fill(tickerText).map((text, i) => (
                     <span key={i} style={{ 
                         fontFamily: "'IBM Plex Mono', monospace", 
                         fontSize: '10px', 
@@ -1184,7 +1198,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
     const heroTextOpacity = 1;
 
     return (
-        <div id="hero-scroll-container" style={{ height: '700vh', position: 'relative' }}>
+        <div id="hero-scroll-container" style={{ height: '900vh', position: 'relative' }}>
             <div id="hero-sticky" style={{
                 position: 'sticky',
                 top: 0,
