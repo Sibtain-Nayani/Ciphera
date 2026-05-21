@@ -7,8 +7,20 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Ciphera V3 — Intelligent PII Anonymization",
-    description: "Enterprise-grade document redaction for Indian and global documents.",
+    title: 'CIPHERA — Intelligent PII Redaction',
+    description: 'Client-side document redaction. Aadhaar, PAN, GSTIN detected and removed before anything leaves your machine. Zero retention. Air-gap compatible.',
+    openGraph: {
+        title: 'CIPHERA',
+        description: 'Your data stays yours. Always.',
+        images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'CIPHERA — PII Redaction',
+        description: 'Your data stays yours. Always.',
+        images: ['/og-image.png'],
+    },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

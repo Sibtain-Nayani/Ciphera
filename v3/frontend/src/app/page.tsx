@@ -6,7 +6,35 @@ import { SiteLoader } from '@/components/layout/SiteLoader';
 import dynamic from 'next/dynamic';
 
 
-import HeroDocument from '@/components/HeroDocument';
+const HeroDocument = dynamic(() => import('@/components/HeroDocument'), { ssr: false });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIPE REVEAL ANIMATION (Task 13)
+// ─────────────────────────────────────────────────────────────────────────────
+function WipeReveal({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [inView, setInView] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setInView(true);
+                observer.disconnect();
+            }
+        }, { threshold: 0.2 });
+        if (ref.current) observer.observe(ref.current);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref} style={{
+            clipPath: inView ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
+            transition: `clip-path 0.6s cubic-bezier(0.85, 0, 0.15, 1) ${delay}ms`
+        }}>
+            {children}
+        </div>
+    );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CIPHER CHARS
@@ -1003,148 +1031,83 @@ function MagneticButton({ children, href, style, className }: { children: React.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RETRO DECLASSIFIED PAPERS SCROLL BAND (Effect 11)
+// SCROLL-DIRECTION PII TICKER STRIP
 // ─────────────────────────────────────────────────────────────────────────────
-function DocumentBand() {
-    const list = [
-        "AADHAAR", "PAN", "GSTIN", "VOTER ID", "PASSPORT", "IFSC", 
-        "VEHICLE REG", "BIOMETRIC", "EMAIL", "PHONE", "BANK ACCOUNT", 
-        "MEDICAL ID", "EMPLOYEE ID", "ADDRESS", "CREDIT CARD"
-    ];
-    const marqueeLine = list.join(' · ') + ' · ';
+function PiiTickerStrip() {
+    const tickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let lastScrollY = window.scrollY;
+        let tickerVelocity = 0;
+        let tickerOffset = 0;
+        let initialized = false;
+        let animationId: number;
+
+        const updateTicker = () => {
+            const currentScrollY = window.scrollY;
+            const delta = currentScrollY - lastScrollY;
+            
+            // Scrolling down = ticker moves left (negative translateX)
+            // Scrolling up = ticker moves right (positive translateX)
+            tickerVelocity -= delta * 0.4;
+            tickerVelocity *= 0.88; // friction/decay
+            tickerOffset += tickerVelocity;
+            lastScrollY = currentScrollY;
+
+            const ticker = document.getElementById('pii-ticker');
+            if (ticker && tickerRef.current) {
+                const thirdWidth = tickerRef.current.scrollWidth / 3;
+                if (thirdWidth > 0) {
+                    if (!initialized) {
+                        tickerOffset = -thirdWidth;
+                        initialized = true;
+                    }
+                    if (tickerOffset <= -thirdWidth * 2) {
+                        tickerOffset += thirdWidth;
+                    } else if (tickerOffset >= 0) {
+                        tickerOffset -= thirdWidth;
+                    }
+                }
+                ticker.style.transform = `translateX(${tickerOffset}px)`;
+            }
+
+            animationId = requestAnimationFrame(updateTicker);
+        };
+
+        animationId = requestAnimationFrame(updateTicker);
+        return () => cancelAnimationFrame(animationId);
+    }, []);
+
+    const tickerText = "AADHAAR · PAN · GSTIN · VOTER ID · PASSPORT · IFSC · VEHICLE REG · BIOMETRIC · EMAIL · PHONE · BANK ACCOUNT · MEDICAL ID · EMPLOYEE ID · ADDRESS · CREDIT CARD · ";
+
     return (
         <div style={{
             height: '56px',
             background: 'rgba(245,196,0,0.03)',
             borderTop: '1px solid rgba(245,196,0,0.08)',
             borderBottom: '1px solid rgba(245,196,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
             overflow: 'hidden',
             width: '100%',
             position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            boxSizing: 'border-box',
-            marginBottom: '40px',
-        }}>
-            <style>{`
-                @keyframes marqueeScroll {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
-                }
-            `}</style>
-            <div style={{
-                display: 'flex',
-                width: 'max-content',
-                animation: 'marqueeScroll 32s linear infinite',
-                whiteSpace: 'nowrap',
-            }}>
-                <span style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    fontSize: '10px',
-                    letterSpacing: '0.28em',
-                    color: 'rgba(245,196,0,0.3)',
-                    textTransform: 'uppercase',
-                }}>
-                    {marqueeLine}{marqueeLine}
-                </span>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ScrollTicker() {
-    const trackRef = useRef<HTMLDivElement>(null);
-    const [offset, setOffset] = useState(0);
-    const velocity = useRef(0.6); // Base speed/direction (positive = right, negative = left)
-    const lastScrollY = useRef(0);
-    const frameId = useRef<number>(0);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            const delta = currentScrollY - lastScrollY.current;
-            lastScrollY.current = currentScrollY;
-
-            // Add scroll delta to velocity (scale factor 0.08)
-            // positive delta (scrolling down) -> moves ticker right (positive velocity)
-            // negative delta (scrolling up) -> moves ticker left (negative velocity)
-            velocity.current += delta * 0.08;
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        lastScrollY.current = window.scrollY;
-
-        const update = () => {
-            // Decay velocity towards target base speed
-            const targetBaseSpeed = velocity.current >= 0 ? 0.6 : -0.6;
-            velocity.current = velocity.current * 0.95 + targetBaseSpeed * 0.05;
-
-            // Cap the maximum velocity
-            const maxVel = 8;
-            if (velocity.current > maxVel) velocity.current = maxVel;
-            if (velocity.current < -maxVel) velocity.current = -maxVel;
-
-            setOffset(prev => {
-                let next = prev + velocity.current;
-                
-                if (trackRef.current) {
-                    const thirdWidth = trackRef.current.scrollWidth / 3;
-                    if (next <= -thirdWidth) {
-                        next += thirdWidth;
-                    } else if (next >= 0) {
-                        next -= thirdWidth;
-                    }
-                }
-                return next;
-            });
-
-            frameId.current = requestAnimationFrame(update);
-        };
-
-        frameId.current = requestAnimationFrame(update);
-
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-            cancelAnimationFrame(frameId.current);
-        };
-    }, []);
-
-    const items = ['AADHAAR','PAN','GSTIN','VOTER ID','PASSPORT','IFSC','VEHICLE REG','BIOMETRIC','EMAIL','PHONE'];
-
-    return (
-        <div id="pii-ticker" style={{ 
-            borderBottom: '1px solid rgba(239,239,239,0.07)', 
-            overflow: 'hidden', 
-            padding: 0, 
-            height: '28px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            marginTop: 'calc(-1 * clamp(80px, 10vh, 120px))', 
-            marginBottom: '40px',
-            width: '100%'
+            boxSizing: 'border-box'
         }}>
             <div 
-                ref={trackRef} 
-                style={{ 
-                    transform: `translate3d(${offset}px, 0, 0)`, 
-                    whiteSpace: 'nowrap', 
-                    display: 'inline-block',
-                    willChange: 'transform'
-                }}
+                id="pii-ticker" 
+                ref={tickerRef}
+                style={{  whiteSpace: 'nowrap', display: 'inline-block', willChange: 'transform' }}
             >
-                {Array(3).fill(items).flat().map((item, i) => (
+                {Array(3).fill(tickerText).map((text, i) => (
                     <span key={i} style={{ 
                         fontFamily: "'IBM Plex Mono', monospace", 
-                        fontSize: '12px', 
-                        letterSpacing: '0.18em', 
-                        textTransform: 'uppercase', 
-                        color: 'rgba(245,196,0,0.42)', 
-                        margin: '0 20px',
+                        fontSize: '10px', 
+                        letterSpacing: '0.28em', 
+                        color: 'rgba(245,196,0,0.3)',
+                        textTransform: 'uppercase',
                         display: 'inline-block'
                     }}>
-                        {item} ·
+                        {text}
                     </span>
                 ))}
             </div>
@@ -1228,7 +1191,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
                 height: '100vh',
                 width: '100%',
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: '0.9fr 1.1fr',
                 alignItems: 'center',
                 padding: '0 clamp(36px, 5vw, 80px)',
                 boxSizing: 'border-box',
@@ -1315,6 +1278,38 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ZERO EASTER EGG (Task 10)
+// ─────────────────────────────────────────────────────────────────────────────
+function ZeroEasterEgg() {
+    const [val, setVal] = useState("0");
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        const scheduleNext = () => {
+            const delay = Math.floor(Math.random() * (18000 - 12000 + 1)) + 12000;
+            timeoutId = setTimeout(() => {
+                setVal("847,293");
+                setTimeout(() => setVal("0"), 80);
+                scheduleNext();
+            }, delay);
+        };
+        scheduleNext();
+        return () => clearTimeout(timeoutId);
+    }, []);
+    return (
+        <div style={{
+            position: 'absolute',
+            left: 'clamp(40px, 5vw, 80px)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(180px, 20vw, 360px)',
+            color:'rgba(239,239,239,0.018)',
+            pointerEvents:'none', userSelect:'none', zIndex:0,
+            lineHeight: 1
+        }}>{val}</div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
@@ -1366,40 +1361,53 @@ export default function LandingPage() {
                 {/* Terminal init — types on load */}
                 {pageVisible && showTerminal && <TerminalInit onFinished={handleTerminalFinished} />}
 
+                {/* ── Top ref bar ─────────────────────────────────────────── */}
+                <div style={{
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px',
+                    letterSpacing: '0.18em', color: 'rgba(239,239,239,0.15)',
+                    padding: '6px clamp(36px,5vw,80px)',
+                    borderBottom: '1px solid rgba(239,239,239,0.07)',
+                    textTransform: 'uppercase',
+                    background: '#080808',
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0,
+                    zIndex: 101,
+                    opacity: navScrolled ? 0 : 1,
+                    transition: 'opacity 0.3s ease',
+                    pointerEvents: navScrolled ? 'none' : 'auto'
+                }}>
+                    DOC-REF: CPH-2025-001 · CLIENT-SIDE · ZERO RETENTION · DPDP ACT 2023
+                </div>
+
                 {/* ── Nav (Task 8: blur on scroll) ────────────────────────── */}
                 <nav style={{
-                    position:'fixed', top:0, left:0, right:0, zIndex:100,
-                    background: navScrolled ? 'rgba(8,8,8,0.95)' : '#080808',
+                    position:'fixed', top: navScrolled ? 0 : '26px', left:0, right:0, zIndex:100,
+                    background: navScrolled ? 'rgba(8,8,8,0.95)' : 'transparent',
                     backdropFilter: navScrolled ? 'blur(12px)' : 'none',
                     borderBottom: navScrolled ? '1px solid rgba(239,239,239,0.07)' : '1px solid transparent',
-                    transition:'background 0.3s, border-color 0.3s, backdrop-filter 0.3s',
+                    transition:'top 0.3s, background 0.3s, border-color 0.3s, backdrop-filter 0.3s',
                 }}>
-                    {/* ── Top ref bar ─────────────────────────────────────────── */}
-                    <div style={{ borderBottom:'1px solid rgba(239,239,239,0.07)', marginTop: navScrolled ? 0 : '10px', transition: 'margin-top 0.3s' }}>
-                        <div className="content-wrap" style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', padding:'6px clamp(24px, 4vw, 64px)' }}>
-                            DOC-REF: CPH-2025-001 · CLIENT-SIDE · ZERO RETENTION · DPDP ACT 2023
-                        </div>
-                    </div>
-
-                    <div className="content-wrap" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px clamp(24px, 4vw, 64px)' }}>
+                    <div className="content-wrap" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px clamp(36px,5vw,80px)' }}>
                         <Link href="/" style={{ textDecoration:'none', display:'flex', alignItems:'baseline', gap:'8px' }}>
                             <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'20px', letterSpacing:'0.12em', textTransform:'uppercase', color:'#EFEFEF' }}>Ciphera</span>
-                            <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', color:'rgba(239,239,239,0.42)' }}>v3</span>
                         </Link>
                         <div style={{ display:'flex', alignItems:'center', gap:'32px' }}>
                             {['Features','Pipeline','API','Compliance'].map(l=>(
                                 <a key={l} href={`#${l.toLowerCase()}`}
-                                    style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', textDecoration:'none', cursor:'pointer', transition:'color 0.15s' }}
-                                    onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
-                                    onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.4)')}
-                                >{l}</a>
+                                    style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'9px', letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(239,239,239,0.32)', textDecoration:'none', cursor:'pointer', position: 'relative' }}
+                                    onMouseEnter={e=>{e.currentTarget.style.color='#EFEFEF'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='100%';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.color='rgba(239,239,239,0.32)'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='0%';}}
+                                >
+                                    {l}
+                                    <span className="nav-underline" style={{ position:'absolute', bottom:'-4px', left:0, width:'0%', height:'1px', background:'#F5C400', transition:'width 0.2s ease-out' }} />
+                                </a>
                             ))}
                         </div>
-                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'10px 20px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
+                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'9px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'11px 26px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
                             onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
                             onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
                         >
-                            Open App →
+                            Start Redacting →
                         </Link>
                     </div>
                 </nav>
@@ -1419,7 +1427,6 @@ export default function LandingPage() {
                     position: 'relative',
                     boxSizing: 'border-box',
                 }}>
-                    <ScrollTicker />
 
                     {/* Stats grid */}
                     <div className="content-wrap">
@@ -1460,8 +1467,8 @@ export default function LandingPage() {
                           <div style={{color:'#EFEFEF'}}>NOTHING LEAVES.</div>
                           <div>
                             <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap'}}
-                              onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
-                              onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                              onMouseEnter={e=>{(e.target as any).style.background='#F5C400';(e.target as any).style.color='#080808'}}
+                              onMouseLeave={e=>{(e.target as any).style.background='#EFEFEF';(e.target as any).style.color='transparent'}}>
                               NOTHING ESCAPES.
                             </span>
                           </div>
@@ -1546,14 +1553,13 @@ export default function LandingPage() {
                         <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
                           <div style={{color:'#EFEFEF'}}>REDACT FROM</div>
                           <div>
-                            <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap',width:'max-content'}}
-                              onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
-                              onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                            <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap'}}
+                              onMouseEnter={e=>{(e.target as any).style.background='#F5C400';(e.target as any).style.color='#080808'}}
+                              onMouseLeave={e=>{(e.target as any).style.background='#EFEFEF';(e.target as any).style.color='transparent'}}>
                               ANYWHERE.
                             </span>
                           </div>
                           <div style={{fontFamily:'IBM Plex Mono',fontSize:'8px',letterSpacing:'0.16em',color:'rgba(239,239,239,0.18)',marginTop:'6px'}}>HOVER TO REVEAL</div>
-                          <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>ANY LANGUAGE. ANY FRAMEWORK. PER-KEY RATE LIMITING. FULL AUDIT TRAIL.</p>
                         </div>
                       </div>
                     </div>
@@ -1588,7 +1594,7 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                <DocumentBand />
+                <PiiTickerStrip />
 
                 {/* ── Compliance (Task 5: nowrap labels) ──────────────────── */}
                 <section id="compliance" style={{
@@ -1610,8 +1616,8 @@ export default function LandingPage() {
                               <div style={{color:'#EFEFEF'}}>EVERY REGULATION.</div>
                               <div>
                                 <span style={{background:'#EFEFEF',color:'transparent',padding:'0 6px',display:'inline-block',cursor:'pointer',transition:'background 0.4s ease, color 0.4s ease',whiteSpace:'nowrap'}}
-                                  onMouseEnter={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#F5C400';target.style.color='#080808'}}
-                                  onMouseLeave={e=>{const target=e.currentTarget as HTMLElement; target.style.background='#EFEFEF';target.style.color='transparent'}}>
+                                  onMouseEnter={e=>{(e.target as any).style.background='#F5C400';(e.target as any).style.color='#080808'}}
+                                  onMouseLeave={e=>{(e.target as any).style.background='#EFEFEF';(e.target as any).style.color='transparent'}}>
                                   FULLY COVERED.
                                 </span>
                               </div>
@@ -1657,16 +1663,7 @@ export default function LandingPage() {
                     }}>CLASSIFIED</div>
 
                     {/* Giant "0" Watermark - Effect 12 */}
-                    <div style={{
-                        position: 'absolute',
-                        left: 'clamp(40px, 5vw, 80px)',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(180px, 20vw, 360px)',
-                        color:'rgba(239,239,239,0.018)',
-                        pointerEvents:'none', userSelect:'none', zIndex:0,
-                        lineHeight: 1
-                    }}>0</div>
+                    <ZeroEasterEgg />
 
                     <div className="content-wrap" style={{ position:'relative', zIndex:1, width:'100%' }}>
                         {/* Headline Block */}
@@ -1690,24 +1687,43 @@ export default function LandingPage() {
                 </section>
 
                 {/* ── Footer (Task 8: terminal cursor) ────────────────────── */}
-                <footer style={{ borderTop:'1px solid rgba(239,239,239,0.07)' }}>
-                    <div className="content-wrap" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px clamp(24px, 4vw, 64px)', flexWrap:'wrap', gap:'12px' }}>
-                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
-                            CIPHERA · CLIENT-SIDE REDACTION ENGINE · V3
+                <footer style={{ borderTop: '1px solid rgba(239,239,239,0.07)' }}>
+                  <div className="content-wrap" style={{ padding: '40px clamp(36px,5vw,80px) 20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(239,239,239,0.07)', paddingBottom: '40px', marginBottom: '20px', flexWrap: 'wrap', gap: '40px' }}>
+                      
+                      {/* Col 1 */}
+                      <div>
+                        <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '24px', color: '#EFEFEF' }}>CIPHERA V3</div>
+                        <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)' }}>INTELLIGENT REDACTION</div>
+                      </div>
+
+                      {/* Col 2 */}
+                      <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: '#EFEFEF' }}>PLATFORM</div>
+                          {[['Dashboard','/dashboard'],['API Keys','/settings'],['Settings','/settings']].map(([l,href]) => (
+                            <Link key={l} href={href} style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)', textDecoration: 'none' }}>{l}</Link>
+                          ))}
                         </div>
-                        <div style={{ display:'flex', gap:'24px' }}>
-                            {[['Dashboard','/dashboard'],['Redact','/redact'],['Batch','/batch'],['Settings','/settings']].map(([label,href])=>(
-                                <Link key={href} href={href} style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)', textDecoration:'none', transition:'color 0.15s' }}
-                                    onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
-                                    onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.4)')}
-                                >{label}</Link>
-                            ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: '#EFEFEF' }}>LEGAL</div>
+                          {['Privacy Policy','Terms of Service','DPDP Compliance'].map(l => (
+                            <a key={l} href="#" style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)', textDecoration: 'none' }}>{l}</a>
+                          ))}
                         </div>
-                        <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(239,239,239,0.42)' }}>
-                            {'>'} SESSION TERMINATED · 0 BYTES RETAINED · AUDIT LOG CLOSED<span style={{ color:'#F5C400', animation:'blink 1s step-end infinite', marginLeft:'2px' }}>|</span>
-                            <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
-                        </div>
+                      </div>
                     </div>
+
+                    {/* Bottom row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.18)' }}>
+                        © 2026 CIPHERA SYSTEMS.
+                      </div>
+                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.42)' }}>
+                        {'>'} SESSION TERMINATED · 0 BYTES RETAINED <span style={{ color: '#F5C400', animation: 'blink 1s step-end infinite' }}>|</span>
+                      </div>
+                    </div>
+                  </div>
                 </footer>
                 </div>
             </div>

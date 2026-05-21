@@ -4,6 +4,58 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { useEffect, useRef, useState } from "react";
 
+function KeyboardEasterEgg() {
+    const [active, setActive] = useState(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+                setActive(true);
+                setTimeout(() => setActive(false), 1200);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    if (!active) return null;
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 999999,
+            background: '#B91C1C',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            mixBlendMode: 'difference',
+            animation: 'redactOverlay 1.2s ease-out forwards',
+        }}>
+            <style>{`
+                @keyframes redactOverlay {
+                    0% { opacity: 0; }
+                    5% { opacity: 1; }
+                    80% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+            `}</style>
+            <div style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontWeight: 900,
+                fontSize: '120px',
+                color: '#080808',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+            }}>
+                REDACTING...
+            </div>
+        </div>
+    );
+}
+
 function GlobalCursor() {
     const cursorRef = useRef<HTMLDivElement>(null);
     const [cursorState, setCursorState] = useState<'default' | 'text' | 'button'>('default');
@@ -197,6 +249,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return (
         <>
             <GlobalCursor />
+            <KeyboardEasterEgg />
 
             {/* Document Progress Indicator */}
             {isLanding && (

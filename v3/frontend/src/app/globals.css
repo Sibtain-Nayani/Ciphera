@@ -51,6 +51,15 @@
 }
 
 :root {
+  --bg: #080808;           /* Page background — only this */
+  --white: #EFEFEF;        /* Primary text */
+  --yellow: #F5C400;       /* Accent — CTAs, one headline word, status dots, hover reveals */
+  --red: #B91C1C;          /* Eyebrow lines, alert states, CLASSIFICATION badges */
+  --green: #4ade80;        /* COMPLIANT status only */
+  --dim: rgba(239,239,239,0.32);    /* Body/descriptive text */
+  --faint: rgba(239,239,239,0.18);  /* Labels, hints */
+  --ghost: rgba(239,239,239,0.07);  /* Borders */
+  --yellow-tint: rgba(245,196,0,0.15); /* Hover backgrounds */
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -151,7 +160,7 @@
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 clamp(24px, 4vw, 64px);
+  padding: 0 clamp(36px, 5vw, 80px);
   box-sizing: border-box;
 }
 
@@ -196,4 +205,30 @@
 
 .animate-nav-glow {
   animation: navGlow 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 16. MOBILE RESPONSIVE RULES */
+@media (max-width: 1024px) {
+  .content-wrap { padding: 0 40px !important; }
+}
+
+@media (max-width: 768px) {
+  .content-wrap { padding: 0 24px !important; }
+  
+  /* Features grid becomes 1 column */
+  .features-grid { grid-template-columns: 1fr !important; }
+  
+  /* Hide 3D document on mobile, fallback CSS document if any */
+  .hero-document-container { display: none !important; }
+  .hero-document-mobile { display: block !important; }
+}
+
+/* 17. PERFORMANCE RULES */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
