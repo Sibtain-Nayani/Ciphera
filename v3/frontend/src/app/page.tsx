@@ -1092,14 +1092,34 @@ function PiiTickerStrip() {
         return () => cancelAnimationFrame(animationId);
     }, []);
 
-    const tickerText = "AADHAAR · PAN · GSTIN · VOTER ID · PASSPORT · IFSC · VEHICLE REG · BIOMETRIC · EMAIL · PHONE · BANK ACCOUNT · MEDICAL ID · EMPLOYEE ID · ADDRESS · CREDIT CARD · ";
+    const tickerItems = ['Aadhaar', 'PAN', 'GSTIN', 'Voter ID', 'Passport', 'IFSC', 'Vehicle Reg', 'Biometric', 'Email', 'Phone', 'Bank Account', 'Medical ID', 'Employee ID', 'Address', 'Credit Card'];
+    const tickerChunk = tickerItems.map((item, idx) => (
+        <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '0' }}>
+            <span style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: '13px',
+                fontWeight: 500,
+                letterSpacing: '0.08em',
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+            }}>{item}</span>
+            <span style={{
+                display: 'inline-block',
+                width: '3px', height: '3px',
+                borderRadius: '50%',
+                background: 'rgba(245,196,0,0.3)',
+                margin: '0 18px',
+                flexShrink: 0,
+            }} />
+        </span>
+    ));
 
     return (
         <div style={{
             height: '56px',
-            background: 'rgba(245,196,0,0.03)',
-            borderTop: '1px solid rgba(245,196,0,0.08)',
-            borderBottom: '1px solid rgba(245,196,0,0.08)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.005) 100%)',
+            borderTop: '1px solid rgba(255,255,255,0.04)',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
             display: 'flex',
             alignItems: 'center',
             overflow: 'hidden',
@@ -1107,21 +1127,21 @@ function PiiTickerStrip() {
             position: 'relative',
             boxSizing: 'border-box'
         }}>
+            {/* Subtle shimmer line */}
+            <div style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, height: '1px',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(245,196,0,0.1) 50%, transparent 100%)',
+                pointerEvents: 'none',
+            }} />
             <div 
                 id="pii-ticker" 
                 ref={tickerRef}
-                style={{  whiteSpace: 'nowrap', display: 'inline-block', willChange: 'transform' }}
+                style={{ whiteSpace: 'nowrap', display: 'inline-block', willChange: 'transform' }}
             >
-                {Array(5).fill(tickerText).map((text, i) => (
-                    <span key={i} style={{ 
-                        fontFamily: "'IBM Plex Mono', monospace", 
-                        fontSize: '10px', 
-                        letterSpacing: '0.28em', 
-                        color: 'rgba(245,196,0,0.3)',
-                        textTransform: 'uppercase',
-                        display: 'inline-block'
-                    }}>
-                        {text}
+                {Array(5).fill(null).map((_, i) => (
+                    <span key={i} style={{ display: 'inline' }}>
+                        {tickerChunk}
                     </span>
                 ))}
             </div>
@@ -1227,7 +1247,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
                     {/* Eyebrow */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                         <div style={{ width: '18px', height: '2px', background: 'rgba(185,28,28,0.8)', flexShrink: 0 }} />
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)' }}>
+                        <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '13px', letterSpacing: '0.04em', color: 'rgba(239,239,239,0.6)' }}>
                             DPDP Act 2023 · GDPR · Built for Indian enterprises
                         </span>
                     </div>
@@ -1248,10 +1268,10 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
 
                     {/* CTAs */}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '32px' }}>
-                        <MagneticButton href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', fontWeight: 700, borderRadius: 0 }}>
+                        <MagneticButton href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.02em', textTransform: 'none', padding: '11px 24px', textDecoration: 'none', fontWeight: 600, borderRadius: 0 }}>
                             Start Redacting →
                         </MagneticButton>
-                        <MagneticButton href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.42)', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '11px 24px', textDecoration: 'none', borderRadius: 0 }}>
+                        <MagneticButton href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.8)', fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.02em', textTransform: 'none', padding: '11px 24px', textDecoration: 'none', fontWeight: 500, borderRadius: 0 }}>
                             Batch Processing
                         </MagneticButton>
                     </div>
@@ -1362,7 +1382,7 @@ export default function LandingPage() {
                 />
             )}
 
-            <div style={{ minHeight:'100vh', background:'#080808', color:'#EFEFEF', fontFamily:'Barlow, sans-serif', opacity:pageVisible?1:0, transition:'opacity 0.3s ease', cursor:'none' }}>
+            <div style={{ minHeight:'100vh', background:'transparent', color:'#EFEFEF', fontFamily:'Barlow, sans-serif', opacity:pageVisible?1:0, transition:'opacity 0.3s ease', cursor:'none' }}>
                 {/* SVG Noise Texture Overlay (Effect 2) */}
                 <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999, opacity: 0.025 }}>
                     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -1408,18 +1428,18 @@ export default function LandingPage() {
                         <div style={{ display:'flex', alignItems:'center', gap:'32px' }}>
                             {['Features','Pipeline','API','Compliance'].map(l=>(
                                 <a key={l} href={`#${l.toLowerCase()}`}
-                                    style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:'9px', letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(239,239,239,0.32)', textDecoration:'none', cursor:'pointer', position: 'relative' }}
+                                    style={{ fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', color:'rgba(239,239,239,0.8)', textDecoration:'none', cursor:'pointer', position: 'relative', fontWeight: 500 }}
                                     onMouseEnter={e=>{e.currentTarget.style.color='#EFEFEF'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='100%';}}
-                                    onMouseLeave={e=>{e.currentTarget.style.color='rgba(239,239,239,0.32)'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='0%';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.color='rgba(239,239,239,0.8)'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='0%';}}
                                 >
                                     {l}
                                     <span className="nav-underline" style={{ position:'absolute', bottom:'-4px', left:0, width:'0%', height:'1px', background:'#F5C400', transition:'width 0.2s ease-out' }} />
                                 </a>
                             ))}
                         </div>
-                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'9px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'11px 26px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
-                            onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
-                            onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
+                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', padding:'10px 24px', textDecoration:'none', fontWeight:600, borderRadius: '8px', transition:'all 0.2s' }}
+                            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+                            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}
                         >
                             Start Redacting →
                         </Link>
@@ -1691,11 +1711,11 @@ export default function LandingPage() {
                         <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', maxWidth:'400px', margin:'0 0 20px 0' }}>
                             No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.
                         </p>
-                        <Link href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#F5C400', color:'#080808', fontFamily:"'IBM Plex Mono', monospace", fontSize:'12px', letterSpacing:'0.18em', textTransform:'uppercase', padding:'14px 28px', textDecoration:'none', fontWeight:700, borderRadius:0, transition:'letter-spacing 0.2s' }}
-                            onMouseEnter={e=>(e.currentTarget.style.letterSpacing='0.24em')}
-                            onMouseLeave={e=>(e.currentTarget.style.letterSpacing='0.18em')}
+                        <Link href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', padding:'12px 28px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+                            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}
                         >
-                            OPEN MISSION CONTROL →
+                            Open Mission Control →
                         </Link>
                     </div>
                 </section>

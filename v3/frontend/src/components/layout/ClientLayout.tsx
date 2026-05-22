@@ -26,32 +26,61 @@ function KeyboardEasterEgg() {
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
             zIndex: 999999,
-            background: '#B91C1C',
+            background: 'rgba(10, 10, 12, 0.95)',
+            backdropFilter: 'blur(16px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             pointerEvents: 'none',
-            mixBlendMode: 'difference',
-            animation: 'redactOverlay 1.2s ease-out forwards',
+            animation: 'redactOverlay 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}>
             <style>{`
                 @keyframes redactOverlay {
-                    0% { opacity: 0; }
-                    5% { opacity: 1; }
-                    80% { opacity: 1; }
-                    100% { opacity: 0; }
+                    0% { opacity: 0; transform: scale(1.05); }
+                    10% { opacity: 1; transform: scale(1); }
+                    80% { opacity: 1; transform: scale(1); }
+                    100% { opacity: 0; transform: scale(1.02); }
                 }
             `}</style>
+            
+            {/* Scanning line effect */}
+            <div style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, height: '4px',
+                background: '#4ade80',
+                boxShadow: '0 0 20px 4px rgba(74, 222, 128, 0.5)',
+                animation: 'scanDown 1.2s linear forwards'
+            }} />
+            <style>{`
+                @keyframes scanDown {
+                    0% { top: 0%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                }
+            `}</style>
+
             <div style={{
                 fontFamily: "'Barlow Condensed', sans-serif",
                 fontWeight: 900,
-                fontSize: '120px',
-                color: '#080808',
+                fontSize: 'clamp(60px, 8vw, 120px)',
+                color: '#fff',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.15em',
+                textShadow: '0 0 40px rgba(255, 255, 255, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '24px'
             }}>
-                REDACTING...
+                <div style={{ width: '20px', height: '20px', background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 16px #4ade80', animation: 'pulse 0.5s infinite alternate' }} />
+                REDACTING
             </div>
+            <style>{`
+                @keyframes pulse {
+                    0% { opacity: 0.5; transform: scale(0.8); }
+                    100% { opacity: 1; transform: scale(1.2); }
+                }
+            `}</style>
         </div>
     );
 }
