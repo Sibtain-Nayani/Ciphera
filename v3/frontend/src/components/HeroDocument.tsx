@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 // ── Sample document lines for the live redaction demo ──
 const DOC_LINES = [
@@ -12,82 +12,277 @@ const DOC_LINES = [
   { text: 'Address: ', pii: '14 MG Road, Pune', replacement: '[ADDRESS_1]', type: 'ADDRESS' },
 ]
 
-function RedactingLine({ line, delay, isActive }: {
+function getLinePhase(index: number, progress: number): 'idle' | 'scanning' | 'found' | 'redacted' {
+  // Starts at 0.16, ends at 0.90. Range is 0.74.
+  // Each index gets 0.105 progress range.
+  const start = 0.16 + index * 0.105;
+  const scanDuration = 0.035;
+  const foundDuration = 0.035;
+  
+  if (progress < start) return 'idle';
+  if (progress < start + scanDuration) return 'scanning';
+  if (progress < start + scanDuration + foundDuration) return 'found';
+  return 'redacted';
+}
+
+function RedactingRow({ line, phase }: {
   line: typeof DOC_LINES[0],
-  delay: number,
-  isActive: boolean
+  phase: 'idle' | 'scanning' | 'found' | 'redacted'
 }) {
-  const [phase, setPhase] = useState<'idle' | 'scanning' | 'found' | 'redacted'>('idle')
+  const isScanning = phase === 'scanning';
+  const isFound = phase === 'found';
+  const isRedacted = phase === 'redacted';
 
-  useEffect(() => {
-    if (!isActive) { setPhase('idle'); return }
-    const t1 = setTimeout(() => setPhase('scanning'), delay)
-    const t2 = setTimeout(() => setPhase('found'), delay + 600)
-    const t3 = setTimeout(() => setPhase('redacted'), delay + 1200)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [isActive, delay])
+  const textSharpness: React.CSSProperties = {
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    textRendering: 'optimizeLegibility',
+  };
 
-  const piiStyle: React.CSSProperties = {
-    display: 'inline-block',
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    padding: '0 3px',
-    borderRadius: '2px',
-    position: 'relative',
-    ...(phase === 'scanning' ? {
-      background: 'rgba(74, 222, 128, 0.08)',
-      color: 'rgba(255,255,255,0.7)',
-      boxShadow: '0 0 8px rgba(74, 222, 128, 0.15)',
-    } : phase === 'found' ? {
-      background: 'rgba(245, 196, 0, 0.15)',
-      color: '#F5C400',
-      boxShadow: '0 0 12px rgba(245, 196, 0, 0.2)',
-    } : phase === 'redacted' ? {
-      background: 'rgba(255,255,255,0.06)',
-      color: 'rgba(255,255,255,0.5)',
-    } : {
-      color: 'rgba(255,255,255,0.7)',
-    })
-  }
-
-  const tagStyle: React.CSSProperties = {
-    fontSize: '7px',
+  const labelStyle: React.CSSProperties = {
     fontFamily: "'IBM Plex Mono', monospace",
-    letterSpacing: '0.08em',
-    color: phase === 'found' ? '#F5C400' : 'rgba(255,255,255,0.25)',
-    marginLeft: '6px',
-    opacity: phase === 'found' || phase === 'redacted' ? 1 : 0,
-    transition: 'opacity 0.3s ease',
-    verticalAlign: 'middle',
+    fontSize: 'clamp(10px, 0.75vw, 12px)',
+    fontWeight: 600,
+    color: 'rgba(255, 255, 255, 0.45)',
+    width: '120px',
+    flexShrink: 0,
+    letterSpacing: '0.05em',
+    ...textSharpness,
+  };
+
+  const valueStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    fontSize: 'clamp(11px, 0.8vw, 13px)',
+    fontFamily: isRedacted ? "'IBM Plex Mono', monospace" : "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontWeight: 500,
+    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    position: 'relative',
+    ...textSharpness,
+    ...(isScanning ? {
+      background: 'rgba(52, 211, 153, 0.08)',
+      color: '#34d399',
+      border: '1px solid rgba(52, 211, 153, 0.3)',
+      boxShadow: '0 0 12px rgba(52, 211, 153, 0.1)',
+    } : isFound ? {
+      background: 'rgba(245, 158, 11, 0.1)',
+      color: '#f59e0b',
+      border: '1px solid rgba(245, 158, 11, 0.4)',
+      boxShadow: '0 0 12px rgba(245, 158, 11, 0.15)',
+    } : isRedacted ? {
+      background: 'rgba(255, 255, 255, 0.04)',
+      color: '#34d399',
+      border: '1px dashed rgba(52, 211, 153, 0.25)',
+      padding: '4px 12px',
+    } : {
+      color: 'rgba(255, 255, 255, 0.9)',
+      border: '1px solid transparent',
+    })
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      padding: 'clamp(10px, 0.8vw, 15px) 16px',
+      borderBottom: '1px solid rgba(255,255,255,0.04)',
+      position: 'relative',
+    }}>
+      <span style={labelStyle}>{line.text}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+        <span style={valueStyle}>
+          {isRedacted ? `✓ DECLASSIFIED` : line.pii}
+        </span>
+        {isFound && (
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '9px',
+            fontWeight: 600,
+            color: '#f59e0b',
+            background: 'rgba(245, 158, 11, 0.15)',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            ...textSharpness,
+          }}>
+            ⚠️ {line.type} MATCH
+          </span>
+        )}
+        {isRedacted && (
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '9px',
+            fontWeight: 600,
+            color: '#34d399',
+            background: 'rgba(52, 211, 153, 0.1)',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            border: '1px solid rgba(52, 211, 153, 0.2)',
+            ...textSharpness,
+          }}>
+            [SECURED]
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EngineLogsConsole({ progress }: { progress: number }) {
+  const textSharpness: React.CSSProperties = {
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    textRendering: 'optimizeLegibility',
+  };
+
+  let activePhaseText = 'AWAITING DECLASSIFICATION';
+  let activePhaseColor = 'rgba(255,255,255,0.4)';
+  
+  if (progress >= 0.85) {
+    activePhaseText = 'EXPORT INTEGRITY SECURED';
+    activePhaseColor = '#34d399';
+  } else if (progress >= 0.70) {
+    activePhaseText = 'SYNTHETIC DE-IDENTIFICATION';
+    activePhaseColor = '#60a5fa';
+  } else if (progress >= 0.45) {
+    activePhaseText = 'DEEP SCANS & ENSEMBLE VOTING';
+    activePhaseColor = '#f59e0b';
+  } else if (progress >= 0.16) {
+    activePhaseText = 'PII SEGMENTATION ACTIVE';
+    activePhaseColor = '#34d399';
   }
 
   return (
     <div style={{
-      fontFamily: "'Barlow Condensed', sans-serif",
-      fontSize: 'clamp(9px, 0.9vw, 13px)',
-      lineHeight: 2.0,
-      color: 'rgba(255,255,255,0.35)',
       display: 'flex',
-      alignItems: 'center',
+      flexDirection: 'column',
+      height: '100%',
+      borderRight: '1px solid rgba(255,255,255,0.06)',
+      paddingRight: '16px',
+      gap: '12px',
+      overflow: 'hidden',
     }}>
-      <span style={{ color: 'rgba(255,255,255,0.2)', width: '60px', flexShrink: 0, fontSize: '0.85em' }}>{line.text}</span>
-      <span style={piiStyle}>
-        {phase === 'redacted' ? line.replacement : line.pii}
-      </span>
-      <span style={tagStyle}>
-        {phase === 'found' ? `⚠ ${line.type}` : phase === 'redacted' ? `✓ ${line.type}` : ''}
-      </span>
+      <div>
+        <div style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: '9px',
+          fontWeight: 700,
+          color: 'rgba(255, 255, 255, 0.3)',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          marginBottom: '4px',
+          ...textSharpness,
+        }}>
+          // AI ENGINE DECLASSIFICATION CORE
+        </div>
+        <div style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: '11px',
+          fontWeight: 600,
+          color: activePhaseColor,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          transition: 'color 0.3s ease',
+          ...textSharpness,
+        }}>
+          ● {activePhaseText}
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '6px',
+        padding: '8px',
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.04)',
+        borderRadius: '6px',
+      }}>
+        {[
+          { name: 'spaCy NER', active: progress >= 0.16 },
+          { name: 'Presidio Core', active: progress >= 0.16 },
+          { name: 'Regex Checksum', active: progress >= 0.16 },
+          { name: 'Local Sandbox', active: true, locked: true },
+        ].map((det, index) => (
+          <div key={index} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '9px',
+            color: det.active ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)',
+            ...textSharpness,
+          }}>
+            <div style={{
+              width: '4px', height: '4px', borderRadius: '50%',
+              background: det.locked ? '#60a5fa' : det.active ? '#34d399' : 'rgba(255,255,255,0.2)',
+              boxShadow: det.active ? `0 0 6px ${det.locked ? '#60a5fa' : '#34d399'}` : 'none',
+              transition: 'all 0.3s ease',
+            }} />
+            <span>{det.name}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{
+        flex: 1,
+        background: 'rgba(0, 0, 0, 0.4)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        borderRadius: '6px',
+        padding: '10px',
+        fontFamily: "'IBM Plex Mono', monospace",
+        fontSize: 'clamp(9px, 0.7vw, 11px)',
+        lineHeight: 1.6,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}>
+        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px', marginBottom: '4px' }}>
+          TERMINAL CORE SHIELD v3.0
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {DOC_LINES.map((line, i) => {
+            const phase = getLinePhase(i, progress);
+            let logText = ``;
+            let logColor = 'rgba(255,255,255,0.15)';
+
+            if (phase === 'idle') {
+              logText = `[WAIT] ${line.type} scanner queued...`;
+            } else if (phase === 'scanning') {
+              logText = `[SCAN] Checking token: ${line.type}...`;
+              logColor = 'rgba(255, 255, 255, 0.7)';
+            } else if (phase === 'found') {
+              logText = `[WARN] Match detected for ${line.type}!`;
+              logColor = '#f59e0b';
+            } else if (phase === 'redacted') {
+              logText = `[OK] ${line.type} secure redaction applied`;
+              logColor = '#34d399';
+            }
+
+            return (
+              <div key={i} style={{
+                color: logColor,
+                transition: 'color 0.3s ease',
+                ...textSharpness,
+              }}>
+                {logText}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 
 export default function HeroDocument({ scrollProgress }: { scrollProgress: number }) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const rafRef = useRef(0)
   const posRef = useRef({ x: 0, y: 0 })
-  const [redactCycle, setRedactCycle] = useState(0)
-  const [isRedacting, setIsRedacting] = useState(false)
 
-  // Smooth mouse tracking with spring-like interpolation
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       posRef.current = {
@@ -110,30 +305,46 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
     }
   }, [])
 
-  // Cycle the redaction demo every 6 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsRedacting(false)
-      setTimeout(() => {
-        setRedactCycle(c => c + 1)
-        setIsRedacting(true)
-      }, 800)
-    }, 7000)
-    // Kick off immediately
-    const init = setTimeout(() => setIsRedacting(true), 1500)
-    return () => { clearInterval(interval); clearTimeout(init) }
-  }, [])
+  // 1. Blueprint wireframe bezel opacity based on initial scrolls
+  let wireframeOpacity = 0;
+  if (scrollProgress < 0.04) {
+    wireframeOpacity = scrollProgress / 0.04;
+  } else if (scrollProgress < 0.08) {
+    wireframeOpacity = 1;
+  } else if (scrollProgress < 0.12) {
+    wireframeOpacity = 1 - (scrollProgress - 0.08) / 0.04;
+  }
 
-  // Updated rotation: start at a fixed 15° tilt, no initial scroll‑driven change
-  const startTilt = 15; // degrees, matches premium iPad angle
-  const baseTiltX = startTilt; // start angle, remains constant
-  // Subtle mouse parallax — cinematic feel
-  const finalRotX = baseTiltX + (mousePos.y * -3);
-  const finalRotY = (mousePos.x * 6);
+  // Corner tech blueprint labels opacity
+  const techLabelsOpacity = 1 - Math.min(1, Math.max(0, (scrollProgress - 0.04) / 0.04));
 
-  /* ── Entrance animation ── */
-  const fadeIn = Math.min(1, scrollProgress / 0.06);
-  const scale = 0.92 + (Math.min(1, scrollProgress / 0.15) * 0.08);
+  // 2. Holographic laser reveal logic
+  const revealProgress = Math.min(1, Math.max(0, (scrollProgress - 0.04) / 0.06));
+  const revealPercent = revealProgress * 50; // 0% (fully closed center line) to 50% (fully open)
+
+  // Bezel premium metallic device opacity (bootup fade-in)
+  const premiumBezelOpacity = Math.min(1, Math.max(0, (scrollProgress - 0.06) / 0.06));
+
+  // Bezel visual scale (starts slightly smaller, pops into place smoothly)
+  const scale = 0.95 + Math.min(0.05, (scrollProgress / 0.10) * 0.05);
+  const fadeIn = Math.min(1, scrollProgress / 0.04);
+
+  // 3. Secure boot degaussing ripple animation
+  const rippleActive = scrollProgress >= 0.10 && scrollProgress <= 0.14;
+  const rippleProgress = rippleActive ? (scrollProgress - 0.10) / 0.04 : 0;
+  const rippleScale = 0.5 + rippleProgress * 2.5;
+  const rippleOpacity = 1 - rippleProgress;
+
+  // 4. Scanner laser coordinates mapping for right side declassification preview
+  const activeProgress = Math.min(1, Math.max(0, (scrollProgress - 0.16) / 0.74));
+  const laserTop = 12 + activeProgress * 76;
+  const isScanningActive = scrollProgress >= 0.14 && scrollProgress <= 0.93;
+
+  const textSharpness: React.CSSProperties = {
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    textRendering: 'optimizeLegibility',
+  };
 
   return (
     <div style={{
@@ -142,191 +353,300 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       perspective: '1800px',
     }}>
-      {/* Float wrapper with entrance transition */}
+      {/* Scale & Fade wrapper */}
       <div style={{
         opacity: fadeIn,
         transform: `scale(${scale})`,
-        transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
         transformStyle: 'preserve-3d',
+        position: 'relative',
       }}>
-        {/* 3D rotation wrapper */}
-        <div style={{
-          transform: `rotateX(${finalRotX}deg) rotateY(${finalRotY}deg)`,
-          transformStyle: 'preserve-3d',
-          willChange: 'transform',
-          transition: 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-          width: 'clamp(540px, 50vw, 900px)',
-          aspectRatio: '1.43 / 1',
-          position: 'relative'
-        }}>
-          {/* ═══════════ iPad Device Body ═══════════ */}
+        {/* ────────────────── Holographic Bezel Wireframe ────────────────── */}
+        {wireframeOpacity > 0 && (
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(145deg, #1a1a1c 0%, #0a0a0b 100%)',
             borderRadius: 'clamp(18px, 3vw, 42px)',
-            border: '1.5px solid rgba(255,255,255,0.08)',
-            boxShadow:
-              '0 40px 80px rgba(0,0,0,0.7), ' +
-              '0 20px 40px rgba(0,0,0,0.5), ' +
-              '0 2px 8px rgba(0,0,0,0.3), ' +
-              'inset 0 1px 0 rgba(255,255,255,0.05), ' +
-              'inset 0 0 0 10px #050506',
-            transformStyle: 'preserve-3d',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
+            border: '1px solid #34d399',
+            boxShadow: '0 0 15px rgba(52, 211, 153, 0.4), inset 0 0 15px rgba(52, 211, 153, 0.2)',
+            opacity: wireframeOpacity,
+            pointerEvents: 'none',
+            zIndex: 15,
+            transition: 'opacity 0.1s linear',
           }}>
-            {/* ── Screen Content ── */}
-            <div style={{
-              width: 'calc(100% - 22px)',
-              height: 'calc(100% - 22px)',
-              background: '#000',
-              borderRadius: 'clamp(14px, 2.5vw, 34px)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {/* Premium dark ambient glow — not childish */}
+            {/* Sci-Fi Blueprint Coordinates Ticks */}
+            {techLabelsOpacity > 0 && (
               <div style={{
                 position: 'absolute',
-                inset: '-30%',
-                background: 'radial-gradient(ellipse at 30% 20%, rgba(245,196,0,0.04) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(74,222,128,0.03) 0%, transparent 50%)',
+                width: '100%',
+                height: '100%',
+                opacity: techLabelsOpacity,
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: '8px',
+                fontWeight: 600,
+                color: '#34d399',
+                letterSpacing: '0.05em',
                 pointerEvents: 'none',
-              }} />
-
-              {/* Subtle grid lines for depth */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-                backgroundSize: '40px 40px',
-                pointerEvents: 'none',
-                opacity: 0.5,
-              }} />
-
-              {/* Glossy Reflection overlay — follows mouse */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: `linear-gradient(${110 + mousePos.x * 20}deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) ${35 + mousePos.x * 15}%, rgba(255,255,255,0) 100%)`,
-                pointerEvents: 'none',
-                zIndex: 10,
-              }} />
-
-              {/* ── Ciphera Interface on Screen ── */}
-              <div style={{
-                position: 'absolute',
-                inset: 'clamp(12px, 1.5vw, 24px)',
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: 2,
+                transition: 'opacity 0.1s ease',
               }}>
-                {/* Header Bar */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
-                  paddingBottom: 'clamp(8px, 1vw, 14px)',
-                  marginBottom: 'clamp(10px, 1.2vw, 18px)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '6px', height: '6px', borderRadius: '50%',
-                      background: '#F5C400',
-                      boxShadow: '0 0 6px rgba(245,196,0,0.4)',
-                    }} />
-                    <span style={{
-                      fontFamily: "'Barlow Condensed', sans-serif",
-                      fontWeight: 700,
-                      fontSize: 'clamp(10px, 0.9vw, 14px)',
-                      letterSpacing: '0.12em',
-                      color: 'rgba(255,255,255,0.8)',
-                      textTransform: 'uppercase',
-                    }}>Ciphera</span>
-                    <span style={{
-                      fontFamily: "'IBM Plex Mono', monospace",
-                      fontSize: 'clamp(7px, 0.55vw, 9px)',
-                      color: 'rgba(255,255,255,0.2)',
-                      letterSpacing: '0.1em',
-                    }}>v3.0</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                    <span style={{
-                      fontFamily: "'IBM Plex Mono', monospace",
-                      fontSize: 'clamp(6px, 0.5vw, 8px)',
-                      color: 'rgba(74,222,128,0.6)',
-                      letterSpacing: '0.08em',
-                    }}>● PROCESSING</span>
-                    <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f56', opacity: 0.8 }} />
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffbd2e', opacity: 0.8 }} />
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#27c93f', opacity: 0.8 }} />
-                    </div>
+                <div style={{ position: 'absolute', top: '-25px', left: '10px' }}>
+                  ┌ SYS_INIT // SECURE_LOCK
+                </div>
+                <div style={{ position: 'absolute', top: '-25px', right: '10px' }}>
+                  COORD_X: 45.92 ┐
+                </div>
+                <div style={{ position: 'absolute', bottom: '-25px', left: '10px' }}>
+                  └ LOCAL_CORE: ACT
+                </div>
+                <div style={{ position: 'absolute', bottom: '-25px', right: '10px' }}>
+                  STAGE_1: MAP_SYS ┘
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────── Split Laser revealing lines ────────────────── */}
+        {revealProgress > 0 && revealProgress < 1 && (
+          <>
+            <div style={{
+              position: 'absolute',
+              left: '11px',
+              right: '11px',
+              top: `calc(${50 - revealPercent}% + 11px)`,
+              height: '2.5px',
+              background: 'linear-gradient(90deg, transparent, #34d399 40%, #34d399 60%, transparent)',
+              boxShadow: '0 0 14px #34d399, 0 0 5px #34d399',
+              zIndex: 16,
+              pointerEvents: 'none',
+              transition: 'top 0.1s ease-out',
+            }} />
+            <div style={{
+              position: 'absolute',
+              left: '11px',
+              right: '11px',
+              top: `calc(${50 + revealPercent}% + 11px)`,
+              height: '2.5px',
+              background: 'linear-gradient(90deg, transparent, #34d399 40%, #34d399 60%, transparent)',
+              boxShadow: '0 0 14px #34d399, 0 0 5px #34d399',
+              zIndex: 16,
+              pointerEvents: 'none',
+              transition: 'top 0.1s ease-out',
+            }} />
+          </>
+        )}
+
+        {/* ────────────────── Premium iPad Device Body ────────────────── */}
+        <div style={{
+          width: 'clamp(540px, 50vw, 900px)',
+          aspectRatio: '1.43 / 1',
+          position: 'relative',
+          background: 'linear-gradient(145deg, #1e1f22 0%, #0d0e10 100%)',
+          borderRadius: 'clamp(18px, 3vw, 42px)',
+          border: '1.5px solid rgba(255,255,255,0.08)',
+          boxShadow:
+            '0 40px 80px rgba(0,0,0,0.65), ' +
+            '0 20px 40px rgba(0,0,0,0.45), ' +
+            '0 2px 8px rgba(0,0,0,0.25), ' +
+            'inset 0 1px 0 rgba(255,255,255,0.05), ' +
+            'inset 0 0 0 10px #08090b',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          opacity: premiumBezelOpacity,
+          transition: 'opacity 0.2s linear',
+        }}>
+          {/* Bezel inner mask with laser sweep reveal clipPath */}
+          <div style={{
+            width: 'calc(100% - 22px)',
+            height: 'calc(100% - 22px)',
+            background: '#040506',
+            borderRadius: 'clamp(14px, 2.5vw, 34px)',
+            position: 'relative',
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.03)',
+            clipPath: `polygon(0% ${50 - revealPercent}%, 100% ${50 - revealPercent}%, 100% ${50 + revealPercent}%, 0% ${50 + revealPercent}%)`,
+            transition: 'clip-path 0.1s ease-out',
+          }}>
+            {/* Degaussing electrostatic bootup ripple */}
+            {rippleActive && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(255,255,255,0.08) 40%, transparent 70%)',
+                transform: `scale(${rippleScale})`,
+                opacity: rippleOpacity,
+                pointerEvents: 'none',
+                zIndex: 20,
+              }} />
+            )}
+
+            {/* Premium dark ambient glow — greyish cool silver gradients */}
+            <div style={{
+              position: 'absolute',
+              inset: '-30%',
+              background: 'radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.03) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(148,163,184,0.02) 0%, transparent 50%)',
+              pointerEvents: 'none',
+            }} />
+
+            {/* Subtle grid lines for depth */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)',
+              backgroundSize: '40px 40px',
+              pointerEvents: 'none',
+              opacity: 0.5,
+            }} />
+
+            {/* Glossy Reflection overlay — follows mouse */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(${110 + mousePos.x * 20}deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) ${35 + mousePos.x * 15}%, rgba(255,255,255,0) 100%)`,
+              pointerEvents: 'none',
+              zIndex: 10,
+            }} />
+
+            {/* Ciphera Interface on Screen */}
+            <div style={{
+              position: 'absolute',
+              inset: 'clamp(12px, 1.5vw, 24px)',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 2,
+              height: 'calc(100% - clamp(24px, 3vw, 48px))',
+            }}>
+              {/* Header Bar */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                paddingBottom: 'clamp(8px, 1vw, 14px)',
+                marginBottom: 'clamp(10px, 1.2vw, 18px)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '6px', height: '6px', borderRadius: '50%',
+                    background: '#34d399',
+                    boxShadow: '0 0 6px rgba(52,211,153,0.5)',
+                  }} />
+                  <span style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 'clamp(10px, 0.9vw, 14px)',
+                    letterSpacing: '0.12em',
+                    color: 'rgba(255,255,255,0.85)',
+                    textTransform: 'uppercase',
+                    ...textSharpness,
+                  }}>Ciphera</span>
+                  <span style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 'clamp(7px, 0.55vw, 9px)',
+                    color: 'rgba(255,255,255,0.3)',
+                    letterSpacing: '0.1em',
+                    ...textSharpness,
+                  }}>v3.0</span>
+                </div>
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                  <span style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 'clamp(6px, 0.5vw, 8px)',
+                    color: '#34d399',
+                    letterSpacing: '0.08em',
+                    ...textSharpness,
+                  }}>● PROCESSING CORE</span>
+                  <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f56', opacity: 0.8 }} />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffbd2e', opacity: 0.8 }} />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#27c93f', opacity: 0.8 }} />
                   </div>
                 </div>
+              </div>
 
-                {/* Status Bar */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 'clamp(8px, 1vw, 14px)',
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 'clamp(6px, 0.5vw, 8px)',
-                  color: 'rgba(255,255,255,0.2)',
-                  letterSpacing: '0.08em',
-                }}>
-                  <span>DOC: employee_records.pdf</span>
-                  <span>7 ENTITIES DETECTED</span>
-                </div>
+              {/* Main Grid: Left Side Console Logs & Right Side Document View */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '35% 65%',
+                gap: '16px',
+                flex: 1,
+                overflow: 'hidden',
+              }}>
+                {/* Left Panel: Engine Logs Console */}
+                <EngineLogsConsole progress={scrollProgress} />
 
-                {/* Scanning line */}
+                {/* Right Panel: Secure Document Viewer */}
                 <div style={{
-                  position: 'absolute',
-                  left: 'clamp(12px, 1.5vw, 24px)',
-                  right: 'clamp(12px, 1.5vw, 24px)',
-                  height: '1px',
-                  background: 'linear-gradient(90deg, transparent 0%, #4ade80 50%, transparent 100%)',
-                  boxShadow: '0 0 12px rgba(74, 222, 128, 0.3)',
-                  opacity: isRedacting ? 0.6 : 0,
-                  animation: isRedacting ? 'heroScan 3s ease-in-out infinite' : 'none',
-                  zIndex: 5,
-                  pointerEvents: 'none',
-                }} />
-
-                {/* Live Redaction Document */}
-                <div style={{
-                  flex: 1,
-                  overflow: 'hidden',
+                  background: 'rgba(255,255,255,0.01)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: '1px',
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}>
-                  {DOC_LINES.map((line, i) => (
-                    <RedactingLine
-                      key={`${redactCycle}-${i}`}
-                      line={line}
-                      delay={i * 350}
-                      isActive={isRedacting}
-                    />
-                  ))}
-                </div>
+                  {/* Document Header */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 16px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    background: 'rgba(255,255,255,0.02)',
+                  }}>
+                    <span style={{
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: '9px',
+                      fontWeight: 600,
+                      color: 'rgba(255,255,255,0.4)',
+                      letterSpacing: '0.05em',
+                      ...textSharpness,
+                    }}>
+                      DOC: employee_records.pdf
+                    </span>
+                    <span style={{
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: '9px',
+                      color: 'rgba(255,255,255,0.3)',
+                      ...textSharpness,
+                    }}>
+                      CONFIDENTIAL · CLASSIFIED
+                    </span>
+                  </div>
 
-                {/* Bottom Status */}
-                <div style={{
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  paddingTop: 'clamp(6px, 0.8vw, 12px)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 'clamp(6px, 0.5vw, 8px)',
-                  color: 'rgba(255,255,255,0.15)',
-                  letterSpacing: '0.08em',
-                }}>
-                  <span>LOCAL INFERENCE · 0 BYTES TRANSMITTED</span>
-                  <span style={{ color: 'rgba(74,222,128,0.4)' }}>CONFIDENCE: ≥0.95</span>
+                  {/* Interactive Scan Laser Beam */}
+                  {isScanningActive && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: `${laserTop}%`,
+                      height: '2px',
+                      background: 'linear-gradient(90deg, transparent, #34d399 30%, #34d399 70%, transparent)',
+                      boxShadow: '0 0 10px rgba(52, 211, 153, 0.8), 0 0 4px rgba(52, 211, 153, 0.4)',
+                      transition: 'top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                    }} />
+                  )}
+
+                  {/* Document Rows */}
+                  <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                  }}>
+                    {DOC_LINES.map((line, i) => (
+                      <RedactingRow
+                        key={i}
+                        line={line}
+                        phase={getLinePhase(i, scrollProgress)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -343,31 +663,8 @@ export default function HeroDocument({ scrollProgress }: { scrollProgress: numbe
               boxShadow: 'inset 0 0 2px rgba(0,0,0,0.8), 0 0 1px rgba(255,255,255,0.05)',
             }} />
           </div>
-
-          {/* ── 3D Shadow beneath the device ── */}
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '10%',
-            right: '10%',
-            height: '40px',
-            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%)',
-            filter: 'blur(20px)',
-            transform: 'translateZ(-60px)',
-            pointerEvents: 'none',
-          }} />
         </div>
       </div>
-
-      {/* Keyframes */}
-      <style>{`
-        @keyframes heroScan {
-          0% { top: 15%; opacity: 0; }
-          10% { opacity: 0.6; }
-          90% { opacity: 0.6; }
-          100% { top: 85%; opacity: 0; }
-        }
-      `}</style>
     </div>
   )
 }
