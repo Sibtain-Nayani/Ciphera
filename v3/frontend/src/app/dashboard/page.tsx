@@ -1,11 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-    UploadCloud, CheckCircle2, Clock, ShieldCheck, FileText,
-    Activity, Lock, XCircle, BarChart3, PieChart, FileDown, ChevronDown,
-} from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import { useDocumentStore } from '@/store/documentStore';
 import { useCanvasStore } from '@/store/canvasStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -16,11 +13,11 @@ import { exportAuditPDF, exportAuditCSV } from '@/lib/complianceReport';
 import { PageLoader } from '@/components/layout/PageLoader';
 
 const ENTITY_COLORS: Record<string, string> = {
-    email: '#60A5FA', phone: '#34D399', creditCard: '#F59E0B', ssn: '#F472B6',
-    names: '#3B82F6', dob: '#F87171', date: '#94A3B8', url: '#06B6D4', ip: '#A78BFA',
-    aadhaar: '#F97316', pan: '#EAB308', gst: '#2DD4BF', ifsc: '#38BDF8',
-    voterId: '#EC4899', passport: '#818CF8', vehicleReg: '#FB7185',
-    'Visual Extractor': '#FFA500',
+    email: '#F5C400', phone: '#F5C400', creditCard: '#F5C400', ssn: '#F5C400',
+    names: '#F5C400', dob: '#F5C400', date: '#F5C400', url: '#F5C400', ip: '#F5C400',
+    aadhaar: '#F5C400', pan: '#F5C400', gst: '#F5C400', ifsc: '#F5C400',
+    voterId: '#F5C400', passport: '#F5C400', vehicleReg: '#F5C400',
+    'Visual Extractor': '#F5C400',
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -31,25 +28,52 @@ const ENTITY_LABELS: Record<string, string> = {
     'Visual Extractor': 'Visual',
 };
 
+function useIntersectionObserver(options = {}) {
+    const [isIntersecting, setIsIntersecting] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setIsIntersecting(true);
+                observer.disconnect();
+            }
+        }, options);
+        if (ref.current) observer.observe(ref.current);
+        return () => observer.disconnect();
+    }, [options]);
+
+    return [ref, isIntersecting] as const;
+}
+
 export default function DashboardPage() {
     const [isDragging, setIsDragging] = useState(false);
     const [isMounted,  setIsMounted]  = useState(false);
+    const [statsVisible, setStatsVisible] = useState(false);
+    
+    const [chartRef, chartVisible] = useIntersectionObserver({ threshold: 0.1 });
+    const [breakdownRef, breakdownVisible] = useIntersectionObserver({ threshold: 0.1 });
+    const [uploadRef, uploadVisible] = useIntersectionObserver({ threshold: 0.1 });
+    const [tableRef, tableVisible] = useIntersectionObserver({ threshold: 0.1 });
+
     const router = useRouter();
 
     const { rules, setRawText } = useDocumentStore();
     const { auditLogs, totalDocumentsSecured, totalEntitiesMasked } = useSessionStore();
 
-    useEffect(() => { setIsMounted(true); }, []);
+    useEffect(() => { 
+        setIsMounted(true); 
+        const t = setTimeout(() => setStatsVisible(true), 300);
+        return () => clearTimeout(t);
+    }, []);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
 
-    // ── Real stats from audit logs ────────────────────────────────────────────
     const stats = useMemo(() => {
         if (!isMounted || !auditLogs.length) return {
             topThreat: 'N/A', entityBreakdown: [], dailyVolume: [], successRate: 0,
         };
 
-        // Entity type breakdown
         const typeCounts: Record<string, number> = {};
         auditLogs.forEach(log => {
             log.rulesApplied.forEach(r => {
@@ -59,11 +83,10 @@ export default function DashboardPage() {
         const entityBreakdown = Object.entries(typeCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 8)
-            .map(([type, count]) => ({ type, count, color: ENTITY_COLORS[type] || '#6B7280', label: ENTITY_LABELS[type] || type }));
+            .map(([type, count]) => ({ type, count, color: '#F5C400', label: ENTITY_LABELS[type] || type }));
 
         const topThreat = entityBreakdown[0]?.label ?? 'N/A';
 
-        // Daily volume — last 7 days from audit log dates
         const dayMap: Record<string, number> = {};
         const now = new Date();
         for (let i = 6; i >= 0; i--) {
@@ -116,266 +139,287 @@ export default function DashboardPage() {
     const entitiesMasked = isMounted ? totalEntitiesMasked : 0;
     const recentLogs     = isMounted ? auditLogs : [];
 
-    const textSharpness: React.CSSProperties = {
-        WebkitFontSmoothing: 'antialiased',
-        MozOsxFontSmoothing: 'grayscale',
-        textRendering: 'optimizeLegibility',
-    };
-
     return (
         <PageLoader page="dashboard">
-        <div className="w-full p-6 md:p-10 selection:bg-[#F5C400] selection:text-black min-h-screen" style={{ background: 'transparent' }}>
-            <main className="max-w-7xl mx-auto space-y-8 pb-16">
+        <div className="w-full p-6 md:p-10 selection:bg-[#F5C400] selection:text-black min-h-screen bg-[#0d0d0d]">
+            <main className="max-w-7xl mx-auto space-y-10 pb-16">
 
                 {/* Header */}
-                <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+                <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 animate-header-in border-b border-[rgba(239,239,239,0.07)]">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-[18px] h-[2px] bg-red-700 shrink-0" />
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase', ...textSharpness }}>
-                                // SECURE TELEMETRY ENGINE
+                        <div className="flex items-center gap-3 mb-3 w-fit animate-eyebrow-in" style={{ clipPath: 'inset(0 100% 0 0)' }}>
+                            <div className="w-[24px] h-[2px] bg-[#B91C1C] shrink-0" />
+                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, letterSpacing: '0.24em', color: '#ff4d4d', textTransform: 'uppercase' }}>
+                                // OVERVIEW
                             </span>
                         </div>
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3"
-                            style={{ fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.02em', textTransform: 'uppercase', ...textSharpness }}>
-                            <Lock className="w-6 h-6 text-[#F5C400]" />
-                            Neural Telemetry Core
+                        <h1 className="text-[#EFEFEF] uppercase animate-title-in opacity-0 drop-shadow-md"
+                            style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: 'clamp(36px, 4vw, 56px)', lineHeight: 1, letterSpacing: '0.02em' }}>
+                            REDACTION OVERVIEW
                         </h1>
-                        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: 'rgba(239,239,239,0.38)', letterSpacing: '0.08em', marginTop: '4px', ...textSharpness }}>
-                            REAL-TIME INFERENCE LOGS · {recentLogs.length} SECURE SESSION VOLUMES LOGGED
+                        <p className="animate-subline-in opacity-0" style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.04em', marginTop: '12px' }}>
+                            Real-time activity · Session logs · Local inference only
                         </p>
                     </div>
-                    <div style={{ border: '1px solid rgba(52, 211, 153, 0.25)', background: 'rgba(52, 211, 153, 0.05)', ...textSharpness }} 
-                        className="flex items-center gap-2.5 px-4 py-2 rounded-none">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#34d399]" />
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', letterSpacing: '0.12em', color: '#34d399', fontWeight: 600 }}>
-                            LOCAL SANDBOX INFERENCE LIVE
+                    <div style={{ border: '1px solid rgba(74,222,128,0.4)', padding: '8px 20px', borderRadius: 0, backgroundColor: 'rgba(74,222,128,0.05)' }} 
+                        className="flex items-center gap-3 shadow-[0_0_15px_rgba(74,222,128,0.1)]">
+                        <div className="w-1.5 h-1.5 bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.8)]" style={{ animation: 'pulse-dot 1.4s ease-in-out infinite' }} />
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', color: '#4ade80' }}>
+                            LOCAL INFERENCE · ACTIVE
                         </span>
                     </div>
                 </header>
 
                 {/* Row 1: Metrics */}
-                <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <section className="bg-[#131315] border border-[rgba(239,239,239,0.07)] relative overflow-hidden" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+                    {/* Sweep highlight for the whole row */}
+                    <div className="absolute top-0 left-0 h-[2px] bg-gradient-to-r from-transparent via-[#F5C400] to-transparent w-full opacity-50" style={{ animation: 'scanline-horizontal 4s linear infinite' }} />
+                    
                     {[
-                        { label: 'Volumes Secured', value: docsSecured,    icon: <FileText className="w-4 h-4" />,    color: '#F5C400',  sub: `${recentLogs.length} local logs` },
-                        { label: 'Entities Masked', value: entitiesMasked, icon: <ShieldCheck className="w-4 h-4" />, color: '#34D399',  sub: 'sandbox lifetime' },
-                        { label: 'Top Signature',   value: stats.topThreat, icon: <Activity className="w-4 h-4" />,   color: '#60A5FA',  sub: 'primary matching pii', isText: true },
-                        { label: 'Active Rules',    value: isMounted ? activeRulesCount : 0, icon: <Lock className="w-4 h-4" />, color: '#A78BFA', sub: 'enforced gatekeepers' },
+                        { label: 'Documents redacted', value: docsSecured, sub: 'This session', idx: '01' },
+                        { label: 'Entities removed', value: entitiesMasked, sub: 'Lifetime total', idx: '02' },
+                        { label: 'Top entity type', value: stats.topThreat, sub: 'Most detected', idx: '03', smallText: true },
+                        { label: 'Active recognisers', value: isMounted ? activeRulesCount : 0, sub: 'Detection rules', idx: '04' },
                     ].map((s, i) => (
-                        <div key={i} className="bg-[#080808] border border-white/5 rounded-none p-5 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-8 -mt-8 transition-transform duration-500 group-hover:scale-125" style={{ backgroundColor: s.color + '08' }} />
-                            <div className="flex justify-between items-start mb-2">
-                                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', color: 'rgba(239,239,239,0.4)', ...textSharpness }} className="font-semibold uppercase">{s.label}</p>
-                                <div style={{ color: s.color }}>{s.icon}</div>
+                        <div key={i} className="relative bg-transparent border-r border-[rgba(239,239,239,0.07)] last:border-r-0" style={{ padding: '32px 36px' }}>
+                            
+                            <div className="absolute top-4 right-5" style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF' }}>
+                                {s.idx}
                             </div>
-                            {s.isText
-                                ? <div className="text-xl font-bold text-white tracking-wide" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '26px', ...textSharpness }}>{s.value}</div>
-                                : <div className="text-4xl font-black text-white tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '42px', ...textSharpness }}>{s.value}</div>
-                            }
-                            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'rgba(239,239,239,0.25)', letterSpacing: '0.05em', marginTop: '4px', ...textSharpness }}>{s.sub}</p>
+                            <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em', marginBottom: '16px' }}>
+                                {s.label}
+                            </div>
+                            <div className="relative">
+                                {/* Dissolve mask */}
+                                {!statsVisible && (
+                                    <div className="absolute inset-0 bg-[#EFEFEF] z-10" />
+                                )}
+                                <div className="text-[#EFEFEF]" style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: s.smallText ? '40px' : '64px', lineHeight: 1, opacity: statsVisible ? 1 : 0 }}>
+                                    {s.value}
+                                </div>
+                            </div>
+                            <p style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em', marginTop: '12px' }}>
+                                {s.sub}
+                            </p>
                         </div>
                     ))}
                 </section>
 
                 {/* Row 2: Charts + Dropzone */}
-                <section className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* Bar chart — daily entity volume */}
-                    <div className="lg:col-span-2 bg-[#080808] border border-white/5 rounded-none p-6 flex flex-col">
-                        <div className="flex items-center gap-2 mb-1">
-                            <BarChart3 className="w-4 h-4 text-[#F5C400]" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '15px', ...textSharpness }}>
-                                7-Day Telemetry Logs
-                            </h3>
+                    {/* Bar chart */}
+                    <div ref={chartRef} className={`group bg-[#131315] border border-[rgba(239,239,239,0.07)] flex flex-col opacity-0 transition-all duration-[450ms] hover:border-[rgba(245,196,0,0.3)] hover:shadow-[0_0_20px_rgba(245,196,0,0.05)] ${chartVisible ? 'translate-y-0 opacity-100' : 'translate-y-[12px]'}`} style={{ transitionDelay: '0ms' }}>
+                        <div className="bg-[#111113] border-b border-[rgba(239,239,239,0.07)] flex justify-between items-center" style={{ padding: '16px 24px' }}>
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em' }}>// 7-day activity</span>
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF' }}>Telemetry core</span>
                         </div>
-                        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: 'rgba(239,239,239,0.38)', ...textSharpness }} className="mb-6">
-                            PII signatures intercepted locally per active day
-                        </p>
-                        {stats.dailyVolume.every(d => d.count === 0) ? (
-                            <div className="flex-1 flex items-center justify-center text-gray-700 text-xs font-mono">
-                                NO LOGS RECORDED - RUN DECLASSIFIED JOBS
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex items-end gap-2.5 min-h-[140px]">
-                                {stats.dailyVolume.map((d, i) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                                        <div className="w-full transition-all duration-700 relative group/bar"
-                                            style={{ height: `${Math.max(4, (d.count / maxBar) * 100)}%`, backgroundColor: d.count > 0 ? '#F5C400' : 'rgba(255,255,255,0.06)', minHeight: '4px' }}>
-                                            {d.count > 0 && (
-                                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#080808] border border-white/10 text-[9px] font-mono text-white px-2 py-0.5 rounded-none opacity-0 group-hover/bar:opacity-100 transition-all duration-200 whitespace-nowrap z-10">
-                                                    {d.count}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'rgba(239,239,239,0.3)' }}>{d.day}</span>
+                        <div className="flex-1 flex flex-col bg-transparent" style={{ padding: '24px' }}>
+                            <p style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em', marginBottom: '28px' }}>
+                                Entities detected per active day
+                            </p>
+                            {stats.dailyVolume.every(d => d.count === 0) ? (
+                                <div className="flex-1 flex items-center justify-center text-[rgba(239,239,239,0.5)] font-mono text-xs">
+                                    NO LOGS RECORDED
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex items-end gap-[2px] min-h-[160px] relative">
+                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                                        {[...Array(4)].map((_, i) => (
+                                            <div key={i} className="w-full h-px bg-[rgba(239,239,239,0.06)]" />
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'rgba(239,239,239,0.25)', borderTop: '1px solid rgba(255,255,255,0.05)', ...textSharpness }} 
-                            className="flex justify-between mt-4 pt-2">
-                            <span>T-6 DAYS</span><span>TELEMETRY CORE</span><span>TODAY</span>
+                                    {stats.dailyVolume.map((d, i) => (
+                                        <div key={i} className="flex-1 flex flex-col items-center gap-2 relative z-10 h-full justify-end group/bar cursor-default">
+                                            <div className="w-full bg-[#F5C400] transition-all duration-700 relative group-hover/bar:bg-[#ffe166] group-hover/bar:shadow-[0_0_12px_rgba(245,196,0,0.6)]"
+                                                style={{ height: `${Math.max(2, (d.count / maxBar) * 100)}%`, opacity: d.count > 0 ? 1 : 0.3 }} />
+                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 400, color: 'rgba(239,239,239,0.6)', transition: 'color 0.2s' }} className="group-hover/bar:text-[#F5C400]">{d.day}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="border-t border-[rgba(239,239,239,0.07)] flex justify-between" style={{ padding: '12px 24px', fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF' }}>
+                            <span>7–6 days</span><span>Telemetry core</span><span>Today</span>
                         </div>
                     </div>
 
                     {/* Entity type breakdown */}
-                    <div className="lg:col-span-1 bg-[#080808] border border-white/5 rounded-none p-6 flex flex-col">
-                        <div className="flex items-center gap-2 mb-1">
-                            <PieChart className="w-4 h-4 text-[#818CF8]" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '15px', ...textSharpness }}>
-                                Signature Mix
-                            </h3>
+                    <div ref={breakdownRef} className={`group bg-[#131315] border border-[rgba(239,239,239,0.07)] flex flex-col opacity-0 transition-all duration-[450ms] hover:border-[rgba(245,196,0,0.3)] hover:shadow-[0_0_20px_rgba(245,196,0,0.05)] ${breakdownVisible ? 'translate-y-0 opacity-100' : 'translate-y-[12px]'}`} style={{ transitionDelay: '60ms' }}>
+                        <div className="bg-[#111113] border-b border-[rgba(239,239,239,0.07)] flex justify-between items-center" style={{ padding: '16px 24px' }}>
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em' }}>// Entity breakdown</span>
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF' }}>Detected entity types</span>
                         </div>
-                        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: 'rgba(239,239,239,0.38)', ...textSharpness }} className="mb-4">
-                            Matching classifications
-                        </p>
-                        {!stats.entityBreakdown.length ? (
-                            <div className="flex-1 flex items-center justify-center text-gray-700 text-xs font-mono text-center">
-                                NO THREAT SIGNATURES
-                            </div>
-                        ) : (
-                            <div className="space-y-3 flex-1">
-                                {stats.entityBreakdown.slice(0, 6).map(e => (
-                                    <div key={e.type}>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: 'rgba(239,239,239,0.5)', ...textSharpness }} className="truncate">{e.label}</span>
-                                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: 'rgba(239,239,239,0.3)' }} className="shrink-0 font-mono ml-1">{e.count}</span>
+                        <div className="flex-1 flex flex-col bg-transparent">
+                            {!stats.entityBreakdown.length ? (
+                                <div className="flex-1 flex items-center justify-center text-[rgba(239,239,239,0.5)] font-mono text-xs">
+                                    NO THREAT SIGNATURES
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto" style={{ padding: '8px 0' }}>
+                                    {stats.entityBreakdown.map((e, i) => (
+                                        <div key={e.type} className="border-b border-[rgba(239,239,239,0.07)] hover:bg-[rgba(245,196,0,0.04)] transition-colors relative overflow-hidden group/row" style={{ padding: '12px 24px' }}>
+                                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#F5C400] scale-y-0 group-hover/row:scale-y-100 transition-transform duration-300" />
+                                            <div className="grid grid-cols-[1fr_auto] mb-2">
+                                                <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', transition: 'color 0.2s', letterSpacing: '0.02em' }} className="group-hover/row:text-[#F5C400]">{e.label}</span>
+                                                <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#F5C400' }}>{e.count}</span>
+                                            </div>
+                                            <div className="h-[2px] bg-[rgba(239,239,239,0.08)] mt-1">
+                                                <div className="h-full bg-[#F5C400] transition-all duration-[800ms] ease-out shadow-[0_0_8px_rgba(245,196,0,0.4)] group-hover/row:bg-[#ffe166]" style={{ width: breakdownVisible ? `${(e.count / maxPie) * 100}%` : '0%', transitionDelay: `${i * 80}ms` }} />
+                                            </div>
                                         </div>
-                                        <div className="h-1 bg-white/5 rounded-none overflow-hidden">
-                                            <div className="h-full transition-all duration-700" style={{ width: `${(e.count / maxPie) * 100}%`, backgroundColor: e.color }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Dropzone */}
-                    <div className={`lg:col-span-2 relative group bg-[#080808] border border-white/5 rounded-none p-8 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer ${isDragging ? 'border-[#F5C400]/40 bg-[#F5C400]/5' : 'border-dashed border-white/10 hover:border-[#F5C400]/40'}`}
+                    <div ref={uploadRef} className={`group bg-[#131315] border ${isDragging ? 'border-[#F5C400] shadow-[0_0_20px_rgba(245,196,0,0.15)] bg-[rgba(245,196,0,0.02)]' : 'border-[rgba(239,239,239,0.15)]'} flex flex-col opacity-0 transition-all duration-[450ms] relative overflow-hidden hover:border-[#F5C400] ${uploadVisible ? 'translate-y-0 opacity-100' : 'translate-y-[12px]'}`} style={{ transitionDelay: '120ms' }}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFileUploadGlobal(e.dataTransfer.files[0]); }}>
+                        
+                        {/* Scanning beam effect on hover/idle */}
+                        <div className="absolute left-0 right-0 h-[1px] bg-[#F5C400] opacity-0 group-hover:opacity-40 transition-opacity" style={{ animation: 'scanline-vertical 3s linear infinite' }} />
+
+                        <div className="bg-[#111113] border-b border-[rgba(239,239,239,0.07)]" style={{ padding: '16px 24px', position: 'relative', zIndex: 2 }}>
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em' }}>// Upload document</span>
+                        </div>
                         <input type="file" accept=".txt,.csv,.json,.md,.docx,.pdf,.png,.jpg,.jpeg,.webp"
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={e => { if (e.target.files?.length) handleFileUploadGlobal(e.target.files[0]); }} />
-                        <div className="absolute inset-0 bg-[#F5C400] opacity-0 group-hover:opacity-[0.015] blur-[40px] transition-opacity rounded-none pointer-events-none" />
-                        <div className={`p-4 rounded-none mb-4 transition-all duration-300 ${isDragging ? 'bg-[#F5C400] text-black scale-110 shadow-[0_0_15px_rgba(245,196,0,0.3)]' : 'bg-white/5 text-[#F5C400] group-hover:scale-105'}`}>
-                            <UploadCloud className="w-8 h-8" />
+                        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center relative z-2" style={{ padding: '32px' }}>
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-[#F5C400] blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 rounded-full" />
+                                <UploadCloud className="w-10 h-10 transition-transform duration-500 group-hover:-translate-y-2 group-hover:text-[#F5C400]" style={{ color: 'rgba(239,239,239,0.4)' }} />
+                            </div>
+                            <h2 className="text-[#EFEFEF] uppercase tracking-wide group-hover:text-[#F5C400] transition-colors" style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: '20px' }}>
+                                UPLOAD DOCUMENT
+                            </h2>
+                            <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 400, color: 'rgba(239,239,239,0.6)' }}>
+                                Drag & drop or click to select a file
+                            </p>
+                            <div className="flex flex-wrap justify-center gap-[8px] mt-4">
+                                {['PDF','TXT','DOCX','IMG'].map(e => (
+                                    <span key={e} className="border border-[rgba(239,239,239,0.2)] text-[rgba(239,239,239,0.6)] transition-all group-hover:border-[#F5C400] group-hover:text-[#F5C400]" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', padding: '4px 12px', background: 'rgba(17,17,19,0.5)' }}>{e}</span>
+                                ))}
+                            </div>
                         </div>
-                        <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '18px', ...textSharpness }}>
-                            Secure Ingestion Portal
-                        </h2>
-                        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: 'rgba(239,239,239,0.38)', ...textSharpness }} className="mb-4">
-                            Drag & drop or <span className="text-[#F5C400]">browse local filesystem</span>
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-1.5 text-[9px] font-mono text-gray-500">
-                            {['PDF','TXT','DOCX','IMG'].map(e => (
-                                <span key={e} className="bg-black/40 px-2.5 py-0.5 rounded-none border border-white/5 tracking-wider font-semibold">{e}</span>
+                    </div>
+                </section>
+
+                {/* Row 3: Session History */}
+                <section ref={tableRef} className="mt-12">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-[24px] h-[2px] bg-[#B91C1C] shrink-0" />
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, color: '#ff4d4d', textTransform: 'uppercase' }}>
+                            // SESSION HISTORY
+                        </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-4">
+                            <h3 className="text-[#EFEFEF]" style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 700, fontSize: '18px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                SESSION LOGS
+                            </h3>
+                            {recentLogs.length > 0 && (
+                                <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', padding: '4px 12px', background: 'rgba(74,222,128,0.05)' }}>
+                                    INTEGRITY VERIFIED
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, color: '#EFEFEF' }}>
+                                // DPDP Act 2023 · GDPR compliant
+                            </span>
+                            {recentLogs.length > 0 && (
+                                <button onClick={() => exportAuditPDF(recentLogs, { totalDocs: docsSecured, totalEntities: entitiesMasked, activeRules: activeRulesCount })}
+                                    className="bg-[#F5C400] text-[#080808] hover:bg-[#ffe166] hover:shadow-[0_0_15px_rgba(245,196,0,0.4)] transition-all border-none cursor-pointer group"
+                                    style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', padding: '10px 24px', textTransform: 'uppercase' }}>
+                                    EXPORT <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131315] border border-[rgba(239,239,239,0.15)] shadow-lg">
+                        <div className="bg-[#111113] border-b border-[rgba(239,239,239,0.15)] flex" style={{ padding: '14px 24px', fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 500, color: '#EFEFEF', letterSpacing: '0.02em' }}>
+                            <div className="flex-1">Session ID</div>
+                            <div className="flex-1">Document</div>
+                            <div className="flex-1">Timestamp</div>
+                            <div className="w-24 text-right">Entities</div>
+                            <div className="w-28 text-right">Status</div>
+                        </div>
+                        
+                        <div className="overflow-hidden bg-transparent">
+                            {recentLogs.length === 0 ? (
+                                <div className="text-center italic tracking-wider uppercase py-12" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 400, color: 'rgba(239,239,239,0.5)' }}>
+                                    [ No secure telemetry runs logged in this sandbox ]
+                                </div>
+                            ) : recentLogs.map((log, i) => (
+                                <div key={log.id} className={`group flex items-center hover:bg-[rgba(245,196,0,0.04)] transition-all duration-[400ms] border-b border-[rgba(239,239,239,0.07)] last:border-b-0 ${tableVisible ? 'translate-x-0 opacity-100' : '-translate-x-[12px] opacity-0'} relative`} style={{ padding: '18px 24px', transitionDelay: `${i * 60}ms` }}>
+                                    <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#F5C400] scale-y-0 group-hover:scale-y-100 transition-transform duration-300" />
+                                    <div className="flex-1" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, color: '#F5C400', letterSpacing: '0.1em' }}>
+                                        {log.id}
+                                    </div>
+                                    <div className="flex-1 truncate pr-4" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 400, color: 'rgba(239,239,239,0.8)' }}>
+                                        {log.name}
+                                    </div>
+                                    <div className="flex-1" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 400, color: 'rgba(239,239,239,0.6)' }}>
+                                        {log.date}
+                                    </div>
+                                    <div className="w-24 text-right text-[#EFEFEF] group-hover:text-[#F5C400] transition-colors" style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 700, fontSize: '16px', textTransform: 'uppercase' }}>
+                                        {log.entitiesDiscovered}
+                                    </div>
+                                    <div className="w-28 text-right flex justify-end">
+                                        <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, color: '#4ade80', letterSpacing: '0.14em', border: '1px solid rgba(74,222,128,0.3)', padding: '4px 12px', display: 'flex', alignItems: 'center', background: 'rgba(74,222,128,0.05)' }}>
+                                            ✓ CLEAN
+                                        </div>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Row 3: Audit trail */}
-                <section className="bg-[#080808] border border-white/5 rounded-none overflow-hidden">
-                    <div className="p-5 border-b border-white/10 flex justify-between items-center bg-[#080808]">
-                        <div className="flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-[#34D399]" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '16px', ...textSharpness }}>
-                                Compliance Audit Logs
-                            </h3>
-                            {recentLogs.length > 0 && (
-                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', letterSpacing: '0.05em', color: '#34D399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }} 
-                                    className="px-2 py-0.5 rounded-none ml-2">
-                                    {stats.successRate}% INTEGRITY VERIFIED
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.08em', color: 'rgba(239,239,239,0.3)' }} 
-                                className="hidden md:block">
-                                // COMPLIANCE MATRIX: DPDP ACT 2023 · GDPR
-                            </span>
-                            {recentLogs.length > 0 && (
-                                <div className="relative group/export">
-                                    <button style={{ background: '#F5C400', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', letterSpacing: '0.05em', fontWeight: 700 }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-black rounded-none cursor-pointer transition-all hover:brightness-110">
-                                        <FileDown className="w-3.5 h-3.5" />EXPORT <ChevronDown className="w-3 h-3" />
-                                    </button>
-                                    <div className="absolute top-full right-0 mt-1.5 w-40 bg-[#080808] border border-white/10 rounded-none shadow-2xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all z-50 p-1">
-                                        <button onClick={() => exportAuditPDF(recentLogs, { totalDocs: docsSecured, totalEntities: entitiesMasked, activeRules: activeRulesCount })}
-                                            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px' }}
-                                            className="block w-full text-left px-3 py-2 text-gray-300 hover:bg-white/5 hover:text-[#F5C400] rounded-none cursor-pointer transition-colors">
-                                            📄 EXPORT AS PDF
-                                        </button>
-                                        <button onClick={() => exportAuditCSV(recentLogs)}
-                                            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px' }}
-                                            className="block w-full text-left px-3 py-2 text-gray-300 hover:bg-white/5 hover:text-[#F5C400] rounded-none cursor-pointer transition-colors">
-                                            📊 EXPORT AS CSV
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto min-h-[220px]">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/10 bg-[#060606] text-[10px] font-semibold text-gray-400 uppercase tracking-widest" style={{ fontFamily: "'IBM Plex Mono', monospace", ...textSharpness }}>
-                                    <th className="p-4 pl-6">Run Signature</th>
-                                    <th className="p-4">Document Profile</th>
-                                    <th className="p-4">Telemetry Epoch</th>
-                                    <th className="p-4 text-center">Matches</th>
-                                    <th className="p-4 pr-6 text-right">Verdict</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', ...textSharpness }}>
-                                {recentLogs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="p-12 text-center text-gray-500 italic text-xs tracking-wider uppercase" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                                            [ No secure telemetry runs logged in this sandbox ]
-                                        </td>
-                                    </tr>
-                                ) : recentLogs.map(log => (
-                                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
-                                        <td className="p-4 pl-6 text-[#F5C400] font-semibold">{log.id}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                                                <span className="text-gray-200 truncate max-w-[180px] font-medium">{log.name}</span>
-                                                <span className="text-[9px] text-gray-500 bg-black border border-white/5 px-1.5 py-0.5 rounded-none">{log.size}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-gray-400">{log.date}</td>
-                                        <td className="p-4 text-center font-bold text-white">{log.entitiesDiscovered}</td>
-                                        <td className="p-4 pr-6 text-right">
-                                            {log.status === 'Completed' && (
-                                                <span style={{ border: '1px solid rgba(52,211,153,0.2)', background: 'rgba(52,211,153,0.05)', fontSize: '10px' }} 
-                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-emerald-400 font-bold tracking-wider">
-                                                    ✓ SECURED
-                                                </span>
-                                            )}
-                                            {log.status === 'Processing' && (
-                                                <span style={{ border: '1px solid rgba(245,196,0,0.2)', background: 'rgba(245,196,0,0.05)', fontSize: '10px' }} 
-                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-[#F5C400] font-bold tracking-wider">
-                                                    ● SCANNING
-                                                </span>
-                                            )}
-                                            {log.status === 'Failed' && (
-                                                <span style={{ border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', fontSize: '10px' }} 
-                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-red-400 font-bold tracking-wider">
-                                                    ✕ ABORTED
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
             </main>
+            
+            <style jsx global>{`
+                @keyframes pulse-dot {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(1.3); }
+                }
+                @keyframes eyebrow-in {
+                    from { clip-path: inset(0 100% 0 0); }
+                    to { clip-path: inset(0 0% 0 0); }
+                }
+                @keyframes title-in {
+                    from { transform: translateY(16px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes scanline-horizontal {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                @keyframes scanline-vertical {
+                    0% { top: 0; opacity: 0; }
+                    10% { opacity: 0.4; }
+                    90% { opacity: 0.4; }
+                    100% { top: 100%; opacity: 0; }
+                }
+                .animate-eyebrow-in {
+                    animation: eyebrow-in 0.3s ease-out forwards;
+                }
+                .animate-title-in {
+                    animation: title-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+                    animation-delay: 150ms;
+                }
+                .animate-subline-in {
+                    animation: title-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+                    animation-delay: 250ms;
+                }
+            `}</style>
         </div>
         </PageLoader>
     );

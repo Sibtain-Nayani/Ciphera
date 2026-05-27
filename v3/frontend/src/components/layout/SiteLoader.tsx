@@ -18,7 +18,7 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
     const [statusText,   setStatusText]   = useState('');
     const [showStatus,   setShowStatus]   = useState(false);
     const [ruleWidth,    setRuleWidth]    = useState(0);
-    const [stageText,    setStageText]    = useState('INITIALIZING');
+    const [stageText,    setStageText]    = useState('Initializing');
     const [edgeGlow,     setEdgeGlow]     = useState(false);
     const [wipeUp,       setWipeUp]       = useState(false);
     const [isDone,       setIsDone]       = useState(false);
@@ -43,7 +43,7 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         if (abortRef.current) return;
 
         // Phase 1 — type in letters
-        setStageText('INCOMING TRANSMISSION');
+        setStageText('Incoming transmission');
         for (let i = 0; i < 7; i++) {
             if (abortRef.current) return;
             for (let s = 0; s < 3; s++) {
@@ -56,8 +56,8 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         await sleep(350);
 
         // Phase 2 — threat detected, mild scramble
-        setStageText('THREAT DETECTED');
-        setStatusText('[ CLASSIFICATION REQUIRED ]');
+        setStageText('Threat detected');
+        setStatusText('[ Classification required ]');
         setShowStatus(true);
         setEdgeGlow(true);
 
@@ -78,7 +78,7 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         await sleep(100);
 
         // Phase 3 — chaos scramble — REDUCED: was 900ms, now 450ms
-        setStageText('FULL SCRAMBLE');
+        setStageText('Full scramble');
         const chaosInterval = setInterval(() => {
             setLetterStates(() => Array(7).fill(null).map(() => rg()));
             setLetterColors(() => Array(7).fill(null).map(() =>
@@ -90,8 +90,8 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         if (abortRef.current) return;
 
         // Phase 4 — redact letters one by one
-        setStageText('REDACTION PROTOCOL');
-        setStatusText('[ REDACTION IN PROGRESS ]');
+        setStageText('Redaction protocol');
+        setStatusText('[ Redaction in progress ]');
         for (let i = 0; i < 7; i++) {
             setLetterAt(i, '█', 'rgba(255,255,255,0.07)');
             await sleep(75);
@@ -99,8 +99,8 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         await sleep(300);
 
         // Phase 5 — clearance, reveal right to left
-        setStageText('CLEARANCE GRANTED');
-        setStatusText('[ IDENTITY CONFIRMED ]');
+        setStageText('Clearance granted');
+        setStatusText('[ Identity confirmed ]');
         setEdgeGlow(false);
         for (let i = 6; i >= 0; i--) {
             setLetterAt(i, WORD[i], 'rgba(255,255,255,0.92)');
@@ -109,8 +109,8 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
         await sleep(180);
 
         // Phase 6 — rule extends + final label
-        setStageText('CLASSIFIED · CONFIRMED');
-        setStatusText('[ ACCESS GRANTED ]');
+        setStageText('Classified · Confirmed');
+        setStatusText('[ Access granted ]');
         setRuleWidth(280);
         await sleep(650);
 
@@ -203,8 +203,8 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
 
                 {/* Status */}
                 <div className="mb-8 h-4 flex items-center justify-center">
-                    <span className="font-mono text-[10px] tracking-[0.22em] text-[#b91c1c] uppercase transition-opacity duration-300"
-                        style={{ opacity: showStatus ? 1 : 0 }}>
+                    <span className="transition-opacity duration-300"
+                        style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, letterSpacing: '0.04em', color: '#EF4444', opacity: showStatus ? 1 : 0 }}>
                         {statusText}
                     </span>
                 </div>
@@ -225,12 +225,14 @@ export function SiteLoader({ onComplete, onRevealPage }: SiteLoaderProps) {
                     style={{ width: `${ruleWidth}px` }} />
 
                 {/* Stage label */}
-                <div className="mt-5 font-mono text-[9px] tracking-[0.22em] text-white/20 uppercase h-4 flex items-center">
+                <div className="mt-5 h-4 flex items-center"
+                     style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, letterSpacing: '0.04em', color: 'rgba(255,255,255,0.2)' }}>
                     {stageText}
                 </div>
 
                 {/* Bottom brand */}
-                <div className="absolute bottom-6 font-mono text-[9px] tracking-[0.18em] text-white/10 uppercase">
+                <div className="absolute bottom-6"
+                     style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '13px', fontWeight: 500, letterSpacing: '0.04em', color: 'rgba(255,255,255,0.12)' }}>
                     Ciphera V3 · PII Anonymization Engine
                 </div>
             </div>

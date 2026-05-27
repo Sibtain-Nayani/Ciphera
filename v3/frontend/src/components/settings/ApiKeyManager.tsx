@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Key, Plus, Trash2, Copy, Eye, EyeOff, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 interface ApiKey {
     key_id:        string;
@@ -20,9 +20,9 @@ export const ApiKeyManager: React.FC = () => {
     const [newKeyDesc,    setNewKeyDesc]    = useState('');
     const [createdKey,    setCreatedKey]    = useState<string | null>(null);
     const [showCreate,    setShowCreate]    = useState(false);
-    const [copiedKey,     setCopiedKey]     = useState(false);
+    const [copiedKey,     setCopiedKey]     = useState<string | null>(null);
+    const [revealedKeys,  setRevealedKeys]  = useState<Record<string, boolean>>({});
     const [error,         setError]         = useState('');
-    const [showPassword,  setShowPassword]  = useState(false);
 
     const BASE = 'http://127.0.0.1:8000';
 
@@ -65,169 +65,155 @@ export const ApiKeyManager: React.FC = () => {
         finally { setLoading(false); }
     };
 
-    const copyKey = async (key: string) => {
+    const copyKey = async (key: string, type: 'new' | 'list' = 'list', id?: string) => {
         await navigator.clipboard.writeText(key);
-        setCopiedKey(true);
-        setTimeout(() => setCopiedKey(false), 2000);
+        if (type === 'new') {
+            setCopiedKey('new');
+            setTimeout(() => setCopiedKey(null), 2000);
+        } else if (id) {
+            setCopiedKey(id);
+            setTimeout(() => setCopiedKey(null), 2000);
+        }
     };
 
-    const textSharpness: React.CSSProperties = {
-        WebkitFontSmoothing: 'antialiased',
-        MozOsxFontSmoothing: 'grayscale',
-        textRendering: 'optimizeLegibility',
+    const toggleReveal = (id: string) => {
+        setRevealedKeys(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
     return (
-        <div className="space-y-6">
-            {/* Admin auth */}
-            <div className="p-5 rounded-none bg-[#080808] border border-white/5">
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', color: 'rgba(255, 255, 255, 0.45)', ...textSharpness }} className="font-semibold uppercase mb-3">
-                    // ADMIN KEY AUTHENTICATION MATRIX
-                </p>
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={adminPassword}
-                            onChange={e => setAdminPassword(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && fetchKeys()}
-                            placeholder="ADMIN VAULT CREDENTIAL"
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px' }}
-                            className="w-full px-3 py-2 bg-black border border-white/15 text-white rounded-none placeholder:text-gray-700 focus:border-[#F5C400]/40 focus:outline-none pr-9 tracking-widest"
-                        />
-                        <button onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 cursor-pointer">
-                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                    </div>
+        <div className="space-y-8">
+            
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h3 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', margin: 0, letterSpacing: '0.03em' }}>API KEYS</h3>
+                    <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '13px', fontWeight: 400, color: 'rgba(239,239,239,0.55)', marginTop: '6px' }}>
+                        Manage secure access credentials for the pipeline.
+                    </p>
+                </div>
+                <button onClick={() => setShowCreate(!showCreate)}
+                    style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', color: showCreate ? '#F5C400' : 'rgba(239,239,239,0.7)', border: showCreate ? '1px solid #F5C400' : '1px solid rgba(239,239,239,0.2)', padding: '10px 20px', background: showCreate ? 'rgba(245,196,0,0.05)' : 'transparent', textTransform: 'uppercase', cursor: 'pointer' }}
+                    className="hover:border-[#F5C400] hover:text-[#F5C400] hover:shadow-[0_0_10px_rgba(245,196,0,0.1)] transition-all duration-200">
+                    {showCreate ? 'CANCEL' : 'GENERATE KEY'}
+                </button>
+            </div>
+
+            {/* Admin auth inline */}
+            {!keys.length && !error && !showCreate && (
+                <div className="flex gap-3 mb-6">
+                    <input
+                        type="password"
+                        value={adminPassword}
+                        onChange={e => setAdminPassword(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && fetchKeys()}
+                        placeholder="ADMIN PASSWORD"
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, background: '#131315', border: '1px solid rgba(239,239,239,0.15)', color: '#EFEFEF', padding: '10px 16px', outline: 'none' }}
+                        className="flex-1 focus:border-[#F5C400] transition-colors"
+                    />
                     <button onClick={fetchKeys} disabled={loading || !adminPassword}
-                        style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', letterSpacing: '0.05em', fontWeight: 700 }}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-[#F5C400]/10 hover:bg-[#F5C400]/25 text-[#F5C400] border border-[#F5C400]/30 rounded-none cursor-pointer transition-all disabled:opacity-40">
-                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                        LOAD VAULT
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', background: '#F5C400', color: '#080808', border: 'none', padding: '10px 20px', cursor: 'pointer' }}
+                        className="hover:bg-[#ffe166] hover:shadow-[0_0_12px_rgba(245,196,0,0.4)] transition-all disabled:opacity-50">
+                        {loading ? 'LOADING...' : 'LOAD KEYS'}
                     </button>
                 </div>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', color: 'rgba(255,255,255,0.2)' }} className="mt-2.5">
-                    * LOCAL CONSOLE CREDENTIAL: ciphera_admin_dev · SYSTEM SEEDED VIA CIPHERA_ADMIN_PASSWORD ENV
-                </p>
-            </div>
+            )}
 
             {error && (
-                <div style={{ border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', fontFamily: "'IBM Plex Mono', monospace" }} 
-                    className="flex items-center gap-2 px-3 py-2 rounded-none">
-                    <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                    <p className="text-xs text-red-400 font-bold tracking-wider">{error}</p>
+                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', padding: '14px 20px', background: 'rgba(248,113,113,0.05)' }}>
+                    {error}
                 </div>
             )}
 
-            {/* Created key display */}
-            {createdKey && (
-                <div style={{ border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.05)' }} 
-                    className="p-5 rounded-none">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '16px', ...textSharpness }} className="font-bold text-emerald-400 uppercase tracking-wider">API KEY COMMITTED SECURELY</p>
-                    </div>
-                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: 'rgba(255,255,255,0.45)' }} className="mb-3">
-                        BUFFER COMMITTED: Copy signature now. local vault will obscure this hash forever.
-                    </p>
-                    <div className="flex items-center gap-2 p-2.5 bg-black rounded-none border border-white/10">
-                        <code className="flex-1 text-[11px] text-emerald-300 font-mono truncate">{createdKey}</code>
-                        <button onClick={() => copyKey(createdKey)}
-                            className="shrink-0 p-1.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-none cursor-pointer transition-colors">
-                            {copiedKey ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                    </div>
-                    <button onClick={() => setCreatedKey(null)} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px' }} 
-                        className="mt-3 text-gray-600 hover:text-gray-400 cursor-pointer">// DISMISS BUFFER</button>
-                </div>
-            )}
-
-            {/* Key list */}
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '18px', ...textSharpness }} className="font-bold text-white uppercase tracking-wider">
-                        Secure Port Authorizations {keys.length > 0 && `(${keys.length})`}
-                    </p>
-                    <button onClick={() => setShowCreate(!showCreate)}
-                        style={{ background: '#F5C400', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', letterSpacing: '0.05em', fontWeight: 700 }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-black rounded-none cursor-pointer transition-all hover:brightness-110">
-                        <Plus className="w-3.5 h-3.5" /> MOUNT KEY
+            {showCreate && (
+                <div className="p-6 bg-[#131315] border border-[rgba(239,239,239,0.15)] space-y-4 mb-6 relative overflow-hidden shadow-lg">
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F5C400] to-transparent opacity-40" />
+                    <input type="password" placeholder="ADMIN PASSWORD" value={adminPassword}
+                        onChange={e => setAdminPassword(e.target.value)}
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, background: '#0d0d0d', border: '1px solid rgba(239,239,239,0.15)', color: '#EFEFEF', padding: '10px 16px', width: '100%', outline: 'none', boxSizing: 'border-box' }}
+                        className="focus:border-[#F5C400] transition-colors" />
+                    <input type="text" placeholder="KEY NAME" value={newKeyName}
+                        onChange={e => setNewKeyName(e.target.value)}
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, background: '#0d0d0d', border: '1px solid rgba(239,239,239,0.15)', color: '#EFEFEF', padding: '10px 16px', width: '100%', outline: 'none', boxSizing: 'border-box' }}
+                        className="focus:border-[#F5C400] transition-colors" />
+                    <input type="text" placeholder="DESCRIPTION" value={newKeyDesc}
+                        onChange={e => setNewKeyDesc(e.target.value)}
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 500, background: '#0d0d0d', border: '1px solid rgba(239,239,239,0.15)', color: '#EFEFEF', padding: '10px 16px', width: '100%', outline: 'none', boxSizing: 'border-box' }}
+                        className="focus:border-[#F5C400] transition-colors" />
+                    <button onClick={createKey} disabled={!newKeyName.trim() || !adminPassword || loading}
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', background: '#F5C400', color: '#080808', border: 'none', padding: '12px 20px', cursor: 'pointer', width: '100%' }}
+                        className="hover:bg-[#ffe166] hover:shadow-[0_0_15px_rgba(245,196,0,0.4)] transition-all disabled:opacity-50 mt-2 group">
+                        <span className="inline-block transition-transform group-hover:scale-105">COMMIT GENERATION</span>
                     </button>
                 </div>
+            )}
 
-                {showCreate && (
-                    <div className="p-4 rounded-none bg-[#080808] border border-white/5 space-y-3">
-                        <input type="text" placeholder="KEY LABEL (e.g. Production Suite)" value={newKeyName}
-                            onChange={e => setNewKeyName(e.target.value)}
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px' }}
-                            className="w-full px-3 py-2 bg-black border border-white/15 text-white rounded-none placeholder:text-gray-700 focus:border-[#F5C400]/40 focus:outline-none" />
-                        <input type="text" placeholder="DESCRIPTION NOTES (Optional)" value={newKeyDesc}
-                            onChange={e => setNewKeyDesc(e.target.value)}
-                            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px' }}
-                            className="w-full px-3 py-2 bg-black border border-white/15 text-white rounded-none placeholder:text-gray-700 focus:border-[#F5C400]/40 focus:outline-none" />
-                        <div className="flex gap-2">
-                            <button onClick={createKey} disabled={!newKeyName.trim() || loading}
-                                style={{ background: '#F5C400', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', letterSpacing: '0.05em', fontWeight: 700 }}
-                                className="flex-1 py-2 text-black rounded-none cursor-pointer disabled:opacity-40 hover:brightness-110">
-                                COMMIT GENERATION
-                            </button>
-                            <button onClick={() => setShowCreate(false)}
-                                style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px' }}
-                                className="px-4 py-2 bg-[#1A1A1A] border border-white/5 text-gray-400 hover:text-white rounded-none cursor-pointer transition-colors">
-                                CANCEL
-                            </button>
-                        </div>
+            {createdKey && (
+                <div className="mb-6 relative overflow-hidden shadow-lg" style={{ border: '1px solid rgba(74,222,128,0.3)', padding: '20px 24px', background: '#131315' }}>
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#4ade80] to-transparent opacity-50" />
+                    <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '15px', fontWeight: 700, color: '#4ade80', margin: '0 0 12px 0' }}>API KEY GENERATED</p>
+                    <div className="flex items-center gap-4">
+                        <code style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '12px', fontWeight: 500, color: '#EFEFEF', background: '#0a0a0b', padding: '8px 16px', flex: 1, border: '1px solid rgba(239,239,239,0.1)' }}>{createdKey}</code>
+                        <button onClick={() => copyKey(createdKey, 'new')}
+                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, color: copiedKey === 'new' ? '#4ade80' : 'rgba(239,239,239,0.6)', border: `1px solid ${copiedKey === 'new' ? 'rgba(74,222,128,0.3)' : 'rgba(239,239,239,0.2)'}`, background: 'transparent', padding: '8px 16px', cursor: 'pointer' }}
+                            className="hover:border-[#F5C400] hover:text-[#F5C400] transition-all">
+                            {copiedKey === 'new' ? '✓ COPIED' : 'COPY'}
+                        </button>
                     </div>
-                )}
+                    <button onClick={() => setCreatedKey(null)} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, background: 'none', border: 'none', color: 'rgba(239,239,239,0.5)', cursor: 'pointer', marginTop: '16px', padding: 0 }} className="hover:text-[#EFEFEF] transition-colors">
+                        DISMISS
+                    </button>
+                </div>
+            )}
 
-                {keys.length === 0 && !showCreate && (
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', ...textSharpness }} className="py-8 text-center text-gray-600">
-                        [ Decryption password required to load securely authorized keys ]
-                    </div>
-                )}
-
-                {keys.map(key => (
-                    <div key={key.key_id}
-                        className={`flex items-center gap-4 p-4 rounded-none border ${key.is_active ? 'bg-[#080808] border-white/5' : 'bg-[#040404] border-white/5 opacity-40'}`}>
-                        <div style={{ background: key.is_active ? 'rgba(245,196,0,0.1)' : 'rgba(255,255,255,0.03)' }} className="p-2.5 rounded-none shrink-0">
-                            <Key className={`w-4 h-4 ${key.is_active ? 'text-[#F5C400]' : 'text-gray-600'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', fontWeight: 700, color: '#fff', ...textSharpness }} className="truncate leading-none">{key.name}</p>
-                                {!key.is_active && (
-                                    <span style={{ border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', fontSize: '8px' }} 
-                                        className="px-1.5 py-0.5 rounded-none text-red-400 font-bold tracking-widest font-mono shrink-0">
-                                        SCRUBBED
-                                    </span>
-                                )}
+            {keys.length > 0 && (
+                <div className="space-y-[2px]">
+                    {keys.map(key => {
+                        const isRevoked = !key.is_active;
+                        return (
+                            <div key={key.key_id} className="group relative overflow-hidden" style={{ background: '#131315', border: '1px solid rgba(239,239,239,0.15)', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#F5C400] scale-y-0 group-hover:scale-y-100 transition-transform duration-300" />
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-4">
+                                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '12px', fontWeight: 600, color: isRevoked ? 'rgba(239,239,239,0.4)' : '#EFEFEF' }} className="group-hover:text-[#F5C400] transition-colors">{key.name}</span>
+                                        {!isRevoked && (
+                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 600, color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', padding: '3px 10px', background: 'rgba(74,222,128,0.05)' }}>
+                                                ACTIVE
+                                            </span>
+                                        )}
+                                        {isRevoked && (
+                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 600, color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', padding: '3px 10px', background: 'rgba(248,113,113,0.05)' }}>
+                                                REVOKED
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 400, color: 'rgba(239,239,239,0.5)', letterSpacing: '0.1em', marginTop: '2px' }}>
+                                        {revealedKeys[key.key_id] ? key.key_id : '••••••••••••••••••••••••••••••••'}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => toggleReveal(key.key_id)}
+                                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, color: 'rgba(239,239,239,0.6)', border: '1px solid rgba(239,239,239,0.2)', background: 'transparent', padding: '6px 14px', cursor: 'pointer' }}
+                                        className="hover:border-[#F5C400] hover:text-[#F5C400] transition-all">
+                                        {revealedKeys[key.key_id] ? 'HIDE' : 'REVEAL'}
+                                    </button>
+                                    <button onClick={() => copyKey(key.key_id, 'list', key.key_id)}
+                                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, color: copiedKey === key.key_id ? '#4ade80' : 'rgba(239,239,239,0.6)', border: `1px solid ${copiedKey === key.key_id ? 'rgba(74,222,128,0.3)' : 'rgba(239,239,239,0.2)'}`, background: 'transparent', padding: '6px 14px', cursor: 'pointer' }}
+                                        className="hover:border-[#F5C400] hover:text-[#F5C400] transition-all">
+                                        {copiedKey === key.key_id ? '✓ COPIED' : 'COPY'}
+                                    </button>
+                                    {!isRevoked && (
+                                        <button onClick={() => revokeKey(key.key_id)}
+                                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', background: 'transparent', padding: '6px 14px', cursor: 'pointer', marginLeft: '4px' }}
+                                            className="hover:bg-[rgba(248,113,113,0.1)] hover:shadow-[0_0_10px_rgba(248,113,113,0.15)] transition-all">
+                                            REVOKE
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: 'rgba(255,255,255,0.3)' }} className="mt-1">
-                                ID: {key.key_id} · Intercepts: {key.request_count} jobs · Created: {new Date(key.created_at).toLocaleDateString()}
-                            </p>
-                            {key.description && <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: 'rgba(255,255,255,0.5)', ...textSharpness }} className="mt-1">{key.description}</p>}
-                        </div>
-                        {key.is_active && (
-                            <button onClick={() => revokeKey(key.key_id)}
-                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-none cursor-pointer transition-colors shrink-0">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            {/* Usage example */}
-            <div className="p-4 rounded-none bg-black border border-white/5">
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', ...textSharpness }} className="font-semibold uppercase mb-2.5">
-                    // INTEGRATION SUITE // CURL MOUNT REFERENCE
-                </p>
-                <pre className="text-[10px] text-gray-400 font-mono leading-relaxed overflow-x-auto">{`curl -X POST http://your-server:8000/api/v3/public/redact \\
-  -H "X-API-Key: ck_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{"text": "Name: Rihaan, Aadhaar: 1234 5678 9012"}'`}</pre>
-            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

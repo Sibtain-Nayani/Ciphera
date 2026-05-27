@@ -326,7 +326,7 @@ function StatCell({ target, suffix='', label, index }: { target:number|string; s
             }}>
                 {String(display)}<span style={{ color:isRedacted?'transparent':'#F5C400', fontSize:'28px', background:'transparent' }}>{!isRedacted && suffix}</span>
             </div>
-            <div style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'12px', letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(239,239,239,0.45)', marginTop:'8px' }}>{label}</div>
+            <div style={{ fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontWeight:500, fontSize:'13px', letterSpacing:'0.04em', textTransform:'none', color:'#EFEFEF', marginTop:'8px' }}>{label}</div>
         </div>
     );
 }
@@ -873,11 +873,12 @@ function LiveCounter() {
     return (
         <div style={{
             marginTop: '32px',
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: '12px',
-            color: 'rgba(239,239,239,0.25)',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            fontFamily: '"SF Pro Display", -apple-system, sans-serif',
+            fontWeight: 500,
+            fontSize: '13px',
+            color: '#EFEFEF',
+            letterSpacing: '0.04em',
+            textTransform: 'none',
             display: 'flex',
             alignItems: 'center',
             gap: '12px'
@@ -924,11 +925,11 @@ function StatusBar({ scrollProgress }: { scrollProgress: number }) {
     // Typewriter effect — only re-runs when phase actually changes
     useEffect(() => {
         const TEXTS = [
-            'AWAITING INITIATION',
-            'REDACTION PROTOCOL ACTIVE',
-            'SECURING SENSITIVE DATA...',
-            'DECLASSIFICATION COMPLETE',
-            'SECURE CONNECTION ESTABLISHED',
+            'Awaiting initiation',
+            'Redaction protocol active',
+            'Securing sensitive data...',
+            'Declassification complete',
+            'Secure connection established',
         ];
         const target = TEXTS[phase];
 
@@ -965,11 +966,12 @@ function StatusBar({ scrollProgress }: { scrollProgress: number }) {
             position: 'absolute',
             bottom: '40px',
             left: 'clamp(36px, 5vw, 80px)',
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: '11px',
-            color: 'rgba(239,239,239,0.42)',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            fontFamily: '"SF Pro Display", -apple-system, sans-serif',
+            fontWeight: 500,
+            fontSize: '13px',
+            color: '#EFEFEF',
+            letterSpacing: '0.04em',
+            textTransform: 'none',
             zIndex: 10,
             display: 'flex',
             alignItems: 'center',
@@ -1218,7 +1220,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
     const heroTextOpacity = 1;
 
     return (
-        <div id="hero-scroll-container" style={{ height: '900vh', position: 'relative' }}>
+        <div id="hero-scroll-container" style={{ height: '500vh', position: 'relative' }}>
             <div id="hero-sticky" style={{
                 position: 'sticky',
                 top: 0,
@@ -1281,7 +1283,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
                         {['Zero data retention', 'Client-side only', 'Air-gap compatible', 'DPDP compliant'].map(item => (
                             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <span style={{ color: 'rgba(239,239,239,0.42)', fontSize: '12px' }}>✓</span>
-                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.42)' }}>{item}</span>
+                                <span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '13px', letterSpacing: '0.04em', textTransform: 'none', color: '#EFEFEF' }}>{item}</span>
                             </div>
                         ))}
                     </div>
@@ -1336,7 +1338,7 @@ function ZeroEasterEgg() {
             top: '50%',
             transform: 'translateY(-50%)',
             fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(180px, 20vw, 360px)',
-            color:'rgba(239,239,239,0.018)',
+            color:'rgba(239,239,239,0.08)',
             pointerEvents:'none', userSelect:'none', zIndex:0,
             lineHeight: 1
         }}>{val}</div>
@@ -1347,11 +1349,17 @@ function ZeroEasterEgg() {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-    const [loaderDone,  setLoaderDone]  = useState(false);
-    const [pageVisible, setPageVisible] = useState(false);
+    const [loaderDone,  setLoaderDone]  = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('ciphera_loader_done') === 'true' : false);
+    const [pageVisible, setPageVisible] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('ciphera_loader_done') === 'true' : false);
     const [navScrolled, setNavScrolled] = useState(false);
     const [showTerminal, setShowTerminal] = useState(true);
     const [heroActive, setHeroActive] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem('ciphera_loader_done', 'true');
+        }
+    }, []);
 
     const handleLoaderComplete = () => { setLoaderDone(true); };
     const handleRevealPage = () => { setPageVisible(true); };
@@ -1465,10 +1473,10 @@ export default function LandingPage() {
                     {/* Stats grid */}
                     <div className="content-wrap">
                         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
-                            <StatCell target={17}   suffix="+" label="Entity Types Detected" index="01" />
-                            <StatCell target={4}    suffix=""  label="Detection Stages"      index="02" />
-                            <StatCell target={7}    suffix=""  label="Indian PII Formats"    index="03" />
-                            <StatCell target="0kb"  suffix=""  label="Sent to Server"        index="04" />
+                            <StatCell target={17}   suffix="+" label="Entity types detected" index="01" />
+                            <StatCell target={4}    suffix=""  label="Detection stages"      index="02" />
+                            <StatCell target={7}    suffix=""  label="Indian PII formats"    index="03" />
+                            <StatCell target="0kb"  suffix=""  label="Sent to server"        index="04" />
                         </div>
                     </div>
                 </section>
@@ -1493,9 +1501,9 @@ export default function LandingPage() {
                     {/* Headline Block */}
                     <div className="content-wrap">
                       <div style={{marginBottom:'48px'}}>
-                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
-                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
-                          NOTHING ESCAPES DETECTION
+                        <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif',fontSize:'14px',fontWeight:500,letterSpacing:'0.04em',color:'#EF4444',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#EF4444',display:'inline-block'}}></span>
+                          Nothing escapes detection
                         </p>
                         <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
                           <div style={{color:'#EFEFEF'}}>NOTHING LEAVES.</div>
@@ -1508,7 +1516,7 @@ export default function LandingPage() {
                           </div>
                           <div style={{fontFamily:'IBM Plex Mono',fontSize:'8px',letterSpacing:'0.16em',color:'rgba(239,239,239,0.18)',marginTop:'6px'}}>HOVER TO REVEAL</div>
                         </div>
-                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>09 MODULES. ALL RUNNING LOCALLY. ALL RUNNING NOW.</p>
+                        <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', marginTop: '16px', textTransform: 'none'}}>09 modules. All running locally. All running now.</p>
                       </div>
                     </div>
 
@@ -1552,15 +1560,15 @@ export default function LandingPage() {
                     {/* Headline Block */}
                     <div className="content-wrap">
                       <div style={{marginBottom:'48px'}}>
-                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
-                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
-                          DETECTION ENGINE · ACTIVE
+                        <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif',fontSize:'14px',fontWeight:500,letterSpacing:'0.04em',color:'#EF4444',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#EF4444',display:'inline-block'}}></span>
+                          Detection engine · Active
                         </p>
                         <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
                           <div style={{color:'#EFEFEF'}}>FOUR STAGES.</div>
                           <div style={{color:'#F5C400'}}>ONE VERDICT.</div>
                         </div>
-                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'11px',color:'rgba(239,239,239,0.38)',letterSpacing:'0.14em',marginTop:'16px'}}>EACH ENTITY IS VOTED ON. CONFIDENCE THRESHOLD: ≥0.80. BELOW THAT — FLAGGED FOR HUMAN REVIEW.</p>
+                        <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', marginTop: '16px', textTransform: 'none'}}>Each entity is voted on. Confidence threshold: ≥0.80. Below that — flagged for human review.</p>
                       </div>
                     </div>
                     <div className="content-wrap">
@@ -1580,9 +1588,9 @@ export default function LandingPage() {
                     {/* Headline Block */}
                     <div className="content-wrap">
                       <div style={{marginBottom:'48px'}}>
-                        <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
-                          <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
-                          API ACCESS · AUTHENTICATED
+                        <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif',fontSize:'14px',fontWeight:500,letterSpacing:'0.04em',color:'#EF4444',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                          <span style={{width:'18px',height:'1px',background:'#EF4444',display:'inline-block'}}></span>
+                          API access · Authenticated
                         </p>
                         <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
                           <div style={{color:'#EFEFEF'}}>REDACT FROM</div>
@@ -1642,9 +1650,9 @@ export default function LandingPage() {
                     <div className="content-wrap" style={{ display:'grid', gridTemplateColumns:'4fr 6fr' }}>
                         <div style={{ paddingRight:'clamp(24px, 4vw, 64px)', borderRight:'1px solid rgba(239,239,239,0.07)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
                           <div style={{marginBottom:'48px'}}>
-                            <p style={{fontFamily:'IBM Plex Mono',fontSize:'10px',letterSpacing:'0.24em',color:'#B91C1C',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
-                              <span style={{width:'18px',height:'1px',background:'#B91C1C',display:'inline-block'}}></span>
-                              REGULATORY CLEARANCE
+                            <p style={{fontFamily:'"SF Pro Display", -apple-system, sans-serif',fontSize:'14px',fontWeight:500,letterSpacing:'0.04em',color:'#EF4444',marginBottom:'20px',display:'flex',alignItems:'center',gap:'8px'}}>
+                              <span style={{width:'18px',height:'1px',background:'#EF4444',display:'inline-block'}}></span>
+                              Regulatory clearance
                             </p>
                             <div style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:'clamp(48px,6vw,80px)',lineHeight:0.88,textTransform:'uppercase'}}>
                               <div style={{color:'#EFEFEF'}}>EVERY REGULATION.</div>
@@ -1692,7 +1700,7 @@ export default function LandingPage() {
                     <div style={{
                         position:'absolute', right:'-80px', top:'50%', transform:'translateY(-50%) rotate(-90deg)',
                         fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'clamp(60px, 8vw, 100px)',
-                        textTransform:'uppercase', color:'rgba(239,239,239,0.025)',
+                        textTransform:'uppercase', color:'rgba(239,239,239,0.10)',
                         pointerEvents:'none', userSelect:'none', whiteSpace:'nowrap', zIndex:0,
                     }}>CLASSIFIED</div>
 
@@ -1727,22 +1735,30 @@ export default function LandingPage() {
                       
                       {/* Col 1 */}
                       <div>
-                        <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '24px', color: '#EFEFEF' }}>CIPHERA V3</div>
-                        <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)' }}>INTELLIGENT REDACTION</div>
+                        <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 900, fontSize: '32px', color: '#EFEFEF' }}>CIPHERA V3</div>
+                        <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '11px', color: 'rgba(239,239,239,0.4)', marginTop: '4px' }}>INTELLIGENT REDACTION</div>
                       </div>
 
                       {/* Col 2 */}
-                      <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: '#EFEFEF' }}>PLATFORM</div>
+                      <div style={{ display: 'flex', gap: '80px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 600, color: '#EFEFEF', letterSpacing: '0.02em' }}>Platform</div>
                           {[['Dashboard','/dashboard'],['API Keys','/settings'],['Settings','/settings']].map(([l,href]) => (
-                            <Link key={l} href={href} style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)', textDecoration: 'none' }}>{l}</Link>
+                            <Link key={l} href={href} style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', color: 'rgba(239,239,239,0.6)', textDecoration: 'none', transition: 'color 0.2s ease' }}
+                                  onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
+                                  onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.6)')}>
+                              {l}
+                            </Link>
                           ))}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: '#EFEFEF' }}>LEGAL</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 600, color: '#EFEFEF', letterSpacing: '0.02em' }}>Legal</div>
                           {['Privacy Policy','Terms of Service','DPDP Compliance'].map(l => (
-                            <a key={l} href="#" style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.32)', textDecoration: 'none' }}>{l}</a>
+                            <a key={l} href="#" style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', color: 'rgba(239,239,239,0.6)', textDecoration: 'none', transition: 'color 0.2s ease' }}
+                               onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
+                               onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.6)')}>
+                              {l}
+                            </a>
                           ))}
                         </div>
                       </div>
@@ -1750,11 +1766,11 @@ export default function LandingPage() {
 
                     {/* Bottom row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.18)' }}>
-                        © 2026 CIPHERA SYSTEMS.
+                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
+                        © 2026 Ciphera systems.
                       </div>
-                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', color: 'rgba(239,239,239,0.42)' }}>
-                        {'>'} SESSION TERMINATED · 0 BYTES RETAINED <span style={{ color: '#F5C400', animation: 'blink 1s step-end infinite' }}>|</span>
+                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
+                        {'>'} Session terminated · 0 bytes retained <span style={{ color: '#F5C400', animation: 'blink 1s step-end infinite' }}>|</span>
                       </div>
                     </div>
                   </div>
