@@ -113,13 +113,18 @@ export const redactionEngine = {
         cleanOcr:     boolean       = false,
         useMlScoring: boolean       = false,
         fileName?:    string,
+        languageMode: 'english' | 'hindi' | 'mixed' = 'english',
     ): Promise<TokenizeResult> {
         if (!rawText) return { tokens: [], failed: false };
 
         // ── Step 1: V3 detection pipeline ────────────────────────────────────
         let v3Entities: V3Entity[] = [];
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/v3/analyze', {
+            let endpoint = 'http://127.0.0.1:8000/api/v3/analyze';
+            if (languageMode === 'hindi') endpoint = 'http://127.0.0.1:8000/api/v3/analyze-hindi';
+            else if (languageMode === 'mixed') endpoint = 'http://127.0.0.1:8000/api/v3/analyze-mixed';
+
+            const response = await fetch(endpoint, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

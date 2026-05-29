@@ -123,6 +123,8 @@ export default function WorkspacePage() {
     const [splitView,       setSplitView]       = useState(false);
     // Banner shown when auto-classifier detects a document type
     const [classifierBanner, setClassifierBanner] = useState<string | null>(null);
+    const [languageBanner, setLanguageBanner] = useState<string | null>(null);
+    const [languageMode, setLanguageMode] = useState<'english'|'hindi'|'mixed'>('english');
 
     const [openGroups,     setOpenGroups]     = useState<Record<string, boolean>>(Object.fromEntries(RULE_GROUPS.map(g => [g.label, true])));
     const [customOpen,     setCustomOpen]     = useState(false);
@@ -163,7 +165,7 @@ export default function WorkspacePage() {
     // Debounced tokenization — re-runs when threshold changes
     useEffect(() => {
         const t = setTimeout(async () => {
-            const result = await redactionEngine.tokenize(rawText, rules, customRules, threshold, false, true, fileName);
+            const result = await redactionEngine.tokenize(rawText, rules, customRules, threshold, false, true, fileName, languageMode);
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
@@ -208,6 +210,26 @@ export default function WorkspacePage() {
             }
         } catch { /* classifier offline — no-op */ }
     };
+    const detectLanguage = async (text: string) => {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/api/v3/detect-language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text.slice(0, 3000) }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setLanguageMode(data.mode || 'english');
+        // data.mode will be 'hindi', 'mixed', or 'english'
+        if (data.mode === 'hindi') {
+            setLanguageBanner('LANGUAGE DETECTED: HINDI · Using hindi analysis pipeline');
+        } else if (data.mode === 'mixed') {
+            setLanguageBanner('LANGUAGE DETECTED: HINDI + ENGLISH · Using bilingual pipeline');
+        }
+        // english = no banner needed, that's the default
+        setTimeout(() => setLanguageBanner(null), 8000);
+    } catch { /* language detection offline — no-op */ }
+};
 
     const handleToggleRule = useCallback(async (ruleId: RuleType) => {
         const wasActive = rules[ruleId]?.isActive ?? false;
@@ -292,6 +314,8 @@ export default function WorkspacePage() {
             useDocumentStore.getState().setFileMetadata(name, type, file);
             // Run classifier after text is loaded
             await runClassifier(text, file.name);
+            await detectLanguage(text);
+
         } catch { useUiStore.getState().addToast("File format not supported.", "error"); }
     };
 
@@ -340,7 +364,37 @@ export default function WorkspacePage() {
         const { fileType, fileName } = useDocumentStore.getState();
         const fmt = formatOverride || fileType;
 
-        if (fileType === 'image' || fileType === 'pdf') {
+        if (fileType === 'pdf') {
+            const origFile = useDocumentStore.getState().originalFile;
+            if (!origFile) { useUiStore.getState().addToast("No PDF file found.", "error"); return; }
+            setIsExporting(true);
+            try {
+                useUiStore.getState().addToast("Redacting PDF on server...", "info");
+                const fd = new FormData();
+                fd.append('file', origFile);
+                const resp = await fetch('http://127.0.0.1:8000/api/v3/redact-pdf', { method: 'POST', body: fd });
+                if (!resp.ok) throw new Error('PDF redaction failed');
+                const blob = await resp.blob();
+                const baseName = fileName.includes('.') ? fileName.slice(0, fileName.lastIndexOf('.')) : fileName;
+                const finalName = `${baseName}_Secure.pdf`;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = finalName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                useUiStore.getState().addToast('PDF redacted and downloaded.', 'success');
+            } catch (err) {
+                useUiStore.getState().addToast("Export failed. Try again.", "error");
+            } finally {
+                setIsExporting(false);
+            }
+            return;
+        }
+
+        if (fileType === 'image') {
             const getStage = async () => {
                 for (let i = 0; i < 5; i++) {
                     const stage = useCanvasStore.getState().stageRef;
@@ -387,7 +441,7 @@ export default function WorkspacePage() {
     };
 
     const handleExportClick = () => {
-        if ((fileType === 'pdf' || fileType === 'image') && pdfPages.length > 1) {
+        if (fileType === 'image' && pdfPages.length > 1) {
             setShowExportModal(true);
         } else if (fileType !== 'image' && fileType !== 'pdf' && totalMatches > 0) {
             setShowReviewModal(true);
@@ -615,7 +669,7 @@ export default function WorkspacePage() {
                             <div className="absolute top-full right-0 mt-1.5 w-28 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 overflow-hidden p-1">
                                 {(isCanvas ? ['pdf','png','jpg'] as const : ['docx','pdf','txt','md','csv','json'] as const).map(fmt => (
                                     <button key={fmt} disabled={redactionFailed || !hasReviewed}
-                                        onClick={(e) => { e.stopPropagation(); pdfPages.length > 1 ? setShowExportModal(true) : exportSecureFile(fmt as any); }}
+                                        onClick={(e) => { e.stopPropagation(); (fileType === 'image' && pdfPages.length > 1) ? setShowExportModal(true) : exportSecureFile(fmt as any); }}
                                         className="block w-full text-left px-3 py-1.5 text-[11px] font-mono text-gray-400 hover:bg-[#2A2A2A] hover:text-white uppercase transition-colors disabled:opacity-40 rounded-lg">.{fmt}</button>
                                 ))}
                             </div>
@@ -633,7 +687,18 @@ export default function WorkspacePage() {
                         <button onClick={() => setClassifierBanner(null)} className="text-blue-400/60 hover:text-blue-300 cursor-pointer ml-3"><X className="w-3 h-3" /></button>
                     </div>
                 )}
-
+                {/* Language detection banner */}
+                {languageBanner && (
+                    <div className="flex items-center justify-between px-4 py-2 bg-orange-500/10 border-b border-orange-500/20 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                            <span className="text-[11px] text-orange-300 font-mono">{languageBanner}</span>
+                        </div>
+                        <button onClick={() => setLanguageBanner(null)} className="text-orange-400/60 hover:text-orange-300 cursor-pointer ml-3">
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                )}
                 <div className="bg-[#141414] border-b border-[#2A2A2A] px-4 py-1.5 flex items-center gap-3">
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap flex-1">
                         {Object.entries(tokens.reduce((acc, t) => { if (t.type !== 'text') acc[t.type] = (acc[t.type] || 0) + 1; return acc; }, {} as Record<string, number>)).slice(0, 6).map(([type, count]) => {
