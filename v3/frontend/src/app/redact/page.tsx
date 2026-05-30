@@ -165,7 +165,12 @@ export default function WorkspacePage() {
     // Debounced tokenization — re-runs when threshold changes
     useEffect(() => {
         const t = setTimeout(async () => {
-            const result = await redactionEngine.tokenize(rawText, rules, customRules, threshold, false, true, fileName, languageMode);
+            const result = await redactionEngine.tokenize(
+                rawText, rules, customRules, threshold, false, true, fileName,
+                (languageMode === 'hindi' || languageMode === 'mixed')
+                ? languageMode
+                : 'english',
+            );
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
@@ -355,7 +360,8 @@ export default function WorkspacePage() {
         const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
         const active = isBI ? rules[t.type as RuleType]?.isActive : cr?.isActive;
         if (!active) return t.value;
-        const action = isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace');
+        const action = actionOverrides[t.id]
+            || (isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace'));
         return redactionEngine.getRedactionReplacement(t.type, t.value, action, customRules);
     }).join('');
 
@@ -441,7 +447,7 @@ export default function WorkspacePage() {
     };
 
     const handleExportClick = () => {
-        if (fileType === 'image' && pdfPages.length > 1) {
+        if (fileType === 'pdf' && pdfPages.length > 1) {
             setShowExportModal(true);
         } else if (fileType !== 'image' && fileType !== 'pdf' && totalMatches > 0) {
             setShowReviewModal(true);
@@ -450,8 +456,11 @@ export default function WorkspacePage() {
         }
     };
 
-    const handleReviewConfirm = async (ids: Set<string>) => {
+    const [actionOverrides, setActionOverrides] = useState<Record<string, import('@/store/documentStore').RedactionAction>>({});
+    
+    const handleReviewConfirm = async (ids: Set<string>, overrides: Record<string, import('@/store/documentStore').RedactionAction>) => {
         setApprovedIds(ids);
+        setActionOverrides(overrides);
         setShowReviewModal(false);
         await exportSecureFile();
     };
@@ -500,7 +509,8 @@ export default function WorkspacePage() {
             if (t.type === 'text') return <PlainTextToken key={t.id} token={t} isRedacted={redacted} />;
             const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
             const action = rules[t.type as RuleType]?.action || cr?.action || 'replace';
-            return <AnimatedToken key={t.id} token={t} isRedacted={redacted} action={action} accentColor={cr?.color} />;
+            return <AnimatedToken key={t.id} token={t} isRedacted={redacted} action={action}
+                accentColor={cr?.color} actionOverride={actionOverrides[t.id]} />;
         });
 
     const configPanelContent = (
@@ -669,7 +679,7 @@ export default function WorkspacePage() {
                             <div className="absolute top-full right-0 mt-1.5 w-28 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 overflow-hidden p-1">
                                 {(isCanvas ? ['pdf','png','jpg'] as const : ['docx','pdf','txt','md','csv','json'] as const).map(fmt => (
                                     <button key={fmt} disabled={redactionFailed || !hasReviewed}
-                                        onClick={(e) => { e.stopPropagation(); (fileType === 'image' && pdfPages.length > 1) ? setShowExportModal(true) : exportSecureFile(fmt as any); }}
+                                        onClick={(e) => { e.stopPropagation(); (fileType === 'pdf' && pdfPages.length > 1) ? setShowExportModal(true) : exportSecureFile(fmt as any); }}
                                         className="block w-full text-left px-3 py-1.5 text-[11px] font-mono text-gray-400 hover:bg-[#2A2A2A] hover:text-white uppercase transition-colors disabled:opacity-40 rounded-lg">.{fmt}</button>
                                 ))}
                             </div>
