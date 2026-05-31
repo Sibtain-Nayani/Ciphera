@@ -1,6 +1,6 @@
 """
-Ciphera V3.1.0 — main.py
-Adds: Hindi pipeline, Hindi OCR, mixed document analysis, language detection
+Ciphera V3.2 — main.py
+Adds: signed audit report PDF (feature14)
 """
 
 from contextlib import asynccontextmanager
@@ -24,10 +24,9 @@ from feature8_api_keys        import api_router, public_router
 from feature9_synthetic       import router as synthetic_router
 from feature10_audit_db       import router as audit_router
 from feature11_doc_classifier import router as classifier_router
-
-# V3.1.0 — Hindi support
 from feature12_hindi_support  import router as hindi_router
 from feature13_ocr_hindi      import router as ocr_hindi_router
+from feature14_audit_report   import router as report_router     # NEW
 
 pipeline: Optional[DetectionPipeline] = None
 
@@ -38,13 +37,12 @@ async def lifespan(app: FastAPI):
     pipeline = DetectionPipeline(use_transformer=True)
     pdf_set_pipeline(pipeline)
     f1.pipeline = pipeline
-    # Hindi pipeline loads itself on import (lazy, non-blocking)
     yield
 
 
 app = FastAPI(
-    title="Ciphera V3.1 — Intelligent PII Anonymization API",
-    version="3.1.0",
+    title="Ciphera V3.2 — Intelligent PII Anonymization API",
+    version="3.2.0",
     lifespan=lifespan,
 )
 
@@ -55,7 +53,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# V3.0 routers
+# V3.0
 app.include_router(pdf_router)
 app.include_router(image_router)
 app.include_router(scoring_router)
@@ -64,10 +62,11 @@ app.include_router(public_router)
 app.include_router(synthetic_router)
 app.include_router(audit_router)
 app.include_router(classifier_router)
-
-# V3.1 routers
+# V3.1
 app.include_router(hindi_router)
 app.include_router(ocr_hindi_router)
+# V3.2
+app.include_router(report_router)
 
 
 @app.post("/api/v3/analyze", response_model=AnalyzeResponse)
@@ -103,24 +102,20 @@ async def health():
     from feature13_ocr_hindi     import ocr_processor
     return {
         "status":  "ok" if pipeline else "loading",
-        "version": "3.1.0",
+        "version": "3.2.0",
         "features": {
-            "english_pipeline":       bool(pipeline),
-            "hindi_pipeline":         hindi_pipeline.ready,
-            "hindi_spacy":            hindi_pipeline._spacy is not None,
-            "hindi_presidio":         hindi_pipeline._presidio is not None,
-            "ocr_tesseract":          ocr_processor.tesseract_available,
-            "ocr_hindi":              ocr_processor.hindi_available,
-            "pdf_burnin_redaction":   True,
-            "dnn_face_detection":     True,
+            "english_pipeline":     bool(pipeline),
+            "hindi_pipeline":       hindi_pipeline.ready,
+            "ocr_hindi":            ocr_processor.hindi_available,
+            "pdf_burnin":           True,
+            "dnn_face_detection":   True,
+            "signed_audit_report":  True,
         },
         "endpoints": [
-            # V3.0
             "POST /api/v3/analyze",
             "POST /api/v3/analyze-pdf",
             "POST /api/v3/redact-pdf",
             "POST /api/v3/redact-image",
-            "POST /api/v3/redact-image/download",
             "POST /api/v3/score-entities",
             "POST /api/v3/synthesize",
             "POST /api/v3/classify",
@@ -129,14 +124,15 @@ async def health():
             "POST /api/v3/audit/log",
             "GET  /api/v3/audit/logs",
             "GET  /api/v3/audit/stats",
-            # V3.1
+            "POST /api/v3/audit/report",        # NEW
+            "GET  /api/v3/audit/verify/{hash}", # NEW
+            "GET  /api/v3/audit/report/history",# NEW
             "POST /api/v3/detect-language",
             "POST /api/v3/analyze-hindi",
             "POST /api/v3/analyze-mixed",
             "POST /api/v3/ocr/pdf-hindi",
             "POST /api/v3/ocr/image-hindi",
             "POST /api/v3/ocr/analyze-hindi-document",
-            "GET  /api/v3/ocr/status",
         ],
     }
 
@@ -144,16 +140,13 @@ async def health():
 @app.get("/api/v3/entities")
 async def list_entity_types():
     return {"entity_types": [
-        # V3.0 English types
         "PERSON","EMAIL_ADDRESS","PHONE_NUMBER","AADHAAR_NUMBER","PAN_NUMBER",
         "GST_NUMBER","IFSC_CODE","VOTER_ID","IN_PASSPORT","IN_VEHICLE_REG",
         "CREDIT_CARD","DATE_TIME","DATE_OF_BIRTH","LOCATION","ORGANIZATION",
-        "URL","IP_ADDRESS","UPI_ID","BANK_ACCOUNT","DRIVING_LICENCE",
-        # V3.1 Hindi-specific types
-        "PIN_CODE",
+        "URL","IP_ADDRESS","UPI_ID","BANK_ACCOUNT","DRIVING_LICENCE","PIN_CODE",
     ]}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main_v31:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

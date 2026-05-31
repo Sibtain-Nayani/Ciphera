@@ -93,135 +93,160 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancel} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onCancel} />
 
             {/* Modal */}
-            <div className="relative z-10 w-full max-w-md mx-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl shadow-2xl overflow-hidden">
+            <div className="relative z-10 w-full max-w-[420px] bg-[#0d0d0d] border border-[#222] rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/5 flex flex-col">
+                {/* Top decorative gradient */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#FFA500]/50 to-transparent opacity-50" />
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A2A2A]">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-[#FFA500]/10 border border-[#FFA500]/20">
-                            <FileDown className="w-4 h-4 text-[#FFA500]" />
+                <div className="flex items-start justify-between px-6 py-5 border-b border-[#222] bg-white/[0.02]">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#FFA500]/20 to-[#FFA500]/5 border border-[#FFA500]/20 shadow-inner">
+                            <FileDown className="w-5 h-5 text-[#FFA500]" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-semibold text-white">Export Redacted Document</h2>
-                            <p className="text-[11px] text-gray-500 mt-0.5">{totalPages} page{totalPages > 1 ? 's' : ''} total</p>
+                            <h2 className="text-[15px] font-medium text-gray-100 tracking-tight">Export Redacted Document</h2>
+                            <p className="text-xs text-gray-500 mt-0.5">{totalPages} page{totalPages > 1 ? 's' : ''} total</p>
                         </div>
                     </div>
-                    <button onClick={onCancel} className="p-1.5 text-gray-500 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors cursor-pointer">
+                    <button onClick={onCancel} className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5">
+                <div className="p-6 space-y-6">
 
                     {/* Page selection — only show for multi-page PDFs */}
                     {totalPages > 1 && (
                         <div>
-                            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 block">
+                            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.1em] mb-3 block ml-1">
                                 Pages to Redact &amp; Export
                             </label>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                                 {/* All pages */}
-                                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${mode === 'all' ? 'border-[#FFA500]/40 bg-[#FFA500]/5' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}>
-                                    <input type="radio" name="pageMode" value="all" checked={mode === 'all'} onChange={() => setMode('all')} className="accent-[#FFA500]" />
-                                    <div className="flex items-center gap-2 flex-1">
-                                        <Layers className="w-4 h-4 text-[#FFA500]" />
+                                <label className={`flex items-center gap-4 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 group ${mode === 'all' ? 'border-[#FFA500]/40 bg-[#FFA500]/[0.08]' : 'border-[#222] hover:border-[#333] hover:bg-white/[0.02]'}`}>
+                                    <div className="flex items-center justify-center relative w-5 h-5">
+                                        <input type="radio" name="pageMode" value="all" checked={mode === 'all'} onChange={() => setMode('all')} className="absolute opacity-0 w-full h-full cursor-pointer" />
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${mode === 'all' ? 'border-[#FFA500]' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                                            {mode === 'all' && <div className="w-2 h-2 rounded-full bg-[#FFA500]" />}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className={`p-1.5 rounded-lg transition-colors ${mode === 'all' ? 'bg-[#FFA500]/10 text-[#FFA500]' : 'bg-[#222] text-gray-400'}`}>
+                                            <Layers className="w-4 h-4" />
+                                        </div>
                                         <div>
-                                            <p className="text-sm font-medium text-white">All Pages</p>
-                                            <p className="text-[11px] text-gray-500">Export all {totalPages} pages as one PDF</p>
+                                            <p className={`text-sm font-medium transition-colors ${mode === 'all' ? 'text-white' : 'text-gray-300'}`}>All Pages</p>
+                                            <p className="text-[11px] text-gray-500 mt-0.5">Export the entire document</p>
                                         </div>
                                     </div>
                                     {mode === 'all' && (
-                                        <span className="text-[10px] font-mono text-[#FFA500] bg-[#FFA500]/10 px-2 py-0.5 rounded-full">{totalPages} pages</span>
+                                        <span className="text-[10px] font-mono font-medium text-[#FFA500] bg-[#FFA500]/10 border border-[#FFA500]/20 px-2 py-0.5 rounded-md shadow-sm">{totalPages} pages</span>
                                     )}
                                 </label>
 
                                 {/* Current page */}
-                                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${mode === 'current' ? 'border-[#FFA500]/40 bg-[#FFA500]/5' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}>
-                                    <input type="radio" name="pageMode" value="current" checked={mode === 'current'} onChange={() => setMode('current')} className="accent-[#FFA500]" />
-                                    <div className="flex items-center gap-2 flex-1">
-                                        <CheckSquare className="w-4 h-4 text-blue-400" />
+                                <label className={`flex items-center gap-4 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 group ${mode === 'current' ? 'border-[#FFA500]/40 bg-[#FFA500]/[0.08]' : 'border-[#222] hover:border-[#333] hover:bg-white/[0.02]'}`}>
+                                    <div className="flex items-center justify-center relative w-5 h-5">
+                                        <input type="radio" name="pageMode" value="current" checked={mode === 'current'} onChange={() => setMode('current')} className="absolute opacity-0 w-full h-full cursor-pointer" />
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${mode === 'current' ? 'border-[#FFA500]' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                                            {mode === 'current' && <div className="w-2 h-2 rounded-full bg-[#FFA500]" />}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className={`p-1.5 rounded-lg transition-colors ${mode === 'current' ? 'bg-[#FFA500]/10 text-[#FFA500]' : 'bg-[#222] text-gray-400'}`}>
+                                            <CheckSquare className="w-4 h-4" />
+                                        </div>
                                         <div>
-                                            <p className="text-sm font-medium text-white">Current Page Only</p>
-                                            <p className="text-[11px] text-gray-500">Export only page {currentPage}</p>
+                                            <p className={`text-sm font-medium transition-colors ${mode === 'current' ? 'text-white' : 'text-gray-300'}`}>Current Page Only</p>
+                                            <p className="text-[11px] text-gray-500 mt-0.5">Export only page {currentPage}</p>
                                         </div>
                                     </div>
                                     {mode === 'current' && (
-                                        <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full">p.{currentPage}</span>
+                                        <span className="text-[10px] font-mono font-medium text-[#FFA500] bg-[#FFA500]/10 border border-[#FFA500]/20 px-2 py-0.5 rounded-md shadow-sm">p.{currentPage}</span>
                                     )}
                                 </label>
 
                                 {/* Custom range */}
-                                <label className={`flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition-all ${mode === 'range' ? 'border-[#FFA500]/40 bg-[#FFA500]/5' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <input type="radio" name="pageMode" value="range" checked={mode === 'range'} onChange={() => setMode('range')} className="accent-[#FFA500]" />
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <Hash className="w-4 h-4 text-purple-400" />
+                                <div className={`flex flex-col gap-3 p-3.5 rounded-xl border transition-all duration-200 ${mode === 'range' ? 'border-[#FFA500]/40 bg-[#FFA500]/[0.08]' : 'border-[#222] hover:border-[#333] hover:bg-white/[0.02]'}`}>
+                                    <label className="flex items-center gap-4 cursor-pointer group">
+                                        <div className="flex items-center justify-center relative w-5 h-5">
+                                            <input type="radio" name="pageMode" value="range" checked={mode === 'range'} onChange={() => setMode('range')} className="absolute opacity-0 w-full h-full cursor-pointer" />
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${mode === 'range' ? 'border-[#FFA500]' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                                                {mode === 'range' && <div className="w-2 h-2 rounded-full bg-[#FFA500]" />}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <div className={`p-1.5 rounded-lg transition-colors ${mode === 'range' ? 'bg-[#FFA500]/10 text-[#FFA500]' : 'bg-[#222] text-gray-400'}`}>
+                                                <Hash className="w-4 h-4" />
+                                            </div>
                                             <div>
-                                                <p className="text-sm font-medium text-white">Custom Range</p>
-                                                <p className="text-[11px] text-gray-500">e.g. 1,3,5-7</p>
+                                                <p className={`text-sm font-medium transition-colors ${mode === 'range' ? 'text-white' : 'text-gray-300'}`}>Custom Range</p>
+                                                <p className="text-[11px] text-gray-500 mt-0.5">e.g. 1,3,5-7</p>
                                             </div>
                                         </div>
                                         {mode === 'range' && getPageCount() > 0 && (
-                                            <span className="text-[10px] font-mono text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded-full">{getPageCount()} pages</span>
+                                            <span className="text-[10px] font-mono font-medium text-[#FFA500] bg-[#FFA500]/10 border border-[#FFA500]/20 px-2 py-0.5 rounded-md shadow-sm">{getPageCount()} pages</span>
                                         )}
-                                    </div>
+                                    </label>
 
                                     {mode === 'range' && (
-                                        <div className="ml-6 mt-1">
+                                        <div className="ml-[44px] mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                                             <input
                                                 type="text"
                                                 value={rangeInput}
                                                 onChange={e => validateRange(e.target.value)}
                                                 placeholder={`e.g. 1-3,5,7 (1–${totalPages})`}
-                                                className="w-full px-3 py-2 bg-[#111] border border-[#3A3A3A] text-sm text-white font-mono rounded-lg placeholder:text-gray-600 focus:border-[#FFA500]/50 focus:outline-none transition-colors"
+                                                className={`w-full px-3.5 py-2.5 bg-[#080808] border text-sm text-gray-100 font-mono rounded-xl placeholder:text-gray-600 transition-all focus:outline-none ${rangeError ? 'border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-[#333] focus:border-[#FFA500]/60 focus:ring-1 focus:ring-[#FFA500]/20 shadow-inner'}`}
                                                 autoFocus
                                             />
                                             {rangeError && (
-                                                <div className="flex items-center gap-1.5 mt-1.5">
-                                                    <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
-                                                    <p className="text-[10px] text-red-400">{rangeError}</p>
+                                                <div className="flex items-center gap-1.5 mt-2">
+                                                    <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                                    <p className="text-[11px] font-medium text-red-400/90">{rangeError}</p>
                                                 </div>
                                             )}
                                         </div>
                                     )}
-                                </label>
+                                </div>
                             </div>
                         </div>
                     )}
 
                     {/* Format selection */}
                     <div>
-                        <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 block">
+                        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.1em] mb-3 block ml-1">
                             Export Format
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center p-1 bg-[#111] border border-[#222] rounded-xl shadow-inner">
                             {(['pdf', 'png'] as const).map(fmt => (
                                 <button key={fmt} onClick={() => setFormat(fmt)}
-                                    className={`py-2.5 rounded-xl border text-sm font-mono font-semibold uppercase transition-all cursor-pointer ${format === fmt ? 'border-[#FFA500]/50 bg-[#FFA500]/10 text-[#FFA500]' : 'border-[#2A2A2A] text-gray-500 hover:border-[#3A3A3A] hover:text-gray-300'}`}>
+                                    className={`flex-1 py-2 rounded-lg text-[13px] font-semibold uppercase tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${format === fmt ? 'bg-[#222] text-white shadow-sm ring-1 ring-white/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'}`}>
                                     .{fmt}
-                                    {fmt === 'pdf' && <span className="ml-1 text-[9px] opacity-60">recommended</span>}
+                                    {fmt === 'pdf' && format === 'pdf' && <span className="text-[9px] text-[#FFA500] font-medium ml-1 bg-[#FFA500]/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Rec</span>}
                                 </button>
                             ))}
                         </div>
                         {format === 'png' && mode === 'all' && totalPages > 1 && (
-                            <p className="text-[10px] text-amber-400 mt-2 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                PNG exports pages as a ZIP archive with one image per page.
-                            </p>
+                            <div className="flex items-start gap-2 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-amber-400/90 font-medium leading-relaxed">
+                                    PNG exports multiple pages as a ZIP archive containing individual images.
+                                </p>
+                            </div>
                         )}
                     </div>
 
                     {/* Summary */}
-                    <div className="px-3 py-2.5 rounded-xl bg-[#111] border border-[#2A2A2A]">
-                        <p className="text-[11px] text-gray-500 font-mono">
+                    <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-white/[0.03] to-transparent border border-white/[0.05]">
+                        <p className="text-xs text-gray-400 leading-relaxed">
                             Will export{' '}
-                            <span className="text-white font-semibold">
+                            <span className="text-white font-medium">
                                 {mode === 'all' ? `all ${totalPages} pages` :
                                  mode === 'current' ? `page ${currentPage}` :
                                  getPageCount() > 0 ? `${getPageCount()} page${getPageCount() > 1 ? 's' : ''}` : '—'}
@@ -234,24 +259,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center gap-3 px-5 py-4 border-t border-[#2A2A2A]">
-                    <button onClick={onCancel} className="flex-1 py-2.5 border border-[#2A2A2A] text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-xl text-sm font-medium transition-all cursor-pointer">
+                <div className="flex items-center gap-3 px-6 py-4 bg-[#111]/50 border-t border-[#222]">
+                    <button onClick={onCancel} className="flex-1 py-2.5 bg-transparent hover:bg-white/5 border border-transparent hover:border-white/10 text-gray-400 hover:text-gray-200 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer">
                         Cancel
                     </button>
                     <button
                         onClick={handleConfirm}
                         disabled={isExporting || (mode === 'range' && (!!rangeError || !rangeInput.trim()))}
-                        className="flex-1 py-2.5 bg-[#FFA500] hover:bg-[#ffb733] text-black rounded-xl text-sm font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 py-2.5 bg-[#FFA500] hover:bg-[#ffb733] text-black rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,165,0,0.15)] hover:shadow-[0_0_25px_rgba(255,165,0,0.25)]"
                     >
                         {isExporting ? (
                             <>
-                                <div className="w-3.5 h-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                Exporting…
+                                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                <span>Exporting...</span>
                             </>
                         ) : (
                             <>
                                 <FileDown className="w-4 h-4" />
-                                Export
+                                <span>Export Document</span>
                             </>
                         )}
                     </button>

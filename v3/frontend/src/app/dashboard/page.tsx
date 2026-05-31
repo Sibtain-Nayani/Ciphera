@@ -139,6 +139,70 @@ export default function DashboardPage() {
     const entitiesMasked = isMounted ? totalEntitiesMasked : 0;
     const recentLogs     = isMounted ? auditLogs : [];
 
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleDownloadReport = async () => {
+        if (isDownloading) return;
+        if (!recentLogs.length) {
+            useUiStore.getState().addToast("No audit logs to generate a report from.", "error");
+            return;
+        }
+        setIsDownloading(true);
+        try {
+            useUiStore.getState().addToast("Syncing audit logs...", "info");
+
+            // Sync all frontend logs to backend DB first
+            await Promise.all(
+                recentLogs.map(log =>
+                    fetch('http://127.0.0.1:8000/api/v3/audit/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: log.id,
+                            name: log.name,
+                            size: log.size,
+                            date: log.date,
+                            status: log.status,
+                            entities_discovered: log.entitiesDiscovered,
+                            rules_applied: log.rulesApplied,
+                            session_id: 'default',
+                        }),
+                    }).catch(() => {}) // ignore individual sync failures (duplicates etc)
+                )
+            );
+
+            useUiStore.getState().addToast("Generating signed report...", "info");
+            const response = await fetch('http://127.0.0.1:8000/api/v3/audit/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: 'default', report_title: 'Ciphera Audit Report', include_raw_log: true })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => null);
+                const msg = err?.detail || 'Report generation failed';
+                useUiStore.getState().addToast(msg, "error");
+                return;
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Signed_Audit_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            useUiStore.getState().addToast("Signed report downloaded successfully.", "success");
+        } catch (err) {
+            console.error(err);
+            useUiStore.getState().addToast("Failed to download report.", "error");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <PageLoader page="dashboard">
         <div className="w-full p-6 md:p-10 selection:bg-[#F5C400] selection:text-black min-h-screen bg-[#0d0d0d]">
@@ -334,10 +398,10 @@ export default function DashboardPage() {
                                 // DPDP Act 2023 · GDPR compliant
                             </span>
                             {recentLogs.length > 0 && (
-                                <button onClick={() => exportAuditPDF(recentLogs, { totalDocs: docsSecured, totalEntities: entitiesMasked, activeRules: activeRulesCount })}
+                                <button onClick={handleDownloadReport}
                                     className="bg-[#F5C400] text-[#080808] hover:bg-[#ffe166] hover:shadow-[0_0_15px_rgba(245,196,0,0.4)] transition-all border-none cursor-pointer group"
                                     style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', padding: '10px 24px', textTransform: 'uppercase' }}>
-                                    EXPORT <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+                                    DOWNLOAD REPORT <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
                                 </button>
                             )}
                         </div>
