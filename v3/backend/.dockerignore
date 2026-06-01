@@ -14,3 +14,24 @@ models/
 data/
 .git/
 *.log
+# ── Never bake secrets or live data into the image ────────────────
+.env
+data/
+data/ciphera.db
+data/audit.db
+data/api_keys.json
+
+# ── Python noise ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+venv/
+venv311/
+.venv/
+*.egg-info/
+
+# ── Dev only ──────────────────────────────────────────────────────
+*.md
+.git/
+.gitignore
+tests/

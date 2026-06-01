@@ -1,6 +1,6 @@
 """
-Ciphera V3.2 — main.py
-Adds: signed audit report PDF (feature14)
+Ciphera V3.3 — main.py
+Auth + Orgs + RBAC + upgraded API keys
 """
 
 from contextlib import asynccontextmanager
@@ -17,16 +17,18 @@ from feature1_pipeline_upgrade import (
 )
 import feature1_pipeline_upgrade as f1
 
-from feature2_pdf_multipage   import router as pdf_router,        set_pipeline as pdf_set_pipeline
-from feature6_image_redaction import router as image_router
-from feature7_ml_scoring      import router as scoring_router
-from feature8_api_keys        import api_router, public_router
-from feature9_synthetic       import router as synthetic_router
-from feature10_audit_db       import router as audit_router
-from feature11_doc_classifier import router as classifier_router
-from feature12_hindi_support  import router as hindi_router
-from feature13_ocr_hindi      import router as ocr_hindi_router
-from feature14_audit_report   import router as report_router     # NEW
+from feature2_pdf_multipage     import router as pdf_router,      set_pipeline as pdf_set_pipeline
+from feature6_image_redaction   import router as image_router
+from feature7_ml_scoring        import router as scoring_router
+from feature8_api_keys          import api_router, public_router  # upgraded
+from feature9_synthetic         import router as synthetic_router
+from feature10_audit_db         import router as audit_router
+from feature11_doc_classifier   import router as classifier_router
+from feature12_hindi_support    import router as hindi_router
+from feature13_ocr_hindi        import router as ocr_hindi_router
+from feature14_audit_report     import router as report_router
+from feature15_auth             import router as auth_router       # NEW
+from feature16_organisations    import router as org_router        # NEW
 
 pipeline: Optional[DetectionPipeline] = None
 
@@ -41,8 +43,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Ciphera V3.2 — Intelligent PII Anonymization API",
-    version="3.2.0",
+    title="Ciphera V3.3 — Intelligent PII Anonymization API",
+    version="3.3.0",
     lifespan=lifespan,
 )
 
@@ -51,9 +53,12 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Ciphera-Report-ID", "X-Ciphera-Content-Hash"],
 )
 
-# V3.0
+# ── All routers ───────────────────────────────────────────────────────────────
+app.include_router(auth_router)
+app.include_router(org_router)
 app.include_router(pdf_router)
 app.include_router(image_router)
 app.include_router(scoring_router)
@@ -62,10 +67,8 @@ app.include_router(public_router)
 app.include_router(synthetic_router)
 app.include_router(audit_router)
 app.include_router(classifier_router)
-# V3.1
 app.include_router(hindi_router)
 app.include_router(ocr_hindi_router)
-# V3.2
 app.include_router(report_router)
 
 
@@ -88,11 +91,7 @@ async def analyze(request: AnalyzeRequest):
     return AnalyzeResponse(
         entity_count=len(entities),
         entities=[EntityResponse(**d) for d in dicts],
-        stats={
-            "by_type":    type_counts,
-            "by_source":  source_counts,
-            "text_length": len(request.text),
-        },
+        stats={"by_type": type_counts, "by_source": source_counts, "text_length": len(request.text)},
     )
 
 
@@ -102,38 +101,19 @@ async def health():
     from feature13_ocr_hindi     import ocr_processor
     return {
         "status":  "ok" if pipeline else "loading",
-        "version": "3.2.0",
+        "version": "3.3.0",
         "features": {
-            "english_pipeline":     bool(pipeline),
-            "hindi_pipeline":       hindi_pipeline.ready,
-            "ocr_hindi":            ocr_processor.hindi_available,
-            "pdf_burnin":           True,
-            "dnn_face_detection":   True,
-            "signed_audit_report":  True,
+            "auth":               True,
+            "organisations":      True,
+            "rbac":               True,
+            "english_pipeline":   bool(pipeline),
+            "hindi_pipeline":     hindi_pipeline.ready,
+            "ocr_hindi":          ocr_processor.hindi_available,
+            "pdf_burnin":         True,
+            "dnn_face_detection": True,
+            "signed_audit_report":True,
+            "api_key_auth":       True,
         },
-        "endpoints": [
-            "POST /api/v3/analyze",
-            "POST /api/v3/analyze-pdf",
-            "POST /api/v3/redact-pdf",
-            "POST /api/v3/redact-image",
-            "POST /api/v3/score-entities",
-            "POST /api/v3/synthesize",
-            "POST /api/v3/classify",
-            "POST /api/v3/public/redact",
-            "POST /api/v3/public/analyze",
-            "POST /api/v3/audit/log",
-            "GET  /api/v3/audit/logs",
-            "GET  /api/v3/audit/stats",
-            "POST /api/v3/audit/report",        # NEW
-            "GET  /api/v3/audit/verify/{hash}", # NEW
-            "GET  /api/v3/audit/report/history",# NEW
-            "POST /api/v3/detect-language",
-            "POST /api/v3/analyze-hindi",
-            "POST /api/v3/analyze-mixed",
-            "POST /api/v3/ocr/pdf-hindi",
-            "POST /api/v3/ocr/image-hindi",
-            "POST /api/v3/ocr/analyze-hindi-document",
-        ],
     }
 
 
