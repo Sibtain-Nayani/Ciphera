@@ -92,3 +92,43 @@ Thumbs.db
 # ── Project Specific ─────────────────────────────────────────────────────────
 assets/
 old_prototype/
+
+# ── Secrets ───────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Ciphera data (never commit live data) ─────────────────────────
+v3/backend/data/
+v3/backend/data/ciphera.db
+v3/backend/data/audit.db
+v3/backend/data/api_keys.json
+
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+venv311/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ── Node ──────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.suo
+*.user
