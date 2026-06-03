@@ -1,103 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShieldCheck, Settings, Layers, ChevronLeft, ChevronRight } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { LayoutDashboard, ShieldCheck, Settings, Layers, ChevronLeft, ChevronRight, LogOut, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const NAV = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", sublabel: "Overview & telemetry logs" },
-    { href: "/redact",    icon: ShieldCheck,      label: "Redact",        sublabel: "Visual workspace" },
-    { href: "/batch",     icon: Layers,           label: "Batch",   sublabel: "Pipeline assembly line" },
-    { href: "/settings",  icon: Settings,         label: "Settings",   sublabel: "Engine config console" },
+    { href: "/dashboard", icon: LayoutDashboard, label: "Mission Control", sublabel: "Telemetry & audit" },
+    { href: "/redact",    icon: ShieldCheck,      label: "Sanitize",        sublabel: "Redact & secure docs" },
+    { href: "/batch",     icon: Layers,           label: "Assembly Line",   sublabel: "Bulk processing queue" },
+    { href: "/settings",  icon: Settings,         label: "Engine Config",   sublabel: "Rules & preferences" },
 ];
 
 export function AppSidebar() {
-    const pathname   = usePathname();
+    const pathname    = usePathname();
+    const router      = useRouter();
+    const { user, logout } = useAuth();
     const [collapsed, setCollapsed] = useState(false);
 
+    const handleLogout = async () => {
+        await logout();
+        document.cookie = "ciphera_authed=; path=/; max-age=0";
+        router.replace("/login");
+    };
+
     return (
-        <aside
-            className="hidden md:flex flex-col bg-[#0a0a0b] transition-all duration-300 ease-out relative border-r border-[rgba(239,239,239,0.07)]"
-            style={{ width: collapsed ? '72px' : '260px' }}
-        >
+        <aside style={{ width: collapsed ? "72px" : "260px", background: "#080808", borderRight: "1px solid rgba(239,239,239,0.07)", transition: "width 0.25s ease", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", fontFamily: "Arial, sans-serif" }}>
+
             {/* Logo */}
-            <Link href="/" className="h-[72px] flex items-center gap-3 px-5 shrink-0 border-b border-[rgba(239,239,239,0.07)] group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(245,196,0,0.05)] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                <div className="shrink-0 w-[6px] h-[6px] bg-[#F5C400] transition-all duration-300 group-hover:shadow-[0_0_12px_rgba(245,196,0,0.6)] group-hover:scale-110" />
+            <Link href="/" style={{ height: "64px", display: "flex", alignItems: "center", gap: "12px", padding: "0 20px", borderBottom: "1px solid rgba(239,239,239,0.07)", textDecoration: "none", flexShrink: 0 }}>
+                <div style={{ width: "28px", height: "28px", background: "#F5C400", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRadius: "4px" }}>
+                    <ShieldCheck style={{ width: "16px", height: "16px", color: "#080808" }} />
+                </div>
                 {!collapsed && (
-                    <div className="overflow-hidden flex flex-col justify-center transform transition-transform duration-300 group-hover:translate-x-1">
-                        <div className="text-[#EFEFEF] uppercase leading-none" style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: '18px', letterSpacing: '0.05em' }}>CIPHERA</div>
-                        <div className="uppercase" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 500, color: 'rgba(239,239,239,0.7)', marginTop: '2px', letterSpacing: '0.1em' }}>v3 CORE</div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div style={{ fontWeight: 900, fontSize: "20px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#EFEFEF", lineHeight: 1 }}>Ciphera</div>
+                        <div style={{ fontSize: "10px", letterSpacing: "0.15em", color: "rgba(239,239,239,0.4)", textTransform: "uppercase", marginTop: "4px" }}>V3</div>
                     </div>
                 )}
             </Link>
 
             {/* Nav */}
-            <nav className="flex-1 py-6 flex flex-col gap-2 overflow-hidden px-3">
+            <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "4px", overflow: "hidden" }}>
                 {NAV.map(({ href, icon: Icon, label, sublabel }) => {
-                    const active = pathname === href;
+                    const active = pathname === href || pathname.startsWith(href + "/");
                     return (
-                        <Link key={href} href={href}
-                            className={`group relative flex items-center gap-4 px-3 py-3 transition-all duration-300 overflow-hidden ${active ? 'bg-[rgba(245,196,0,0.06)]' : 'hover:bg-[rgba(239,239,239,0.04)]'}`}
-                        >
-                            {/* Active Indicator / Hover Border */}
-                            <div className={`absolute left-0 top-0 bottom-0 w-[2px] transition-all duration-300 ease-out ${active ? 'bg-[#F5C400] shadow-[0_0_8px_rgba(245,196,0,0.5)]' : 'bg-[rgba(239,239,239,0.2)] opacity-0 group-hover:opacity-100 scale-y-0 group-hover:scale-y-100'}`} />
-
-                            {/* Icon */}
-                            <div className={`relative z-10 shrink-0 transition-all duration-300 ${active ? 'text-[#F5C400] scale-110 drop-shadow-[0_0_8px_rgba(245,196,0,0.5)]' : 'text-[#EFEFEF] opacity-70'} group-hover:text-[#F5C400] group-hover:scale-110`}>
-                                <Icon className="w-[18px] h-[18px]" strokeWidth={active ? 2.5 : 2} />
-                            </div>
-
-                            {/* Labels */}
+                        <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", borderBottom: active ? "1px solid #F5C400" : "1px solid transparent", borderLeft: active ? "3px solid #F5C400" : "3px solid transparent", background: active ? "rgba(245,196,0,0.06)" : "transparent", textDecoration: "none", transition: "all 0.15s", borderRadius: "0 4px 4px 0" }}
+                            onMouseEnter={e => { if (!active) { e.currentTarget.style.borderBottom = "1px solid rgba(245,196,0,0.3)"; e.currentTarget.style.background = "rgba(239,239,239,0.03)"; } }}
+                            onMouseLeave={e => { if (!active) { e.currentTarget.style.borderBottom = "1px solid transparent"; e.currentTarget.style.background = "transparent"; } }}>
+                            <Icon style={{ width: "18px", height: "18px", color: active ? "#F5C400" : "rgba(239,239,239,0.4)", flexShrink: 0, transition: "color 0.15s" }} />
                             {!collapsed && (
-                                <div className="relative z-10 flex-1 min-w-0 overflow-hidden flex flex-col gap-1 transform transition-transform duration-300 group-hover:translate-x-1">
-                                    <div className={`uppercase truncate transition-all duration-300`}
-                                         style={{ fontFamily: '"Barlow Condensed", sans-serif', fontSize: '11px', fontWeight: active ? 600 : 500, letterSpacing: '0.12em', color: active ? '#F5C400' : '#EFEFEF' }}>
-                                        {label}
-                                    </div>
-                                    <div className={`truncate transition-colors duration-300`}
-                                         style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 400, color: active ? 'rgba(239,239,239,0.9)' : 'rgba(239,239,239,0.6)' }}>
-                                        {sublabel}
-                                    </div>
+                                <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+                                    <div style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "0.03em", textTransform: "uppercase", color: active ? "#EFEFEF" : "rgba(239,239,239,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+                                    <div style={{ fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", whiteSpace: "nowrap" }}>{sublabel}</div>
                                 </div>
-                            )}
-
-                            {/* Active indicator dot (collapsed) */}
-                            {active && collapsed && (
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-[#F5C400] rounded-full shadow-[0_0_6px_rgba(245,196,0,0.6)]" />
                             )}
                         </Link>
                     );
                 })}
             </nav>
 
-            {/* Bottom Status & Collapse */}
-            <div className="border-t border-[rgba(239,239,239,0.07)] flex flex-col shrink-0 bg-[#0a0a0b] relative z-20">
-                {!collapsed && (
-                    <div className="flex items-center gap-3 px-5 py-4 border-b border-[rgba(239,239,239,0.03)] bg-gradient-to-r from-[rgba(74,222,128,0.03)] to-transparent">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] shrink-0 shadow-[0_0_8px_rgba(74,222,128,0.6)]" style={{ animation: 'pulse-dot 2s ease-in-out infinite' }} />
-                        <span className="truncate" style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, letterSpacing: '0.02em', color: '#EFEFEF' }}>Inference engine: Active</span>
-                    </div>
+            {/* User profile + logout */}
+            <div style={{ borderTop: "1px solid rgba(239,239,239,0.07)", flexShrink: 0, paddingBottom: "8px" }}>
+                {user && (
+                    <Link href="/account" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px", textDecoration: "none", borderBottom: "1px solid rgba(239,239,239,0.07)", transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(239,239,239,0.04)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        {/* Avatar */}
+                        <div style={{ width: "32px", height: "32px", background: "rgba(245,196,0,0.15)", border: "1px solid rgba(245,196,0,0.3)", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontWeight: 900, fontSize: "15px", color: "#F5C400" }}>
+                                {user.full_name?.[0]?.toUpperCase() || "U"}
+                            </span>
+                        </div>
+                        {!collapsed && (
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: "15px", color: "#EFEFEF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "2px" }}>{user.full_name}</div>
+                                <div style={{ fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.plan} plan</div>
+                            </div>
+                        )}
+                    </Link>
                 )}
-                <button
-                    onClick={() => setCollapsed(c => !c)}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 text-[#EFEFEF] opacity-70 hover:opacity-100 hover:bg-[rgba(239,239,239,0.03)] transition-all cursor-pointer bg-transparent border-none outline-none group"
-                    title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                >
-                    {collapsed
-                        ? <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        : <><ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" /><span style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', fontWeight: 500, letterSpacing: '0.02em', color: '#EFEFEF' }}>Collapse sidebar</span></>
-                    }
-                </button>
+
+                {/* Status + collapse */}
+                <div style={{ padding: "12px 16px" }}>
+                    {!collapsed && (
+                        <div style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                            <div style={{ width: 8, height: 8, background: "#22c55e", borderRadius: "50%", flexShrink: 0, boxShadow: "0 0 8px rgba(34,197,94,0.5)" }} />
+                            Local inference active
+                        </div>
+                    )}
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => setCollapsed(c => !c)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: "8px", padding: "8px 0", background: "transparent", border: "none", cursor: "pointer", color: "rgba(239,239,239,0.4)", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", transition: "color 0.2s" }}
+                            onMouseEnter={e => e.currentTarget.style.color = "#EFEFEF"}
+                            onMouseLeave={e => e.currentTarget.style.color = "rgba(239,239,239,0.4)"}>
+                            {collapsed ? <ChevronRight style={{ width: 16, height: 16 }} /> : <><ChevronLeft style={{ width: 16, height: 16 }} /><span>Collapse</span></>}
+                        </button>
+                        {user && (
+                            <button onClick={handleLogout} title="Sign out" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 10px", background: "transparent", border: "none", cursor: "pointer", color: "rgba(239,239,239,0.4)", transition: "color 0.15s" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#fca5a5"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(239,239,239,0.4)"}>
+                                <LogOut style={{ width: 16, height: 16 }} />
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
-            
-            <style jsx global>{`
-                @keyframes pulse-dot {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.5; transform: scale(1.2); }
-                }
-            `}</style>
         </aside>
     );
 }
