@@ -1,6 +1,6 @@
 """
-Ciphera V3.3 — main.py
-Auth + Orgs + RBAC + upgraded API keys
+Ciphera V3.4 — main.py
+Adds: Google OAuth (feature17)
 """
 
 from contextlib import asynccontextmanager
@@ -20,15 +20,16 @@ import feature1_pipeline_upgrade as f1
 from feature2_pdf_multipage     import router as pdf_router,      set_pipeline as pdf_set_pipeline
 from feature6_image_redaction   import router as image_router
 from feature7_ml_scoring        import router as scoring_router
-from feature8_api_keys          import api_router, public_router  # upgraded
+from feature8_api_keys          import api_router, public_router
 from feature9_synthetic         import router as synthetic_router
 from feature10_audit_db         import router as audit_router
 from feature11_doc_classifier   import router as classifier_router
 from feature12_hindi_support    import router as hindi_router
 from feature13_ocr_hindi        import router as ocr_hindi_router
 from feature14_audit_report     import router as report_router
-from feature15_auth             import router as auth_router       # NEW
-from feature16_organisations    import router as org_router        # NEW
+from feature15_auth             import router as auth_router
+from feature16_organisations    import router as org_router
+from feature17_social_auth      import router as social_router      # NEW
 
 pipeline: Optional[DetectionPipeline] = None
 
@@ -43,21 +44,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Ciphera V3.3 — Intelligent PII Anonymization API",
-    version="3.3.0",
+    title="Ciphera V3.4 — Intelligent PII Anonymization API",
+    version="3.4.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Ciphera-Report-ID", "X-Ciphera-Content-Hash"],
 )
 
-# ── All routers ───────────────────────────────────────────────────────────────
 app.include_router(auth_router)
+app.include_router(social_router)       # NEW — mount before org so /auth prefix works
 app.include_router(org_router)
 app.include_router(pdf_router)
 app.include_router(image_router)
@@ -97,20 +98,15 @@ async def analyze(request: AnalyzeRequest):
 
 @app.get("/api/v3/health")
 async def health():
-    from feature12_hindi_support import hindi_pipeline
-    from feature13_ocr_hindi     import ocr_processor
     return {
         "status":  "ok" if pipeline else "loading",
-        "version": "3.3.0",
+        "version": "3.4.0",
         "features": {
             "auth":               True,
+            "google_oauth":       True,
             "organisations":      True,
             "rbac":               True,
             "english_pipeline":   bool(pipeline),
-            "hindi_pipeline":     hindi_pipeline.ready,
-            "ocr_hindi":          ocr_processor.hindi_available,
-            "pdf_burnin":         True,
-            "dnn_face_detection": True,
             "signed_audit_report":True,
             "api_key_auth":       True,
         },
