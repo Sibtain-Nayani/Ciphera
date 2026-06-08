@@ -1,14 +1,9 @@
-# ── Ciphera V3 — docker-compose.yml ──────────────────────────────────────────
+# ── Ciphera V3.4 — docker-compose.yml ────────────────────────────────────────
 # Place at: v3/docker-compose.yml
 #
 # Setup:
-#   1. Create v3/.env with your keys:
-#        GROQ_API_KEY=gsk_...
-#        ANTHROPIC_API_KEY=sk-ant-...  (optional)
-#
-#   2. Run:
-#        cd v3
-#        docker compose up --build
+#   1. Create v3/.env with your keys (copy from env_template.txt)
+#   2. docker compose up --build
 #
 # Frontend → http://localhost:3000
 # Backend  → http://localhost:8000
@@ -24,21 +19,26 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - .env                       # reads GROQ_API_KEY etc from v3/.env
+      - .env
     volumes:
-      - spacy_models:/root/.cache  # cache spaCy models between restarts
+      - ciphera_data:/app/data       # SQLite DBs persist across restarts
+      - spacy_models:/root/.cache    # spaCy models cached
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v3/health')\" || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 90s            # spaCy model loading takes time
+      start_period: 90s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Bakes the API URL into the Next.js build at image build time.
+        # For local dev this is localhost. For production, set in .env.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: ciphera_frontend
     ports:
       - "3000:3000"
@@ -50,4 +50,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  spacy_models:
+  ciphera_data:     # persistent SQLite (users, sessions, audit logs)
+  spacy_models:     # cached spaCy models

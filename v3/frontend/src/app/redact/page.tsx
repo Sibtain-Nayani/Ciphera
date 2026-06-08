@@ -25,6 +25,7 @@ import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/l
 import { convertPdfToImages, PdfPageData } from '@/lib/pdfRenderer';
 import { extractOcrData, mapOcrToShapes, removeShapesByRule } from '@/lib/ocrEngine';
 import dynamic from 'next/dynamic';
+import { api } from '@/lib/api';
 
 const CanvasEngine = dynamic(
     () => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine),
@@ -93,7 +94,7 @@ function persistAuditLog(entry: {
     id: string; name: string; size: string; date: string;
     status: string; entities_discovered: number; rules_applied: string[];
 }) {
-    fetch('http://127.0.0.1:8000/api/v3/audit/log', {
+    fetch(api('/api/v3/audit/log'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...entry, session_id: 'default' }),
@@ -187,7 +188,7 @@ export default function WorkspacePage() {
     // ── Auto document classifier ──────────────────────────────────────────────
     const runClassifier = async (text: string, filename: string) => {
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/v3/classify', {
+            const res = await fetch(api('/api/v3/classify'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text.slice(0, 2000), filename }),
@@ -217,7 +218,7 @@ export default function WorkspacePage() {
     };
     const detectLanguage = async (text: string) => {
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/v3/detect-language', {
+        const res = await fetch(api('/api/v3/detect-language'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text.slice(0, 3000) }),
@@ -337,7 +338,7 @@ export default function WorkspacePage() {
             const blob = await (await fetch(src)).blob();
             const fd   = new FormData();
             fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'medium');
-            const resp = await fetch('http://127.0.0.1:8000/api/v3/redact-image', { method: 'POST', body: fd });
+            const resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
             if (!resp.ok) throw new Error(`${resp.status}`);
             const data = await resp.json();
             if (data.face_count === 0) { useUiStore.getState().addToast("No faces detected.", "info"); return; }
@@ -378,7 +379,7 @@ export default function WorkspacePage() {
                 useUiStore.getState().addToast("Redacting PDF on server...", "info");
                 const fd = new FormData();
                 fd.append('file', origFile);
-                const resp = await fetch('http://127.0.0.1:8000/api/v3/redact-pdf', { method: 'POST', body: fd });
+                const resp = await fetch(api('/api/v3/redact-pdf'), { method: 'POST', body: fd });
                 if (!resp.ok) throw new Error('PDF redaction failed');
                 const blob = await resp.blob();
                 const baseName = fileName.includes('.') ? fileName.slice(0, fileName.lastIndexOf('.')) : fileName;

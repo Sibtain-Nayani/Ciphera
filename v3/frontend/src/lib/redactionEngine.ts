@@ -14,6 +14,7 @@
  */
 
 import { RuleType, RuleConfig, RedactionAction, CustomRule } from '@/store/documentStore';
+import { api } from '@/lib/api';
 
 // ── Token interface ────────────────────────────────────────────────────────────
 export interface Token {
@@ -195,9 +196,9 @@ export const redactionEngine = {
 
         try {
             const endpoint =
-                languageMode === 'hindi' ? 'http://127.0.0.1:8000/api/v3/analyze-hindi'
-              : languageMode === 'mixed' ? 'http://127.0.0.1:8000/api/v3/analyze-mixed'
-              :                           'http://127.0.0.1:8000/api/v3/analyze';
+                languageMode === 'hindi' ? api('/api/v3/analyze-hindi')
+              : languageMode === 'mixed' ? api('/api/v3/analyze-mixed')
+              :                           api('/api/v3/analyze');
 
             // Payload differs slightly per endpoint
             let body: Record<string, unknown>;
@@ -247,7 +248,7 @@ export const redactionEngine = {
 
         if (useMlScoring && normEntities.length > 0) {
             try {
-                const mlResp = await fetch('http://127.0.0.1:8000/api/v3/score-entities', {
+                const mlResp = await fetch(api('/api/v3/score-entities'), {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { SiteLoader } from '@/components/layout/SiteLoader';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/context/AuthContext';
 
 
 const HeroDocument = dynamic(() => import('@/components/HeroDocument'), { ssr: false });
@@ -1153,6 +1154,19 @@ function PiiTickerStrip() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+function HeroCtaButtons() {
+    const { user } = useAuth();
+    return (
+        <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', marginTop:'32px' }}>
+            <MagneticButton href={user ? '/dashboard' : '/register'} className="cta-primary" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:600, borderRadius:0 }}>
+                {user ? 'Open Dashboard →' : 'Start Redacting Free →'}
+            </MagneticButton>
+            <MagneticButton href={user ? '/batch' : '/login'} className="cta-ghost" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.07)', color:'rgba(239,239,239,0.8)', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:500, borderRadius:0 }}>
+                {user ? 'Batch Processing' : 'Sign In →'}
+            </MagneticButton>
+        </div>
+    );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REBUILT 3D HERO SECTION CONTAINER (Task 2 + Task 3)
@@ -1270,12 +1284,7 @@ function HeroSectionRebuild({ active }: { active: boolean }) {
 
                     {/* CTAs */}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '32px' }}>
-                        <MagneticButton href="/dashboard" className="cta-primary" style={{ background: '#F5C400', color: '#080808', fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.02em', textTransform: 'none', padding: '11px 24px', textDecoration: 'none', fontWeight: 600, borderRadius: 0 }}>
-                            Start Redacting →
-                        </MagneticButton>
-                        <MagneticButton href="/batch" className="cta-ghost" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.07)', color: 'rgba(239,239,239,0.8)', fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.02em', textTransform: 'none', padding: '11px 24px', textDecoration: 'none', fontWeight: 500, borderRadius: 0 }}>
-                            Batch Processing
-                        </MagneticButton>
+                        <HeroCtaButtons />
                     </div>
 
                     {/* Trust strip */}
@@ -1342,6 +1351,56 @@ function ZeroEasterEgg() {
             pointerEvents:'none', userSelect:'none', zIndex:0,
             lineHeight: 1
         }}>{val}</div>
+    );
+}
+
+function NavAuthButtons() {
+    const { user } = useAuth();
+    if (user) {
+        return (
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <Link href="/account" style={{ display:'flex', alignItems:'center', gap:'7px', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', transition:'color 0.15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.color='#EFEFEF'}
+                    onMouseLeave={e=>e.currentTarget.style.color='rgba(239,239,239,0.7)'}>
+                    <div style={{ width:26, height:26, background:'rgba(245,196,0,0.15)', border:'1px solid rgba(245,196,0,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'11px', color:'#F5C400' }}>
+                            {user.full_name?.[0]?.toUpperCase() || 'U'}
+                        </span>
+                    </div>
+                    <span>{user.full_name?.split(' ')[0]}</span>
+                </Link>
+                <Link href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                    onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+                    onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
+                    Dashboard →
+                </Link>
+            </div>
+        );
+    }
+    return (
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            <Link href="/login" style={{ fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', padding:'9px 16px', transition:'color 0.15s', letterSpacing:'0.02em' }}
+                onMouseEnter={e=>e.currentTarget.style.color='#EFEFEF'}
+                onMouseLeave={e=>e.currentTarget.style.color='rgba(239,239,239,0.7)'}>
+                Sign In
+            </Link>
+            <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+                onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
+                Get Started →
+            </Link>
+        </div>
+    );
+}
+
+function BottomCtaButton() {
+    const { user } = useAuth();
+    return (
+        <Link href={user ? '/dashboard' : '/register'} style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', padding:'12px 28px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
+            {user ? 'Open Mission Control →' : 'Create Free Account →'}
+        </Link>
     );
 }
 
@@ -1445,12 +1504,7 @@ export default function LandingPage() {
                                 </a>
                             ))}
                         </div>
-                        <Link id="nav-cta-button" href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', padding:'10px 24px', textDecoration:'none', fontWeight:600, borderRadius: '8px', transition:'all 0.2s' }}
-                            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
-                            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}
-                        >
-                            Start Redacting →
-                        </Link>
+                        <NavAuthButtons />
                     </div>
                 </nav>
 
@@ -1719,12 +1773,7 @@ export default function LandingPage() {
                         <p style={{ fontFamily:'Barlow, sans-serif', fontWeight:400, fontSize:'13px', lineHeight:1.7, color:'rgba(239,239,239,0.5)', maxWidth:'400px', margin:'0 0 20px 0' }}>
                             No data transmitted externally. Runs entirely on-premise via Docker. Full compliance audit trail in every session.
                         </p>
-                        <Link href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', padding:'12px 28px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
-                            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
-                            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}
-                        >
-                            Open Mission Control →
-                        </Link>
+                        <BottomCtaButton />
                     </div>
                 </section>
 
@@ -1743,7 +1792,7 @@ export default function LandingPage() {
                       <div style={{ display: 'flex', gap: '80px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                           <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 600, color: '#EFEFEF', letterSpacing: '0.02em' }}>Platform</div>
-                          {[['Dashboard','/dashboard'],['API Keys','/settings'],['Settings','/settings']].map(([l,href]) => (
+                            {[['Dashboard','/dashboard'],['API Keys','/account/api-keys'],['Account','/account']].map(([l,href]) => (
                             <Link key={l} href={href} style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', color: 'rgba(239,239,239,0.6)', textDecoration: 'none', transition: 'color 0.2s ease' }}
                                   onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
                                   onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.6)')}>
