@@ -661,10 +661,11 @@ cd frontend && npm run test
 
 ## Roadmap
 
-- [ ] **v3.1** — Hindi/Devanagari document support
-- [ ] **v3.2** — Browser extension for inline redaction
-- [ ] **v3.3** — CLI tool for pipeline integration
-- [ ] **v3.4** — Webhook support for batch completion events
+- [x] **v3.1** — Hindi/Devanagari document support + bilingual pipeline + signed audit reports
+- [x] **v3.2** — JWT auth + Google OAuth + multi-tenant orgs + API keys v2
+- [ ] **v3.3** — Browser extension for inline redaction
+- [ ] **v3.4** — CLI tool for pipeline integration
+- [ ] **v3.5** — Webhook support for batch completion events
 - [ ] **v4.0** — On-device LLM for contextual PII detection
 
 ---
