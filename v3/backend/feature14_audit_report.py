@@ -75,6 +75,7 @@ class ReportRequest(BaseModel):
     date_from:    Optional[str] = None
     date_to:      Optional[str] = None
     include_raw_log: bool = False   # whether to include individual doc entries
+    logs:         Optional[list[dict]] = None
 
 
 # ── PDF builder ───────────────────────────────────────────────────────────────
@@ -430,26 +431,30 @@ async def generate_report(req: ReportRequest):
     """
     conn = _get_db()
 
-    # Fetch logs for this session
-    query  = "SELECT * FROM audit_logs WHERE session_id = ?"
-    params = [req.session_id]
+    if req.logs is not None:
+        logs = req.logs
+        conn.close()
+    else:
+        # Fetch logs for this session
+        query  = "SELECT * FROM audit_logs WHERE session_id = ?"
+        params = [req.session_id]
 
-    if req.date_from:
-        query  += " AND created_at >= ?"
-        params.append(req.date_from)
-    if req.date_to:
-        query  += " AND created_at <= ?"
-        params.append(req.date_to)
+        if req.date_from:
+            query  += " AND created_at >= ?"
+            params.append(req.date_from)
+        if req.date_to:
+            query  += " AND created_at <= ?"
+            params.append(req.date_to)
 
-    query += " ORDER BY created_at DESC"
-    rows   = conn.execute(query, params).fetchall()
-    conn.close()
+        query += " ORDER BY created_at DESC"
+        rows   = conn.execute(query, params).fetchall()
+        conn.close()
 
-    logs = []
-    for row in rows:
-        d = dict(row)
-        d["rules_applied"] = json.loads(d.get("rules_applied", "[]"))
-        logs.append(d)
+        logs = []
+        for row in rows:
+            d = dict(row)
+            d["rules_applied"] = json.loads(d.get("rules_applied", "[]"))
+            logs.append(d)
 
     if not logs:
         raise HTTPException(404, "No audit logs found for this session")
