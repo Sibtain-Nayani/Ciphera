@@ -121,6 +121,7 @@ export default function WorkspacePage() {
     const [isExporting,     setIsExporting]     = useState(false);
     const [exportProgress,  setExportProgress]  = useState<{ current: number; total: number; status: string } | null>(null);
     const [approvedIds,     setApprovedIds]     = useState<Set<string> | null>(null);
+    const [actionOverrides, setActionOverrides] = useState<Record<string, import('@/store/documentStore').RedactionAction>>({});
     const [splitView,       setSplitView]       = useState(false);
     // Banner shown when auto-classifier detects a document type
     const [classifierBanner, setClassifierBanner] = useState<string | null>(null);
@@ -133,7 +134,7 @@ export default function WorkspacePage() {
     const [newRuleLabel,   setNewRuleLabel]   = useState('');
     const [newRulePattern, setNewRulePattern] = useState('');
     const [newRuleColor,   setNewRuleColor]   = useState<import('@/store/documentStore').PresetColor>('#3B82F6');
-
+    const mlScoringRef = useRef<boolean>(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { ocrResult } = useCanvasStore();
     const { addAuditLog, incrementMetrics } = useSessionStore();
@@ -159,7 +160,21 @@ export default function WorkspacePage() {
         useCanvasStore.getState().setOcrResult(null);
         setPdfPages([]); setCurrentPage(1); setLoaderStage('idle');
         setApprovedIds(null); setClassifierBanner(null);
+        setActionOverrides({});
     };
+
+    // Read preferences saved in Settings → Language tab
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const savedLang  = localStorage.getItem('ciphera_lang_mode') as 'auto'|'english'|'hindi'|'mixed'|null;
+        const savedConf  = localStorage.getItem('ciphera_conf_threshold');
+        const savedMl    = localStorage.getItem('ciphera_ml_scoring');
+        if (savedLang && savedLang !== 'auto') setLanguageMode(savedLang as 'english'|'hindi'|'mixed');
+        if (savedConf) setThreshold(parseFloat(savedConf));
+        // ML scoring preference is passed to redactionEngine.tokenize() as 6th arg
+        // Store it in a ref so the debounced effect can read it
+        if (savedMl !== null) mlScoringRef.current = savedMl === 'true';
+    }, []);
 
     useEffect(() => { sessionMapper.clear(); setHasReviewed(false); setApprovedIds(null); }, [rawText, fileType]);
 
@@ -167,7 +182,7 @@ export default function WorkspacePage() {
     useEffect(() => {
         const t = setTimeout(async () => {
             const result = await redactionEngine.tokenize(
-                rawText, rules, customRules, threshold, false, true, fileName,
+                rawText, rules, customRules, threshold, false, mlScoringRef.current, fileName,
                 (languageMode === 'hindi' || languageMode === 'mixed')
                 ? languageMode
                 : 'english',
@@ -457,8 +472,6 @@ export default function WorkspacePage() {
         }
     };
 
-    const [actionOverrides, setActionOverrides] = useState<Record<string, import('@/store/documentStore').RedactionAction>>({});
-    
     const handleReviewConfirm = async (ids: Set<string>, overrides: Record<string, import('@/store/documentStore').RedactionAction>) => {
         setApprovedIds(ids);
         setActionOverrides(overrides);
@@ -698,16 +711,20 @@ export default function WorkspacePage() {
                         <button onClick={() => setClassifierBanner(null)} className="text-blue-400/60 hover:text-blue-300 cursor-pointer ml-3"><X className="w-3 h-3" /></button>
                     </div>
                 )}
-                {/* Language detection banner */}
                 {languageBanner && (
-                    <div className="flex items-center justify-between px-4 py-2 bg-orange-500/10 border-b border-orange-500/20 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                            <span className="text-[11px] text-orange-300 font-mono">{languageBanner}</span>
-                        </div>
-                        <button onClick={() => setLanguageBanner(null)} className="text-orange-400/60 hover:text-orange-300 cursor-pointer ml-3">
-                            <X className="w-3 h-3" />
-                        </button>
+                    <div style={{
+                        position: 'fixed', top: '72px', left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 200, background: '#080808',
+                        border: '1px solid rgba(245,196,0,0.4)',
+                        padding: '8px 20px',
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        boxShadow: '0 0 20px rgba(245,196,0,0.1)',
+                        animation: 'slideDown 0.3s ease',
+                    }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F5C400', boxShadow: '0 0 6px #F5C400' }} />
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5C400' }}>
+                            {languageBanner}
+                        </span>
                     </div>
                 )}
                 <div className="bg-[#141414] border-b border-[#2A2A2A] px-4 py-1.5 flex items-center gap-3">
@@ -869,7 +886,12 @@ export default function WorkspacePage() {
             </div>
 
             <ExportModal isOpen={showExportModal} totalPages={pdfPages.length || 1} currentPage={currentPage} onConfirm={handleModalConfirm} onCancel={() => { if (!isExporting) setShowExportModal(false); }} isExporting={isExporting} />
-            <EntityReviewModal isOpen={showReviewModal} tokens={tokens} onConfirm={handleReviewConfirm} onCancel={() => setShowReviewModal(false)} />
+            <EntityReviewModal isOpen={showReviewModal} tokens={tokens} onConfirm={(ids, overrides) => {
+                setApprovedIds(ids);
+                setActionOverrides(overrides || {});
+                setShowReviewModal(false);
+                setHasReviewed(true);
+            }} onCancel={() => setShowReviewModal(false)} />
             {isExporting && exportProgress && (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl px-8 py-6 flex flex-col items-center gap-4 min-w-[280px]">
@@ -884,6 +906,9 @@ export default function WorkspacePage() {
                     </div>
                 </div>
             )}
+            <style>{`
+                @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+            `}</style>
         </div>
     );
 }
