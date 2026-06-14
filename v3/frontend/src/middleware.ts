@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PROTECTED = ["/dashboard", "/redact", "/batch", "/settings", "/account"];
-const AUTH_ONLY = ["/login", "/register"]; // redirect away if already logged in
+const AUTH_ONLY = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-    const accessToken  = request.cookies.get("ciphera_access")?.value
-                      || request.headers.get("x-ciphera-token");
 
-    // Check localStorage-based auth via a cookie we set on login
-    const authCookie = request.cookies.get("ciphera_authed")?.value;
-    const isAuthed   = Boolean(authCookie);
+    const authCookie  = request.cookies.get("ciphera_authed")?.value;
+    const guestCookie = request.cookies.get("ciphera_guest")?.value;
+
+    // Either a real account OR a guest session counts as "in"
+    const isAuthed = Boolean(authCookie || guestCookie);
 
     const isProtected = PROTECTED.some(p => pathname.startsWith(p));
     const isAuthOnly  = AUTH_ONLY.some(p => pathname.startsWith(p));
@@ -22,7 +22,9 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
-    if (isAuthOnly && isAuthed) {
+    // Only redirect away from login/register if REAL account (not guest)
+    // — guest users might want to upgrade to a real account
+    if (isAuthOnly && authCookie) {
         const url = request.nextUrl.clone();
         url.pathname = "/dashboard";
         return NextResponse.redirect(url);

@@ -3,29 +3,19 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
+import { Shield, Eye, EyeOff, AlertCircle, Loader2, UserX } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 
-// ── Google OAuth button ───────────────────────────────────────────────────────
 function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={loading}
-            style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                gap: "10px", padding: "11px 16px", background: "transparent",
-                border: "1px solid rgba(239,239,239,0.15)", cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.15s", opacity: loading ? 0.6 : 1,
-            }}
+        <button type="button" onClick={onClick} disabled={loading}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "11px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.15)", cursor: loading ? "not-allowed" : "pointer", transition: "all 0.15s", opacity: loading ? 0.6 : 1 }}
             onMouseEnter={e => { if (!loading) e.currentTarget.style.borderColor = "rgba(239,239,239,0.35)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.15)"; }}
-        >
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.15)"; }}>
             {loading ? (
                 <Loader2 style={{ width: 16, height: 16, color: "#EFEFEF", animation: "spin 1s linear infinite" }} />
             ) : (
-                /* Google's official G icon — SVG inline, no external fetch */
                 <svg width="16" height="16" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -40,39 +30,45 @@ function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => v
     );
 }
 
-// ── Divider ───────────────────────────────────────────────────────────────────
-function Divider() {
+function Divider({ label = "or" }: { label?: string }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "4px 0" }}>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
-            <span style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.2)" }}>or</span>
+            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.2)" }}>{label}</span>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
         </div>
     );
 }
 
 function LoginContent() {
-    const { login, user, loading } = useAuth();
+    const { login, loginAsGuest, user, loading } = useAuth();
     const router       = useRouter();
     const searchParams = useSearchParams();
     const from         = searchParams.get("from") || "/dashboard";
     const oauthError   = searchParams.get("error");
 
-    const [email,       setEmail]       = useState("");
-    const [password,    setPassword]    = useState("");
-    const [showPass,    setShowPass]    = useState(false);
-    const [error,       setError]       = useState(oauthError ? "Google sign-in failed. Please try again or use email." : "");
-    const [busy,        setBusy]        = useState(false);
-    const [googleBusy,  setGoogleBusy]  = useState(false);
+    const [email,      setEmail]      = useState("");
+    const [password,   setPassword]   = useState("");
+    const [showPass,   setShowPass]   = useState(false);
+    const [error,      setError]      = useState(oauthError ? "Google sign-in failed. Try email instead." : "");
+    const [busy,       setBusy]       = useState(false);
+    const [googleBusy, setGoogleBusy] = useState(false);
 
     useEffect(() => { if (!loading && user) router.replace(from); }, [user, loading]);
 
+    const inputStyle: React.CSSProperties = {
+        width: "100%", background: "#080808",
+        border: "1px solid rgba(239,239,239,0.12)",
+        padding: "10px 14px",
+        fontFamily: '"IBM Plex Mono", monospace',
+        fontSize: "12px", color: "#EFEFEF", outline: "none",
+        boxSizing: "border-box", transition: "border-color 0.15s",
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(""); setBusy(true);
+        e.preventDefault(); setError(""); setBusy(true);
         try {
             await login(email.trim(), password);
-            document.cookie = "ciphera_authed=1; path=/; max-age=2592000; SameSite=Lax";
             router.replace(from);
         } catch (err: any) {
             setError(err.message || "Login failed. Check your credentials.");
@@ -82,25 +78,19 @@ function LoginContent() {
     const handleGoogle = async () => {
         setError(""); setGoogleBusy(true);
         try {
-            const res  = await fetch("http://127.0.0.1:8000/api/v3/auth/google/init");
+            const res  = await fetch(api('/api/v3/auth/google/init'));
             const data = await res.json();
-            if (data.url) {
-                window.location.href = data.url; // redirect to Google
-            } else {
-                throw new Error("Could not get Google auth URL");
-            }
-        } catch (err: any) {
+            if (data.url) { window.location.href = data.url; }
+            else throw new Error("Could not get Google auth URL");
+        } catch {
             setError("Could not connect to Google. Try again.");
             setGoogleBusy(false);
         }
     };
 
-    const inputStyle: React.CSSProperties = {
-        width: "100%", background: "#080808",
-        border: "1px solid rgba(239,239,239,0.12)",
-        padding: "10px 14px", fontFamily: "Barlow, sans-serif",
-        fontSize: "13px", color: "#EFEFEF", outline: "none",
-        boxSizing: "border-box", transition: "border-color 0.15s",
+    const handleGuest = () => {
+        loginAsGuest();
+        router.replace("/dashboard");
     };
 
     return (
@@ -112,13 +102,13 @@ function LoginContent() {
                     <div style={{ background: "#F5C400", padding: "8px", display: "flex" }}>
                         <Shield style={{ width: 18, height: 18, color: "#080808" }} />
                     </div>
-                    <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 900, fontSize: "22px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#EFEFEF" }}>Ciphera</span>
+                    <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "22px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#EFEFEF" }}>Ciphera</span>
                 </Link>
 
                 <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "36px", background: "#0D0D0D" }}>
                     <div style={{ marginBottom: "24px" }}>
-                        <h1 style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Sign In</h1>
-                        <p style={{ fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.32)", margin: 0 }}>Access your redaction workspace</p>
+                        <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Sign In</h1>
+                        <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.32)", margin: 0 }}>Access your redaction workspace</p>
                     </div>
 
                     {/* Error banner */}
@@ -129,22 +119,19 @@ function LoginContent() {
                         </div>
                     )}
 
-                    {/* Google button */}
                     <GoogleButton loading={googleBusy} onClick={handleGoogle} />
-
                     <Divider />
 
-                    {/* Email + password form */}
+                    {/* Email + password */}
                     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                         <div>
-                            <label style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Email Address</label>
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Email</label>
                             <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="you@company.com"
                                 onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
                                 onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
                         </div>
-
                         <div>
-                            <label style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Password</label>
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Password</label>
                             <div style={{ position: "relative" }}>
                                 <input type={showPass ? "text" : "password"} required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
                                     style={{ ...inputStyle, padding: "10px 40px 10px 14px" }} placeholder="••••••••"
@@ -156,21 +143,34 @@ function LoginContent() {
                                 </button>
                             </div>
                         </div>
-
                         <button type="submit" disabled={busy || googleBusy}
-                            style={{ background: (busy || googleBusy) ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: "Courier New, monospace", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700, cursor: (busy || googleBusy) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s" }}>
+                            style={{ background: busy || googleBusy ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700, cursor: busy || googleBusy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s" }}>
                             {busy && <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />}
                             {busy ? "Signing In…" : "Sign In →"}
                         </button>
                     </form>
 
+                    {/* Guest divider + button */}
+                    <Divider label="or skip" />
+                    <button onClick={handleGuest}
+                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "11px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.08)", cursor: "pointer", transition: "all 0.15s" }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.2)"; e.currentTarget.style.background = "rgba(239,239,239,0.02)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.08)"; e.currentTarget.style.background = "transparent"; }}>
+                        <UserX style={{ width: 14, height: 14, color: "rgba(239,239,239,0.4)" }} />
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", fontWeight: 500 }}>
+                            Continue as Guest
+                        </span>
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.2)", letterSpacing: "0.1em" }}>— no account needed</span>
+                    </button>
+
+                    {/* Bottom row */}
                     <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.14em", color: "rgba(239,239,239,0.25)" }}>No account?</span>
-                        <Link href="/register" style={{ fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#F5C400", textDecoration: "none" }}>Create Account →</Link>
+                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.14em", color: "rgba(239,239,239,0.25)" }}>No account?</span>
+                        <Link href="/register" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#F5C400", textDecoration: "none" }}>Create Account →</Link>
                     </div>
                 </div>
 
-                <p style={{ textAlign: "center", fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.15)", marginTop: "20px" }}>
+                <p style={{ textAlign: "center", fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.15)", marginTop: "20px" }}>
                     Zero retention · Client-side inference · DPDP Act 2023
                 </p>
             </div>
@@ -184,9 +184,10 @@ export default function LoginPage() {
         <Suspense fallback={
             <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Loader2 style={{ width: 24, height: 24, color: "#F5C400", animation: "spin 1s linear infinite" }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         }>
             <LoginContent />
         </Suspense>
     );
-}
+}
