@@ -41,7 +41,7 @@ function Divider({ label = "or" }: { label?: string }) {
 }
 
 function LoginContent() {
-    const { login, loginAsGuest, user, loading } = useAuth();
+    const { login, loginAsGuest, user, loading, isGuest } = useAuth();
     const router       = useRouter();
     const searchParams = useSearchParams();
     const from         = searchParams.get("from") || "/dashboard";
@@ -54,7 +54,7 @@ function LoginContent() {
     const [busy,       setBusy]       = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
 
-    useEffect(() => { if (!loading && user) router.replace(from); }, [user, loading]);
+    useEffect(() => { if (!loading && user && !isGuest) router.replace(from); }, [user, loading, isGuest]);
 
     const inputStyle: React.CSSProperties = {
         width: "100%", background: "#080808",

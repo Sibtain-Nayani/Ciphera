@@ -26,6 +26,9 @@ import { convertPdfToImages, PdfPageData } from '@/lib/pdfRenderer';
 import { extractOcrData, mapOcrToShapes, removeShapesByRule } from '@/lib/ocrEngine';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const CanvasEngine = dynamic(
     () => import('@/components/canvas/CanvasEngine').then(m => m.CanvasEngine),
@@ -90,10 +93,14 @@ const ENTITY_COLORS: Record<string, string> = {
 };
 
 // ── Persist audit log to backend DB (silent fail — localStorage is fallback) ──
-function persistAuditLog(entry: {
-    id: string; name: string; size: string; date: string;
-    status: string; entities_discovered: number; rules_applied: string[];
-}) {
+function persistAuditLog(
+    entry: {
+        id: string; name: string; size: string; date: string;
+        status: string; entities_discovered: number; rules_applied: string[];
+    },
+    skip = false,
+) {
+    if (skip) return;
     fetch(api('/api/v3/audit/log'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,6 +109,7 @@ function persistAuditLog(entry: {
 }
 
 export default function WorkspacePage() {
+    const { isGuest } = useAuth();
     const {
         rawText, setRawText, previewMode, rules, setPreviewMode,
         toggleRule, fileType, fileName, customRules, clearWorkspace,
@@ -174,6 +182,8 @@ export default function WorkspacePage() {
         // ML scoring preference is passed to redactionEngine.tokenize() as 6th arg
         // Store it in a ref so the debounced effect can read it
         if (savedMl !== null) mlScoringRef.current = savedMl === 'true';
+        // Guests don't get ML scoring — it requires auth
+        if (isGuest) mlScoringRef.current = false;
     }, []);
 
     useEffect(() => { sessionMapper.clear(); setHasReviewed(false); setApprovedIds(null); }, [rawText, fileType]);
@@ -348,6 +358,7 @@ export default function WorkspacePage() {
     const handleFaceRedaction = async () => {
         const src = useCanvasStore.getState().imageSrc;
         if (!src) { useUiStore.getState().addToast("No image loaded.", "warning"); return; }
+        if (isGuest) { useUiStore.getState().addToast("Create an account to use face redaction.", "info"); return; }
         setLoaderStage('face');
         try {
             const blob = await (await fetch(src)).blob();
@@ -382,6 +393,7 @@ export default function WorkspacePage() {
     }).join('');
 
     const exportSecureFile = async (formatOverride?: DocumentState['fileType'] | string) => {
+        if (isGuest) { useUiStore.getState().addToast("Create a free account to export redacted files.", "info"); return; }
         if (redactionFailed) { useUiStore.getState().addToast('Engine offline. Export blocked.', 'error'); return; }
         const { fileType, fileName } = useDocumentStore.getState();
         const fmt = formatOverride || fileType;
@@ -444,7 +456,7 @@ export default function WorkspacePage() {
                 await exportVisualCanvas(dataUrl, fileName, finalExt, origFile, shapes, finalDims);
                 const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: shapes.length, rulesApplied: ['Visual Extractor'] };
                 addAuditLog({ ...logEntry, status: 'Completed' as const });
-                persistAuditLog({ ...logEntry, entities_discovered: shapes.length, rules_applied: ['Visual Extractor'] });
+                persistAuditLog({ ...logEntry, entities_discovered: shapes.length, rules_applied: ['Visual Extractor'] }, isGuest);
                 incrementMetrics(1, shapes.length);
                 useUiStore.getState().addToast(`Exported ${shapes.length} redacted entities`, 'success');
             } catch { useUiStore.getState().addToast("Export failed. Try again.", "error"); }
@@ -457,7 +469,7 @@ export default function WorkspacePage() {
         const rulesApplied = Array.from(new Set(effectiveTokens.filter(t => t.type !== 'text').map(t => t.type)));
         const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed' as const, entitiesDiscovered: entityCount, rulesApplied };
         addAuditLog(logEntry);
-        persistAuditLog({ ...logEntry, entities_discovered: entityCount, rules_applied: rulesApplied });
+        persistAuditLog({ ...logEntry, entities_discovered: entityCount, rules_applied: rulesApplied }, isGuest);
         incrementMetrics(1, entityCount);
         useUiStore.getState().addToast(`Protected ${entityCount} entities`, 'success');
     };
@@ -669,7 +681,7 @@ export default function WorkspacePage() {
                         <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-[#2A2A2A] px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border border-[#2A2A2A]">
                             <UploadCloud className="w-3.5 h-3.5" /><span className="hidden sm:inline">Load File</span>
                         </button>
-                        {isCanvas && (
+                        {isCanvas && !isGuest && (
                             <button onClick={handleFaceRedaction} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-purple-500/15 border border-[#2A2A2A] hover:border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer">
                                 <ScanFace className="w-3.5 h-3.5" /><span className="hidden sm:inline">Faces</span>
                             </button>
@@ -684,8 +696,14 @@ export default function WorkspacePage() {
                             <CheckCircle2 className="w-3.5 h-3.5" /> Reviewed
                         </button>
                         <div className="relative group">
-                            <button onClick={handleExportClick} disabled={redactionFailed || !hasReviewed}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${redactionFailed || !hasReviewed ? 'bg-[#252525] text-gray-600 cursor-not-allowed border border-[#2A2A2A]' : 'bg-[#FFA500] hover:bg-[#ffb733] text-black cursor-pointer shadow-[0_0_12px_rgba(255,165,0,0.2)]'}`}>
+                            <button onClick={handleExportClick} disabled={redactionFailed || (!hasReviewed && !isGuest)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                    isGuest
+                                        ? 'bg-[#252525] text-gray-500 cursor-pointer border border-[#2A2A2A] hover:border-yellow-500/30 hover:text-yellow-400'
+                                        : redactionFailed || !hasReviewed
+                                            ? 'bg-[#252525] text-gray-600 cursor-not-allowed border border-[#2A2A2A]'
+                                            : 'bg-[#FFA500] hover:bg-[#ffb733] text-black cursor-pointer shadow-[0_0_12px_rgba(255,165,0,0.2)]'
+                                }`}>
                                 <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span>
                                 {pdfPages.length > 1 && <Layers className="w-3 h-3 opacity-70" />}
                                 <ChevronDown className="w-3 h-3 opacity-60" />
@@ -701,6 +719,19 @@ export default function WorkspacePage() {
                     </div>
                 </header>
 
+                {isGuest && (
+                    <div className="flex items-center justify-between px-4 py-2 bg-yellow-500/5 border-b border-yellow-500/15 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/60" />
+                            <span className="text-[11px] text-yellow-500/70 font-mono">Guest session · Detection works · Export requires an account</span>
+                        </div>
+                        <Link href="/register"
+                            className="text-[10px] font-mono font-semibold text-yellow-400 hover:text-yellow-300 border border-yellow-500/25 hover:border-yellow-400/50 px-2.5 py-1 rounded transition-all cursor-pointer"
+                            style={{ textDecoration: 'none' }}>
+                            Sign up free →
+                        </Link>
+                    </div>
+                )}
                 {/* Classifier banner */}
                 {classifierBanner && (
                     <div className="flex items-center justify-between px-4 py-2 bg-blue-500/10 border-b border-blue-500/20 shrink-0">

@@ -41,7 +41,7 @@ function Divider({ label = "or" }: { label?: string }) {
 }
 
 export default function RegisterPage() {
-    const { register, loginAsGuest, user, loading } = useAuth();
+    const { register, loginAsGuest, user, loading, isGuest } = useAuth();
     const router = useRouter();
 
     const [fullName,   setFullName]   = useState("");
@@ -52,7 +52,7 @@ export default function RegisterPage() {
     const [busy,       setBusy]       = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
 
-    useEffect(() => { if (!loading && user) router.replace("/dashboard"); }, [user, loading]);
+    useEffect(() => { if (!loading && user && !isGuest) router.replace("/dashboard"); }, [user, loading, isGuest]);
 
     // Password strength
     const strength = password.length === 0 ? 0

@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { UploadCloud, X, Download, Eye, Archive } from 'lucide-react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
+import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
 import { useSessionStore } from '@/store/sessionStore';
 import { useUiStore } from '@/store/uiStore';
 import { redactionEngine } from '@/lib/redactionEngine';
@@ -101,6 +103,7 @@ function ProgressBar({ progress, status }: { progress: number; status: JobStatus
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function BatchPage() {
+    const { isGuest } = useAuth();
     const { rules, customRules }           = useDocumentStore();
     const { addAuditLog, incrementMetrics } = useSessionStore();
 
@@ -203,6 +206,10 @@ export default function BatchPage() {
 
     // ── Run batch — parallel with concurrency = 3 ─────────────────────────────
     const runBatch = async () => {
+        if (isGuest) {
+            useUiStore.getState().addToast("Create a free account to use batch processing.", "info");
+            return;
+        }
         const queued = jobs.filter(j => j.status === 'queued');
         if (!queued.length || isRunning) return;
         setIsRunning(true);
@@ -336,6 +343,27 @@ export default function BatchPage() {
                     </div>
                 </div>
 
+                {isGuest && (
+                    <div style={{ border: '1px solid rgba(245,196,0,0.2)', background: 'rgba(245,196,0,0.03)', padding: '40px', textAlign: 'center' }}>
+                        <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(245,196,0,0.7)', marginBottom: '12px' }}>
+                            [ BATCH PROCESSING · ACCOUNT REQUIRED ]
+                        </div>
+                        <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', color: 'rgba(239,239,239,0.35)', letterSpacing: '0.14em', marginBottom: '20px', lineHeight: 1.8 }}>
+                            Batch processing requires an account.<br />
+                            Single-file redaction is available on the Redact page.
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <Link href="/register" style={{ background: '#F5C400', color: '#080808', fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, padding: '10px 20px', textDecoration: 'none', transition: 'all 0.15s' }}>
+                                Create Free Account →
+                            </Link>
+                            <Link href="/redact" style={{ background: 'transparent', border: '1px solid rgba(239,239,239,0.15)', color: 'rgba(239,239,239,0.6)', fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', padding: '10px 20px', textDecoration: 'none', transition: 'all 0.15s' }}>
+                                Go to Redact →
+                            </Link>
+                        </div>
+                    </div>
+                )}
+                {!isGuest && (
+                    <>
                 {/* ── DROP ZONE (unchanged styles) ─────────────────────────── */}
                 <div onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
@@ -475,6 +503,9 @@ export default function BatchPage() {
                             ))}
                         </div>
                     </div>
+                )}
+
+                </>
                 )}
 
             </main>

@@ -62,7 +62,10 @@ export default function OrganisationPage() {
     const [copied,      setCopied]      = useState(false);
     const [changingRole,setChangingRole]= useState<string | null>(null);
 
-    useEffect(() => { if (!loading && !user) router.replace("/login"); }, [user, loading]);
+    useEffect(() => {
+        if (!loading && !user) router.replace("/login");
+        if (!loading && user?.is_guest) router.replace("/register");
+    }, [user, loading]);
 
     const loadOrg = useCallback(async () => {
         setPageLoad(true);

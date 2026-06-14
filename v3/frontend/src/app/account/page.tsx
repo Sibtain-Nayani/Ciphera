@@ -230,7 +230,10 @@ export default function AccountPage() {
     const { user, logout, loading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => { if (!loading && !user) router.replace("/login"); }, [user, loading]);
+    useEffect(() => {
+        if (!loading && !user) router.replace("/login");
+        if (!loading && user?.is_guest) router.replace("/register");
+    }, [user, loading]);
 
     const handleLogout = async () => {
         await logout();

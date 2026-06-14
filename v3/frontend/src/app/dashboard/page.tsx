@@ -81,7 +81,7 @@ export default function DashboardPage() {
     const [keyRef,       keyVisible]       = useIntersectionObserver({ threshold: 0.1 });
 
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, isGuest, loading } = useAuth();
     const { rules, setRawText } = useDocumentStore();
     const { auditLogs, totalDocumentsSecured, totalEntitiesMasked } = useSessionStore();
 
@@ -97,6 +97,13 @@ export default function DashboardPage() {
     const fetchBackendData = useCallback(async () => {
         setLoadingBackend(true);
         try {
+            if (isGuest) {
+                setBackendOnline(true);
+                setBackendStats(null);
+                setBackendLogs([]);
+                setLoadingBackend(false);
+                return;
+            }
             // Health
             const health = await publicFetch('/api/v3/health').then(r => r.json()).catch(() => null);
             setBackendOnline(Boolean(health?.status === 'ok' || health?.status === 'loading'));
@@ -134,9 +141,9 @@ export default function DashboardPage() {
             setGroqHealthy(groq?.available ?? false);
 
         } finally { setLoadingBackend(false); }
-    }, []);
+    }, [isGuest]);
 
-    useEffect(() => { if (isMounted) fetchBackendData(); }, [isMounted]);
+    useEffect(() => { if (isMounted && !loading) fetchBackendData(); }, [isMounted, loading, fetchBackendData]);
 
     // ── Stats derived ─────────────────────────────────────────────────────
     const totalDocs     = isMounted ? (backendStats?.total_documents || totalDocumentsSecured)   : 0;
@@ -347,7 +354,7 @@ export default function DashboardPage() {
                             Sync
                         </button>
                         {/* Download report */}
-                        {allLogs.length > 0 && (
+                        {allLogs.length > 0 && !isGuest && (
                             <button onClick={handleDownloadReport} disabled={isDownloading}
                                 className="flex items-center gap-2 bg-[#F5C400] text-[#080808] hover:bg-[#ffe166] hover:shadow-[0_0_15px_rgba(245,196,0,0.4)] transition-all border-none cursor-pointer group"
                                 style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', padding: '10px 24px', textTransform: 'uppercase' }}>
@@ -502,7 +509,7 @@ export default function DashboardPage() {
                 </section>
 
                 {/* ── API KEY USAGE ────────────────────────────────────────── */}
-                {apiKeys.length > 0 && (
+                {apiKeys.length > 0 && !isGuest && (
                     <section ref={keyRef} className={`bg-[#131315] border border-[rgba(239,239,239,0.07)] opacity-0 transition-all duration-[450ms] ${keyVisible ? 'translate-y-0 opacity-100' : 'translate-y-[12px]'}`}>
                         <div className="bg-[#111113] border-b border-[rgba(239,239,239,0.07)] flex justify-between items-center" style={{ padding: '16px 24px' }}>
                             <div className="flex items-center gap-3">

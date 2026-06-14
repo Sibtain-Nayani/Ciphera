@@ -4,16 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
 import { ApiKeyManager } from '@/components/settings/ApiKeyManager';
 import { PageLoader } from '@/components/layout/PageLoader';
+import { useAuth } from '@/context/AuthContext';
 import { publicFetch } from '@/lib/api';
 
 type Tab = 'detection' | 'language' | 'api' | 'about';
 
-const TAB_CONFIG: { id: Tab; label: string }[] = [
-    { id: 'detection', label: 'DETECTION'  },
-    { id: 'language',  label: 'LANGUAGE'   },
-    { id: 'api',       label: 'API KEYS'   },
-    { id: 'about',     label: 'SYSTEM'     },
-];
+
 
 // All rules — matches documentStore RuleType exactly
 const ALL_RULES: { id: RuleType; label: string; group: string }[] = [
@@ -59,6 +55,13 @@ const CONF_PREF_KEY  = 'ciphera_conf_threshold';
 const ML_PREF_KEY    = 'ciphera_ml_scoring';
 
 export default function SettingsPage() {
+    const { isGuest } = useAuth();
+    const TAB_CONFIG: { id: Tab; label: string }[] = [
+        { id: 'detection', label: 'DETECTION' },
+        { id: 'language',  label: 'LANGUAGE'  },
+        ...(!isGuest ? [{ id: 'api' as Tab, label: 'API KEYS' }] : []),
+        { id: 'about',     label: 'SYSTEM'    },
+    ];
     const [activeTab,     setActiveTab]     = useState<Tab>('detection');
     const [backendStatus, setBackendStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
     const [backendInfo,   setBackendInfo]   = useState<any>(null);

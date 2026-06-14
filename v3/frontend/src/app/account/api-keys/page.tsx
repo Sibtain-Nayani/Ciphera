@@ -56,7 +56,10 @@ export default function ApiKeysPage() {
     const [expDays, setExpDays] = useState("");
     const [rpm,     setRpm]     = useState("60");
 
-    useEffect(() => { if (!loading && !user) router.replace("/login"); }, [user, loading]);
+    useEffect(() => {
+        if (!loading && !user) router.replace("/login");
+        if (!loading && user?.is_guest) router.replace("/register");
+    }, [user, loading]);
 
     const loadKeys = useCallback(async () => {
         setPageLoad(true);
