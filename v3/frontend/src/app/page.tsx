@@ -1363,17 +1363,17 @@ function NavAuthButtons() {
     if (user && !isGuest) {
         return (
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                <Link href="/account" style={{ display:'flex', alignItems:'center', gap:'7px', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', transition:'color 0.15s' }}
+                <Link href="/account" style={{ display:'flex', alignItems:'center', gap:'7px', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'11px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', transition:'color 0.15s' }}
                     onMouseEnter={e=>e.currentTarget.style.color='#EFEFEF'}
                     onMouseLeave={e=>e.currentTarget.style.color='rgba(239,239,239,0.7)'}>
-                    <div style={{ width:26, height:26, background:'rgba(245,196,0,0.15)', border:'1px solid rgba(245,196,0,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'11px', color:'#F5C400' }}>
+                    <div style={{ width:24, height:24, background:'rgba(245,196,0,0.15)', border:'1px solid rgba(245,196,0,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'10px', color:'#F5C400' }}>
                             {user.full_name?.[0]?.toUpperCase() || 'U'}
                         </span>
                     </div>
                     <span>{user.full_name?.split(' ')[0]}</span>
                 </Link>
-                <Link href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                <Link href="/dashboard" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'11px', letterSpacing:'0.02em', padding:'7px 16px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
                     onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
                     onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
                     Dashboard →
@@ -1386,15 +1386,15 @@ function NavAuthButtons() {
     if (user && isGuest) {
         return (
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                <span style={{ fontFamily:'"IBM Plex Mono", monospace', fontSize:'10px', letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(239,239,239,0.35)' }}>
+                <span style={{ fontFamily:'"IBM Plex Mono", monospace', fontSize:'9px', letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(239,239,239,0.35)' }}>
                     Guest
                 </span>
-                <Link href="/dashboard" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.15)', color:'rgba(239,239,239,0.7)', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', padding:'9px 16px', textDecoration:'none', fontWeight:500, borderRadius:'8px', transition:'all 0.2s' }}
+                <Link href="/dashboard" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.15)', color:'rgba(239,239,239,0.7)', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'11px', padding:'7px 14px', textDecoration:'none', fontWeight:500, borderRadius:'8px', transition:'all 0.2s' }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(239,239,239,0.35)';}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(239,239,239,0.15)';}}>
                     Dashboard
                 </Link>
-                <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'11px', letterSpacing:'0.02em', padding:'7px 16px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
                     onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
                     onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
                     Sign Up to Save →
@@ -1406,12 +1406,12 @@ function NavAuthButtons() {
     // Logged out
     return (
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-            <Link href="/login" style={{ fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', padding:'9px 16px', transition:'color 0.15s', letterSpacing:'0.02em' }}
+            <Link href="/login" style={{ fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'12px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', padding:'7px 14px', transition:'color 0.15s', letterSpacing:'0.02em' }}
                 onMouseEnter={e=>e.currentTarget.style.color='#EFEFEF'}
                 onMouseLeave={e=>e.currentTarget.style.color='rgba(239,239,239,0.7)'}>
                 Sign In
             </Link>
-            <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+            <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'12px', letterSpacing:'0.02em', padding:'7px 18px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
                 onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
                 onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
                 Get Started →
@@ -1517,12 +1517,12 @@ export default function LandingPage() {
                 }}>
                     <div className="content-wrap" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px clamp(36px,5vw,80px)' }}>
                         <Link href="/" style={{ textDecoration:'none', display:'flex', alignItems:'baseline', gap:'8px' }}>
-                            <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'20px', letterSpacing:'0.12em', textTransform:'uppercase', color:'#EFEFEF' }}>Ciphera</span>
+                            <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'17px', letterSpacing:'0.12em', textTransform:'uppercase', color:'#EFEFEF' }}>Ciphera</span>
                         </Link>
                         <div style={{ display:'flex', alignItems:'center', gap:'32px' }}>
                             {['Features','Pipeline','API','Compliance'].map(l=>(
                                 <a key={l} href={`#${l.toLowerCase()}`}
-                                    style={{ fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'14px', letterSpacing:'0.02em', textTransform:'none', color:'rgba(239,239,239,0.8)', textDecoration:'none', cursor:'pointer', position: 'relative', fontWeight: 500 }}
+                                    style={{ fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'12px', letterSpacing:'0.02em', textTransform:'none', color:'rgba(239,239,239,0.8)', textDecoration:'none', cursor:'pointer', position: 'relative', fontWeight: 500 }}
                                     onMouseEnter={e=>{e.currentTarget.style.color='#EFEFEF'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='100%';}}
                                     onMouseLeave={e=>{e.currentTarget.style.color='rgba(239,239,239,0.8)'; const underline = e.currentTarget.querySelector('.nav-underline') as HTMLElement; if (underline) underline.style.width='0%';}}
                                 >

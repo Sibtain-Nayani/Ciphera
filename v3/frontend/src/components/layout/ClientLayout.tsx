@@ -113,18 +113,22 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     const { user, loading, isGuest } = useAuth();
 
     // ── Client-side protection ────────────────────────────────────────────────
-    // Only redirect if not loading, no user at all, AND not a guest.
-    // Guests are valid sessions — don't kick them out.
+    // Guests are valid sessions, but they are restricted to /dashboard and /redact
     useEffect(() => {
-        if (
-            !loading &&
-            !user &&
-            !isGuest &&
-            PROTECTED_ROUTES.some(p => pathname.startsWith(p))
-        ) {
-            document.cookie = "ciphera_authed=; path=/; max-age=0; SameSite=Lax";
-            document.cookie = "ciphera_guest=; path=/; max-age=0; SameSite=Lax";
-            window.location.href = "/login?from=" + encodeURIComponent(pathname);
+        if (!loading) {
+            const onProtected = PROTECTED_ROUTES.some(p => pathname.startsWith(p));
+            if (onProtected) {
+                if (!user && !isGuest) {
+                    document.cookie = "ciphera_authed=; path=/; max-age=0; SameSite=Lax";
+                    document.cookie = "ciphera_guest=; path=/; max-age=0; SameSite=Lax";
+                    window.location.href = "/login?from=" + encodeURIComponent(pathname);
+                } else if (isGuest) {
+                    const isGuestAllowedRoute = ["/dashboard", "/redact"].some(p => pathname.startsWith(p));
+                    if (!isGuestAllowedRoute) {
+                        window.location.href = "/login?from=" + encodeURIComponent(pathname);
+                    }
+                }
+            }
         }
     }, [user, loading, isGuest, pathname]);
 

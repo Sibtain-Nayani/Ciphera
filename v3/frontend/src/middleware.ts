@@ -9,17 +9,26 @@ export function middleware(request: NextRequest) {
     const authCookie  = request.cookies.get("ciphera_authed")?.value;
     const guestCookie = request.cookies.get("ciphera_guest")?.value;
 
-    // Either a real account OR a guest session counts as "in"
-    const isAuthed = Boolean(authCookie || guestCookie);
-
     const isProtected = PROTECTED.some(p => pathname.startsWith(p));
     const isAuthOnly  = AUTH_ONLY.some(p => pathname.startsWith(p));
 
-    if (isProtected && !isAuthed) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        url.searchParams.set("from", pathname);
-        return NextResponse.redirect(url);
+    if (isProtected) {
+        // No session at all -> redirect
+        if (!authCookie && !guestCookie) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/login";
+            url.searchParams.set("from", pathname);
+            return NextResponse.redirect(url);
+        }
+
+        // Guest session but accessing non-guest route -> redirect
+        const isGuestAllowed = ["/dashboard", "/redact"].some(p => pathname.startsWith(p));
+        if (guestCookie && !authCookie && !isGuestAllowed) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/login";
+            url.searchParams.set("from", pathname);
+            return NextResponse.redirect(url);
+        }
     }
 
     // Only redirect away from login/register if REAL account (not guest)

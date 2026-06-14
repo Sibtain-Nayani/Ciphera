@@ -90,7 +90,7 @@ function LoginContent() {
 
     const handleGuest = () => {
         loginAsGuest();
-        router.replace("/dashboard");
+        window.location.href = "/dashboard";
     };
 
     return (
