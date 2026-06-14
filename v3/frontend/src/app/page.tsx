@@ -1155,14 +1155,15 @@ function PiiTickerStrip() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function HeroCtaButtons() {
-    const { user } = useAuth();
+    const { user, isGuest } = useAuth();
+    const isRealUser = user && !isGuest;
     return (
         <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', marginTop:'32px' }}>
-            <MagneticButton href={user ? '/dashboard' : '/register'} className="cta-primary" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:600, borderRadius:0 }}>
-                {user ? 'Open Dashboard →' : 'Start Redacting Free →'}
+            <MagneticButton href={isRealUser ? '/dashboard' : '/register'} className="cta-primary" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:600, borderRadius:0 }}>
+                {isRealUser ? 'Open Dashboard →' : isGuest ? 'Sign Up to Save →' : 'Start Redacting Free →'}
             </MagneticButton>
-            <MagneticButton href={user ? '/batch' : '/login'} className="cta-ghost" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.07)', color:'rgba(239,239,239,0.8)', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:500, borderRadius:0 }}>
-                {user ? 'Batch Processing' : 'Sign In →'}
+            <MagneticButton href={isRealUser ? '/batch' : isGuest ? '/dashboard' : '/login'} className="cta-ghost" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.07)', color:'rgba(239,239,239,0.8)', fontFamily:'"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize:'13px', letterSpacing:'0.02em', textTransform:'none', padding:'11px 24px', textDecoration:'none', fontWeight:500, borderRadius:0 }}>
+                {isRealUser ? 'Batch Processing' : isGuest ? 'Back to App →' : 'Sign In →'}
             </MagneticButton>
         </div>
     );
@@ -1354,9 +1355,12 @@ function ZeroEasterEgg() {
     );
 }
 
+
 function NavAuthButtons() {
-    const { user } = useAuth();
-    if (user) {
+    const { user, isGuest } = useAuth();
+ 
+    // Logged-in real account
+    if (user && !isGuest) {
         return (
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                 <Link href="/account" style={{ display:'flex', alignItems:'center', gap:'7px', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', transition:'color 0.15s' }}
@@ -1377,6 +1381,29 @@ function NavAuthButtons() {
             </div>
         );
     }
+ 
+    // Guest session — nudge to sign up
+    if (user && isGuest) {
+        return (
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <span style={{ fontFamily:'"IBM Plex Mono", monospace', fontSize:'10px', letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(239,239,239,0.35)' }}>
+                    Guest
+                </span>
+                <Link href="/dashboard" style={{ background:'transparent', border:'1px solid rgba(239,239,239,0.15)', color:'rgba(239,239,239,0.7)', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', padding:'9px 16px', textDecoration:'none', fontWeight:500, borderRadius:'8px', transition:'all 0.2s' }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(239,239,239,0.35)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(239,239,239,0.15)';}}>
+                    Dashboard
+                </Link>
+                <Link href="/register" style={{ background:'#F5C400', color:'#080808', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'13px', letterSpacing:'0.02em', padding:'9px 20px', textDecoration:'none', fontWeight:600, borderRadius:'8px', transition:'all 0.2s' }}
+                    onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.02)')}
+                    onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
+                    Sign Up to Save →
+                </Link>
+            </div>
+        );
+    }
+ 
+    // Logged out
     return (
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             <Link href="/login" style={{ fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'14px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', padding:'9px 16px', transition:'color 0.15s', letterSpacing:'0.02em' }}
