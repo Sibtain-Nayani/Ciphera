@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Key, Plus, Trash2, Loader2, Copy, Check, Eye, EyeOff, AlertCircle, BarChart3 } from "lucide-react";
+import { Key, Plus, Trash2, Loader2, Copy, Check, BarChart3, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
+import { useUiStore } from "@/store/uiStore";
 
 function TabBar() {
     return (
-        <div style={{ display: "flex", gap: "0px", borderBottom: "1px solid rgba(239,239,239,0.07)", marginBottom: "28px" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(239,239,239,0.08)", marginBottom: "28px" }}>
             {[
                 { label: "Profile",      href: "/account" },
                 { label: "Organisation", href: "/account/organisation" },
@@ -17,8 +18,7 @@ function TabBar() {
             ].map(tab => {
                 const active = typeof window !== "undefined" && window.location.pathname === tab.href;
                 return (
-                    <Link key={tab.href} href={tab.href}
-                        style={{ fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: active ? "#F5C400" : "rgba(239,239,239,0.35)", textDecoration: "none", padding: "10px 16px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, transition: "all 0.15s" }}>
+                    <Link key={tab.href} href={tab.href} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: active ? 700 : 500, color: active ? "#F5C400" : "rgba(239,239,239,0.4)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
                         {tab.label}
                     </Link>
                 );
@@ -27,32 +27,41 @@ function TabBar() {
     );
 }
 
+const INPUT: React.CSSProperties = {
+    width: "100%", background: "#080808",
+    border: "1px solid rgba(239,239,239,0.12)",
+    padding: "9px 12px",
+    fontFamily: '"IBM Plex Mono", monospace',
+    fontSize: "11px", color: "#EFEFEF",
+    outline: "none", boxSizing: "border-box",
+    transition: "border-color 0.15s",
+};
+
 export default function ApiKeysPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    const [keys,       setKeys]      = useState<any[]>([]);
-    const [pageLoad,   setPageLoad]  = useState(true);
-    const [creating,   setCreating]  = useState(false);
-    const [newKey,     setNewKey]    = useState<string | null>(null);
-    const [copied,     setCopied]    = useState(false);
-    const [busy,       setBusy]      = useState(false);
-    const [error,      setError]     = useState("");
-    const [showUsage,  setShowUsage] = useState<string | null>(null);
-    const [usageData,  setUsageData] = useState<any>(null);
+    const [keys,      setKeys]      = useState<any[]>([]);
+    const [pageLoad,  setPageLoad]  = useState(true);
+    const [creating,  setCreating]  = useState(false);
+    const [newKey,    setNewKey]    = useState<string | null>(null);
+    const [copied,    setCopied]    = useState<string | null>(null);
+    const [busy,      setBusy]      = useState(false);
+    const [error,     setError]     = useState("");
+    const [showUsage, setShowUsage] = useState<string | null>(null);
+    const [usageData, setUsageData] = useState<any>(null);
 
-    // Create form
-    const [name,     setName]     = useState("");
-    const [desc,     setDesc]     = useState("");
-    const [expDays,  setExpDays]  = useState<string>("");
-    const [rpm,      setRpm]      = useState("60");
+    const [name,    setName]    = useState("");
+    const [desc,    setDesc]    = useState("");
+    const [expDays, setExpDays] = useState("");
+    const [rpm,     setRpm]     = useState("60");
 
     useEffect(() => { if (!loading && !user) router.replace("/login"); }, [user, loading]);
 
     const loadKeys = useCallback(async () => {
         setPageLoad(true);
         try {
-            const res = await authFetch("/api/v3/keys/list");
+            const res = await apiFetch("/api/v3/keys/list");
             if (res.ok) { const d = await res.json(); setKeys(d.keys || []); }
         } finally { setPageLoad(false); }
     }, []);
@@ -64,7 +73,7 @@ export default function ApiKeysPage() {
         try {
             const body: any = { name, description: desc, rate_limit_rpm: parseInt(rpm) || 60 };
             if (expDays) body.expires_in_days = parseInt(expDays);
-            const res = await authFetch("/api/v3/keys/create", { method: "POST", body: JSON.stringify(body) });
+            const res = await apiFetch("/api/v3/keys/create", { method: "POST", body: JSON.stringify(body) });
             if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Failed"); }
             const d = await res.json();
             setNewKey(d.api_key);
@@ -76,179 +85,211 @@ export default function ApiKeysPage() {
 
     const revokeKey = async (keyId: string) => {
         if (!confirm("Revoke this API key? This cannot be undone.")) return;
-        await authFetch(`/api/v3/keys/${keyId}`, { method: "DELETE" });
+        await apiFetch(`/api/v3/keys/${keyId}`, { method: "DELETE" });
+        useUiStore.getState().addToast("Key revoked.", "success");
         await loadKeys();
     };
 
     const loadUsage = async (keyId: string) => {
         if (showUsage === keyId) { setShowUsage(null); setUsageData(null); return; }
         setShowUsage(keyId);
-        const res = await authFetch(`/api/v3/keys/${keyId}/usage`);
+        const res = await apiFetch(`/api/v3/keys/${keyId}/usage`);
         if (res.ok) setUsageData(await res.json());
     };
 
-    const copyKey = () => {
-        if (newKey) { navigator.clipboard.writeText(newKey); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    const copyText = async (text: string, id: string) => {
+        await navigator.clipboard.writeText(text);
+        setCopied(id); setTimeout(() => setCopied(null), 2000);
     };
 
     if (loading || pageLoad) return (
-        <div style={{ minHeight: "100vh", background: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Loader2 style={{ width: 20, height: 20, color: "#F5C400", animation: "spin 1s linear infinite" }} />
+        <div style={{ minHeight: "100vh", background: "#0D0D0D", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Loader2 style={{ width: 18, height: 18, color: "#F5C400", animation: "spin 1s linear infinite" }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 
     return (
-        <div style={{ maxWidth: "760px", margin: "0 auto", padding: "32px 24px", cursor: "none" }}>
-            <div style={{ marginBottom: "28px" }}>
-                <span style={{ fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)" }}>// Account</span>
-                <h1 style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 900, fontSize: "32px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: "4px 0 0" }}>API Keys</h1>
-            </div>
+        <div style={{ maxWidth: "820px", margin: "0 auto", padding: "40px 32px", cursor: "none" }}>
+            {/* Header */}
+            <header style={{ paddingBottom: "24px", borderBottom: "1px solid rgba(239,239,239,0.07)", marginBottom: "32px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                    <div style={{ width: "18px", height: "2px", background: "rgba(185,28,28,0.8)" }} />
+                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(185,28,28,0.8)" }}>// ACCOUNT</span>
+                </div>
+                <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "clamp(32px,4vw,48px)", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, lineHeight: 1 }}>API Keys</h1>
+            </header>
+
             <TabBar />
 
-            {/* New key reveal */}
+            {/* New key reveal banner */}
             {newKey && (
-                <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.25)", marginBottom: "20px" }}>
-                    <div style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#22c55e", marginBottom: "10px" }}>✓ Key created — copy it now. You won't see it again.</div>
+                <div style={{ padding: "16px 20px", background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.25)", marginBottom: "20px", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, #4ade80, transparent)", opacity: 0.5 }} />
+                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#4ade80", marginBottom: "10px" }}>✓ Key created — copy now, not shown again</div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <code style={{ fontFamily: "Courier New, monospace", fontSize: "11px", color: "#EFEFEF", background: "#080808", padding: "8px 12px", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: "1px solid rgba(239,239,239,0.1)" }}>{newKey}</code>
-                        <button onClick={copyKey} style={{ background: "#F5C400", color: "#080808", border: "none", padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px", fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.14em", fontWeight: 700, flexShrink: 0 }}>
-                            {copied ? <Check style={{ width: 12, height: 12 }} /> : <Copy style={{ width: 12, height: 12 }} />}
-                            {copied ? "Copied!" : "Copy"}
+                        <code style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "11px", color: "#EFEFEF", background: "#080808", padding: "8px 12px", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: "1px solid rgba(239,239,239,0.1)" }}>{newKey}</code>
+                        <button onClick={() => copyText(newKey, "new")}
+                            style={{ background: "#F5C400", color: "#080808", border: "none", padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", fontWeight: 700, flexShrink: 0 }}>
+                            {copied === "new" ? <Check style={{ width: 12, height: 12 }} /> : <Copy style={{ width: 12, height: 12 }} />}
+                            {copied === "new" ? "Copied!" : "Copy"}
                         </button>
                     </div>
-                    <button onClick={() => setNewKey(null)} style={{ marginTop: "10px", background: "none", border: "none", fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)", cursor: "pointer" }}>Dismiss</button>
+                    <button onClick={() => setNewKey(null)} style={{ marginTop: "10px", background: "none", border: "none", fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)", cursor: "pointer" }}>Dismiss</button>
                 </div>
             )}
 
-            {/* Create key form */}
-            {creating ? (
-                <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "20px", marginBottom: "20px" }}>
-                    <div style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 700, fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#EFEFEF", marginBottom: "16px" }}>New API Key</div>
+            {/* Actions row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)" }}>{keys.length} key{keys.length !== 1 ? "s" : ""}</span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <button onClick={loadKeys}
+                        style={{ display: "flex", alignItems: "center", gap: "5px", background: "transparent", border: "1px solid rgba(239,239,239,0.1)", color: "rgba(239,239,239,0.4)", padding: "8px 12px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s" }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,196,0,0.4)"; e.currentTarget.style.color = "#F5C400"; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.1)"; e.currentTarget.style.color = "rgba(239,239,239,0.4)"; }}>
+                        <RefreshCw style={{ width: 11, height: 11 }} /> Refresh
+                    </button>
+                    <button onClick={() => setCreating(!creating)}
+                        style={{ display: "flex", alignItems: "center", gap: "6px", background: creating ? "rgba(245,196,0,0.08)" : "#F5C400", color: creating ? "#F5C400" : "#080808", border: creating ? "1px solid rgba(245,196,0,0.3)" : "none", padding: "8px 16px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                        <Plus style={{ width: 11, height: 11 }} />
+                        {creating ? "Cancel" : "New Key"}
+                    </button>
+                </div>
+            </div>
+
+            {/* Create form */}
+            {creating && (
+                <div style={{ border: "1px solid rgba(239,239,239,0.1)", padding: "20px", marginBottom: "16px", position: "relative", overflow: "hidden", background: "#111113" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, #F5C400, transparent)", opacity: 0.4 }} />
+                    <div style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 700, fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#EFEFEF", marginBottom: "16px" }}>Generate New Key</div>
                     {error && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "rgba(185,28,28,0.08)", border: "1px solid rgba(185,28,28,0.25)", marginBottom: "14px" }}>
-                            <AlertCircle style={{ width: 12, height: 12, color: "#B91C1C", flexShrink: 0 }} />
-                            <span style={{ fontFamily: "Barlow, sans-serif", fontSize: "12px", color: "#fca5a5" }}>{error}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "rgba(185,28,28,0.06)", border: "1px solid rgba(185,28,28,0.25)", marginBottom: "12px" }}>
+                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", color: "#fca5a5" }}>{error}</span>
                         </div>
                     )}
                     <form onSubmit={createKey} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         {[
-                            { label: "Key Name *", val: name, set: setName, type: "text", req: true, ph: "e.g. Production Integration" },
-                            { label: "Description", val: desc, set: setDesc, type: "text", req: false, ph: "Optional note" },
-                        ].map(({ label, val, set, type, req, ph }) => (
+                            { label: "Key Name *", val: name, set: setName, req: true,  ph: "e.g. Production Integration" },
+                            { label: "Description", val: desc, set: setDesc, req: false, ph: "Optional note" },
+                        ].map(({ label, val, set, req, ph }) => (
                             <div key={label}>
-                                <label style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>{label}</label>
-                                <input type={type} required={req} value={val} onChange={e => set(e.target.value)} placeholder={ph}
-                                    style={{ width: "100%", background: "#080808", border: "1px solid rgba(239,239,239,0.12)", padding: "9px 12px", fontFamily: "Barlow, sans-serif", fontSize: "13px", color: "#EFEFEF", outline: "none", boxSizing: "border-box" }}
+                                <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>{label}</label>
+                                <input type="text" required={req} value={val} onChange={e => set(e.target.value)} placeholder={ph} style={INPUT}
                                     onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
                                     onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
                             </div>
                         ))}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                            <div>
-                                <label style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>Rate Limit (req/min)</label>
-                                <input type="number" min="1" max="1000" value={rpm} onChange={e => setRpm(e.target.value)}
-                                    style={{ width: "100%", background: "#080808", border: "1px solid rgba(239,239,239,0.12)", padding: "9px 12px", fontFamily: "Courier New, monospace", fontSize: "12px", color: "#EFEFEF", outline: "none", boxSizing: "border-box" }}
-                                    onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
-                                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
-                            </div>
-                            <div>
-                                <label style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>Expires in days (optional)</label>
-                                <input type="number" min="1" max="365" value={expDays} onChange={e => setExpDays(e.target.value)} placeholder="Never"
-                                    style={{ width: "100%", background: "#080808", border: "1px solid rgba(239,239,239,0.12)", padding: "9px 12px", fontFamily: "Courier New, monospace", fontSize: "12px", color: "#EFEFEF", outline: "none", boxSizing: "border-box" }}
-                                    onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
-                                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
-                            </div>
+                            {[
+                                { label: "Rate Limit (req/min)", val: rpm,     set: setRpm,     ph: "60"    },
+                                { label: "Expires in days",      val: expDays, set: setExpDays, ph: "Never" },
+                            ].map(({ label, val, set, ph }) => (
+                                <div key={label}>
+                                    <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>{label}</label>
+                                    <input type="number" value={val} onChange={e => set(e.target.value)} placeholder={ph} style={INPUT}
+                                        onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
+                                        onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
+                                </div>
+                            ))}
                         </div>
                         <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
-                            <button type="submit" disabled={busy}
-                                style={{ background: "#F5C400", color: "#080808", border: "none", padding: "10px 20px", fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                                {busy && <Loader2 style={{ width: 11, height: 11, animation: "spin 1s linear infinite" }} />} Generate Key
+                            <button type="submit" disabled={busy || !name.trim()}
+                                style={{ background: busy || !name.trim() ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "10px 20px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, cursor: busy || !name.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                                {busy && <Loader2 style={{ width: 11, height: 11, animation: "spin 1s linear infinite" }} />}
+                                Generate →
                             </button>
                             <button type="button" onClick={() => { setCreating(false); setError(""); }}
-                                style={{ background: "transparent", border: "1px solid rgba(239,239,239,0.1)", color: "rgba(239,239,239,0.4)", padding: "10px 16px", fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer" }}>
+                                style={{ background: "transparent", border: "1px solid rgba(239,239,239,0.1)", color: "rgba(239,239,239,0.4)", padding: "10px 16px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer" }}>
                                 Cancel
                             </button>
                         </div>
                     </form>
                 </div>
-            ) : (
-                <button onClick={() => setCreating(true)}
-                    style={{ display: "flex", alignItems: "center", gap: "7px", background: "#F5C400", color: "#080808", border: "none", padding: "10px 20px", fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, cursor: "pointer", marginBottom: "20px" }}>
-                    <Plus style={{ width: 12, height: 12 }} /> New API Key
-                </button>
             )}
 
             {/* Keys list */}
             {keys.length === 0 ? (
-                <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "40px", textAlign: "center" }}>
-                    <Key style={{ width: 28, height: 28, color: "rgba(239,239,239,0.2)", margin: "0 auto 12px" }} />
-                    <p style={{ fontFamily: "Courier New, monospace", fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)", margin: 0 }}>No API keys yet</p>
+                <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "48px", textAlign: "center", background: "#111113" }}>
+                    <Key style={{ width: 24, height: 24, color: "rgba(239,239,239,0.15)", margin: "0 auto 12px" }} />
+                    <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)", margin: 0 }}>No API keys yet</p>
                 </div>
             ) : (
-                <div style={{ border: "1px solid rgba(239,239,239,0.07)" }}>
-                    <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(239,239,239,0.07)", display: "flex", gap: "0" }}>
-                        {["Key", "Status", "Rate Limit", "Requests", "Last Used", ""].map((h, i) => (
-                            <div key={i} style={{ flex: h === "" ? "0 0 80px" : h === "Key" ? 2 : 1, fontFamily: "Courier New, monospace", fontSize: "7px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)" }}>{h}</div>
+                <div style={{ border: "1px solid rgba(239,239,239,0.1)", background: "#111113" }}>
+                    {/* Table header */}
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 80px 80px 80px 100px 70px", gap: "0", padding: "10px 20px", borderBottom: "1px solid rgba(239,239,239,0.07)", background: "#0D0D0D" }}>
+                        {["Key", "Status", "Rate", "Requests", "Last Used", ""].map((h, i) => (
+                            <div key={i} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.22)", textAlign: i > 1 ? "center" : "left" }}>{h}</div>
                         ))}
                     </div>
+
                     {keys.map((k, i) => (
                         <React.Fragment key={k.key_id}>
-                            <div style={{ display: "flex", padding: "14px 20px", borderBottom: i < keys.length - 1 || showUsage === k.key_id ? "1px solid rgba(239,239,239,0.05)" : "none", alignItems: "center" }}>
-                                <div style={{ flex: 2, minWidth: 0 }}>
-                                    <div style={{ fontFamily: "Barlow, sans-serif", fontSize: "13px", color: "#EFEFEF", fontWeight: 600, marginBottom: "2px" }}>{k.name}</div>
-                                    <div style={{ fontFamily: "Courier New, monospace", fontSize: "8px", color: "rgba(239,239,239,0.3)", letterSpacing: "0.1em" }}>{k.key_prefix}</div>
+                            <div
+                                style={{ display: "grid", gridTemplateColumns: "2fr 80px 80px 80px 100px 70px", gap: "0", padding: "14px 20px", borderBottom: i < keys.length - 1 || showUsage === k.key_id ? "1px solid rgba(239,239,239,0.05)" : "none", alignItems: "center", transition: "background 0.15s", cursor: "default", position: "relative" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(245,196,0,0.02)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                {/* Left accent bar */}
+                                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "2px", background: "#F5C400", transform: "scaleY(0)", transition: "transform 0.2s" }}
+                                    onMouseEnter={e => e.currentTarget.style.transform = "scaleY(1)"}
+                                    onMouseLeave={e => e.currentTarget.style.transform = "scaleY(0)"} />
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: "13px", color: "#EFEFEF", fontWeight: 600, marginBottom: "2px" }}>{k.name}</div>
+                                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.3)", letterSpacing: "0.1em" }}>{k.key_prefix}</div>
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <span style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: k.is_active ? "#22c55e" : "#ef4444", border: `1px solid ${k.is_active ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`, padding: "2px 6px" }}>
+                                <div>
+                                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.12em", textTransform: "uppercase", color: k.is_active ? "#4ade80" : "#ef4444", border: `1px solid ${k.is_active ? "rgba(74,222,128,0.25)" : "rgba(239,68,68,0.25)"}`, padding: "2px 7px", background: k.is_active ? "rgba(74,222,128,0.05)" : "transparent" }}>
                                         {k.is_active ? "Active" : "Revoked"}
                                     </span>
                                 </div>
-                                <div style={{ flex: 1, fontFamily: "Courier New, monospace", fontSize: "9px", color: "rgba(239,239,239,0.5)" }}>{k.rate_limit_rpm}/min</div>
-                                <div style={{ flex: 1, fontFamily: "Courier New, monospace", fontSize: "9px", color: "rgba(239,239,239,0.5)" }}>{k.request_count.toLocaleString()}</div>
-                                <div style={{ flex: 1, fontFamily: "Courier New, monospace", fontSize: "8px", color: "rgba(239,239,239,0.35)" }}>
+                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.45)", textAlign: "center" }}>{k.rate_limit_rpm}/m</div>
+                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.45)", textAlign: "center" }}>{k.request_count.toLocaleString()}</div>
+                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.3)", textAlign: "center" }}>
                                     {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "Never"}
                                 </div>
-                                <div style={{ flex: "0 0 80px", display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                                    <button onClick={() => loadUsage(k.key_id)} title="Usage stats"
-                                        style={{ background: showUsage === k.key_id ? "rgba(245,196,0,0.1)" : "none", border: `1px solid ${showUsage === k.key_id ? "rgba(245,196,0,0.3)" : "transparent"}`, color: showUsage === k.key_id ? "#F5C400" : "rgba(239,239,239,0.3)", padding: "5px 7px", cursor: "pointer", display: "flex" }}
+                                <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                                    <button onClick={() => loadUsage(k.key_id)} title="Usage"
+                                        style={{ background: showUsage === k.key_id ? "rgba(245,196,0,0.08)" : "none", border: `1px solid ${showUsage === k.key_id ? "rgba(245,196,0,0.3)" : "transparent"}`, color: showUsage === k.key_id ? "#F5C400" : "rgba(239,239,239,0.3)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
                                         onMouseEnter={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "#EFEFEF"; }}
                                         onMouseLeave={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "rgba(239,239,239,0.3)"; }}>
                                         <BarChart3 style={{ width: 12, height: 12 }} />
                                     </button>
-                                    <button onClick={() => revokeKey(k.key_id)} title="Revoke"
-                                        style={{ background: "none", border: "transparent", color: "rgba(239,239,239,0.25)", padding: "5px 7px", cursor: "pointer", display: "flex" }}
-                                        onMouseEnter={e => e.currentTarget.style.color = "#fca5a5"}
-                                        onMouseLeave={e => e.currentTarget.style.color = "rgba(239,239,239,0.25)"}>
-                                        <Trash2 style={{ width: 12, height: 12 }} />
-                                    </button>
+                                    {k.is_active && (
+                                        <button onClick={() => revokeKey(k.key_id)} title="Revoke"
+                                            style={{ background: "none", border: "1px solid transparent", color: "rgba(239,239,239,0.22)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
+                                            onMouseEnter={e => { e.currentTarget.style.color = "#fca5a5"; e.currentTarget.style.borderColor = "rgba(248,113,113,0.2)"; }}
+                                            onMouseLeave={e => { e.currentTarget.style.color = "rgba(239,239,239,0.22)"; e.currentTarget.style.borderColor = "transparent"; }}>
+                                            <Trash2 style={{ width: 12, height: 12 }} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            {/* Usage breakdown */}
+
+                            {/* Usage panel */}
                             {showUsage === k.key_id && usageData && (
                                 <div style={{ padding: "14px 20px", background: "rgba(245,196,0,0.02)", borderBottom: i < keys.length - 1 ? "1px solid rgba(239,239,239,0.05)" : "none" }}>
-                                    <div style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)", marginBottom: "10px" }}>Usage — Last 7 Days</div>
+                                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)", marginBottom: "10px" }}>Usage — Last 7 Days</div>
                                     <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-                                        {/* Daily volume sparkline */}
                                         <div>
-                                            <div style={{ fontFamily: "Courier New, monospace", fontSize: "7px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)", marginBottom: "6px" }}>Daily Calls</div>
+                                            <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)", marginBottom: "6px" }}>Daily Calls</div>
                                             <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: "28px" }}>
                                                 {(usageData.daily_volume || []).map((d: any) => {
-                                                    const maxCalls = Math.max(...(usageData.daily_volume || []).map((x: any) => x.calls), 1);
-                                                    const h = Math.max(2, (d.calls / maxCalls) * 28);
+                                                    const maxC = Math.max(...(usageData.daily_volume || []).map((x: any) => x.calls), 1);
+                                                    const h    = Math.max(2, (d.calls / maxC) * 28);
                                                     return <div key={d.day} title={`${d.day}: ${d.calls}`} style={{ width: "10px", height: `${h}px`, background: "#F5C400", opacity: 0.6 }} />;
                                                 })}
                                             </div>
                                         </div>
-                                        {/* By endpoint */}
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontFamily: "Courier New, monospace", fontSize: "7px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)", marginBottom: "6px" }}>By Endpoint</div>
+                                            <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(239,239,239,0.25)", marginBottom: "6px" }}>By Endpoint</div>
                                             {(usageData.by_endpoint || []).map((ep: any) => (
-                                                <div key={ep.endpoint} style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginBottom: "3px" }}>
-                                                    <span style={{ fontFamily: "Courier New, monospace", fontSize: "9px", color: "#F5C400" }}>{ep.endpoint}</span>
-                                                    <span style={{ fontFamily: "Courier New, monospace", fontSize: "9px", color: "rgba(239,239,239,0.4)" }}>{ep.calls} calls · {Math.round(ep.avg_ms)}ms avg</span>
+                                                <div key={ep.endpoint} style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginBottom: "4px" }}>
+                                                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "#F5C400" }}>{ep.endpoint}</span>
+                                                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.4)" }}>{ep.calls} calls · {Math.round(ep.avg_ms)}ms avg</span>
                                                 </div>
                                             ))}
+                                            {!usageData.by_endpoint?.length && (
+                                                <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.3)" }}>No requests in last 7 days</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -257,13 +298,6 @@ export default function ApiKeysPage() {
                     ))}
                 </div>
             )}
-
-            {/* Docs note */}
-            <div style={{ marginTop: "20px", padding: "12px 16px", border: "1px solid rgba(239,239,239,0.05)", background: "rgba(245,196,0,0.02)" }}>
-                <span style={{ fontFamily: "Courier New, monospace", fontSize: "8px", letterSpacing: "0.14em", color: "rgba(239,239,239,0.25)" }}>
-                    Pass your key as: <span style={{ color: "#F5C400" }}>X-API-Key: ck_live_…</span> on POST /api/v3/public/redact or /analyze
-                </span>
-            </div>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
