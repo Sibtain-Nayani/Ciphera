@@ -1829,13 +1829,17 @@ export default function LandingPage() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                           <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '15px', fontWeight: 600, color: '#EFEFEF', letterSpacing: '0.02em' }}>Legal</div>
-                          {['Privacy Policy','Terms of Service','DPDP Compliance'].map(l => (
-                            <a key={l} href="#" style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', color: 'rgba(239,239,239,0.6)', textDecoration: 'none', transition: 'color 0.2s ease' }}
-                               onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
-                               onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.6)')}>
-                              {l}
-                            </a>
-                          ))}
+                          {[
+                            { label: 'Privacy Policy',   href: '/privacy' },
+                            { label: 'Terms of Service', href: '/terms'   },
+                            { label: 'DPDP Compliance',  href: '/privacy#dpdp-compliance' },
+                        ].map(({ label, href }) => (
+                            <Link key={label} href={href} style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: '14px', color: 'rgba(239,239,239,0.6)', textDecoration: 'none', transition: 'color 0.2s ease' }}
+                            onMouseEnter={e=>(e.currentTarget.style.color='#EFEFEF')}
+                            onMouseLeave={e=>(e.currentTarget.style.color='rgba(239,239,239,0.6)')}>
+                            {label}
+                            </Link>
+                            ))}
                         </div>
                       </div>
                     </div>

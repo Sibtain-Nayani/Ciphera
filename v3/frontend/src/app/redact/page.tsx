@@ -67,13 +67,17 @@ const RULE_GROUPS: { label: string; accent: string; icon: React.ReactNode; rules
     {
         label: 'Indian PII', accent: '#F97316', icon: <Fingerprint className="w-3.5 h-3.5" />,
         rules: [
-            { id: 'aadhaar',    label: 'Aadhaar',     icon: <Fingerprint className="w-3.5 h-3.5" />, color: '#F97316' },
-            { id: 'pan',        label: 'PAN',         icon: <BookKey className="w-3.5 h-3.5" />,     color: '#EAB308' },
-            { id: 'gst',        label: 'GST / GSTIN', icon: <Building2 className="w-3.5 h-3.5" />,  color: '#2DD4BF' },
-            { id: 'ifsc',       label: 'IFSC Code',   icon: <Landmark className="w-3.5 h-3.5" />,   color: '#38BDF8' },
-            { id: 'voterId',    label: 'Voter ID',    icon: <Vote className="w-3.5 h-3.5" />,       color: '#EC4899' },
-            { id: 'passport',   label: 'Passport',    icon: <MapPin className="w-3.5 h-3.5" />,     color: '#818CF8' },
-            { id: 'vehicleReg', label: 'Vehicle Reg', icon: <Car className="w-3.5 h-3.5" />,        color: '#FB7185' },
+            { id: 'aadhaar',        label: 'Aadhaar',         icon: <Fingerprint className="w-3.5 h-3.5" />, color: '#F97316' },
+            { id: 'pan',            label: 'PAN',             icon: <BookKey className="w-3.5 h-3.5" />,     color: '#EAB308' },
+            { id: 'gst',            label: 'GST / GSTIN',     icon: <Building2 className="w-3.5 h-3.5" />,  color: '#2DD4BF' },
+            { id: 'ifsc',           label: 'IFSC Code',       icon: <Landmark className="w-3.5 h-3.5" />,   color: '#38BDF8' },
+            { id: 'voterId',        label: 'Voter ID',        icon: <Vote className="w-3.5 h-3.5" />,       color: '#EC4899' },
+            { id: 'passport',       label: 'Passport',        icon: <MapPin className="w-3.5 h-3.5" />,     color: '#818CF8' },
+            { id: 'vehicleReg',     label: 'Vehicle Reg',     icon: <Car className="w-3.5 h-3.5" />,        color: '#FB7185' },
+            { id: 'upi' as RuleType,            label: 'UPI ID',          icon: <Hash className="w-3.5 h-3.5" />,       color: '#A78BFA' },
+            { id: 'bankAccount' as RuleType,    label: 'Bank Account',    icon: <Landmark className="w-3.5 h-3.5" />,   color: '#34D399' },
+            { id: 'drivingLicence' as RuleType, label: 'Driving Licence', icon: <Car className="w-3.5 h-3.5" />,        color: '#F472B6' },
+            { id: 'pinCode' as RuleType,        label: 'PIN Code',        icon: <MapPin className="w-3.5 h-3.5" />,     color: '#60A5FA' },
         ],
     },
     {
@@ -86,11 +90,12 @@ const RULE_GROUPS: { label: string; accent: string; icon: React.ReactNode; rules
 ];
 
 const ENTITY_COLORS: Record<string, string> = {
-    email: '#60A5FA', phone: '#34D399', creditCard: '#F59E0B', ssn: '#F472B6',
-    names: '#3B82F6', dob: '#F87171', date: '#94A3B8', url: '#06B6D4', ip: '#A78BFA',
-    aadhaar: '#F97316', pan: '#EAB308', gst: '#2DD4BF', ifsc: '#38BDF8',
-    voterId: '#EC4899', passport: '#818CF8', vehicleReg: '#FB7185',
-};
+        email: '#60A5FA', phone: '#34D399', creditCard: '#F59E0B', ssn: '#F472B6',
+        names: '#3B82F6', dob: '#F87171', date: '#94A3B8', url: '#06B6D4', ip: '#A78BFA',
+        aadhaar: '#F97316', pan: '#EAB308', gst: '#2DD4BF', ifsc: '#38BDF8',
+        voterId: '#EC4899', passport: '#818CF8', vehicleReg: '#FB7185',
+        upi: '#A78BFA', bankAccount: '#34D399', drivingLicence: '#F472B6', pinCode: '#60A5FA',
+    };
 
 // ── Persist audit log to backend DB (silent fail — localStorage is fallback) ──
 function persistAuditLog(
@@ -883,14 +888,130 @@ export default function WorkspacePage() {
                     )}
 
                     {!isCanvas && !rawText && !isLoading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none">
-                            <div className="p-4 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A]"><UploadCloud className="w-8 h-8 text-gray-600" /></div>
-                            <div className="text-center">
-                                <p className="text-sm text-gray-500 font-medium">Drop a file or click Load File</p>
-                                <p className="text-xs text-gray-700 mt-1">Supports PDF, images, TXT, DOCX, CSV and more</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0 overflow-y-auto z-20 pointer-events-none">
+            <div className="w-full max-w-xl mx-auto p-8 flex flex-col items-center gap-6 pointer-events-auto">
+ 
+                {/* Upload prompt */}
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="p-4 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A]">
+                        <UploadCloud className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-400 font-medium">Drop a file or click Load File</p>
+                        <p className="text-xs text-gray-600 mt-1 font-mono">PDF · DOCX · TXT · CSV · IMG</p>
+                    </div>
+                </div>
+ 
+                {/* Divider */}
+                <div className="flex items-center gap-3 w-full">
+                    <div className="flex-1 h-px bg-[#2A2A2A]" />
+                    <span className="text-[10px] font-mono text-gray-700 uppercase tracking-widest">or try a sample</span>
+                    <div className="flex-1 h-px bg-[#2A2A2A]" />
+                </div>
+ 
+                {/* Sample documents */}
+                <div className="w-full grid grid-cols-1 gap-2">
+                    {[
+                        {
+                            label: "KYC Form",
+                            desc:  "Name, Aadhaar, PAN, DOB, address",
+                            color: "#F97316",
+                            text:  `KYC VERIFICATION FORM
+ 
+Full Name: Rahul Sharma
+Date of Birth: 15/08/1992
+Aadhaar Number: 4532 8812 9901
+PAN Number: ABCRS1234F
+Mobile: +91 98765 43210
+Email: rahul.sharma@example.com
+Address: 42, MG Road, Bandra West, Mumbai - 400050
+ 
+Bank Account: 9876543210123
+IFSC Code: SBIN0001234
+GST Number: 27ABCRS1234F1Z5
+ 
+I hereby declare the above information is true.
+Signature: Rahul Sharma`,
+                        },
+                        {
+                            label: "Medical Record",
+                            desc:  "Patient data, diagnosis, contact",
+                            color: "#34D399",
+                            text:  `PATIENT MEDICAL RECORD
+Apollo Hospital, Mumbai
+ 
+Patient Name: Priya Mehta
+Date of Birth: 22/03/1985
+Patient ID: APL-2024-00847
+Mobile: 9876512345
+Email: priya.mehta@gmail.com
+ 
+Diagnosis: Type 2 Diabetes Mellitus
+Attending Physician: Dr. Suresh Nair (MBBS, MD)
+Date of Visit: 10/06/2024
+ 
+Prescription:
+- Metformin 500mg twice daily
+- HbA1c test every 3 months
+ 
+Emergency Contact: Amit Mehta, +91 9988776655
+Insurance ID: STAR-HLT-2024-PM8472`,
+                        },
+                        {
+                            label: "Financial Statement",
+                            desc:  "Bank details, PAN, transactions",
+                            color: "#F59E0B",
+                            text:  `ACCOUNT STATEMENT
+HDFC Bank Limited
+ 
+Account Holder: Vikram Singh
+Account Number: 50100234567890
+IFSC: HDFC0001234
+PAN: BVCSS9876G
+Period: 01/05/2024 - 31/05/2024
+ 
+TRANSACTIONS:
+10/05/2024  UPI/GPay  9876543210@okaxis  -₹5,000
+15/05/2024  NEFT from SBIN  +₹45,000
+20/05/2024  Credit Card XXXX-4521  -₹12,450
+ 
+Closing Balance: ₹1,23,456.78
+For queries: vikram.singh@company.in | +91 8800991234`,
+                        },
+                    ].map((sample) => (
+                        <button
+                            key={sample.label}
+                            onClick={() => {
+                                setRawText(sample.text);
+                                useDocumentStore.getState().setFileMetadata(
+                                    `${sample.label.replace(/\s+/g, '_')}_Sample.txt`,
+                                    'txt',
+                                );
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 bg-[#181818] border border-[#2A2A2A] hover:border-[#FFA500]/40 hover:bg-[#1E1E1E] transition-all text-left group cursor-pointer rounded-lg"
+                        >
+                            <div className="w-2 h-2 rounded-full shrink-0 transition-all group-hover:scale-125"
+                                style={{ backgroundColor: sample.color }} />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">{sample.label}</div>
+                                <div className="text-[10px] text-gray-600 font-mono mt-0.5">{sample.desc}</div>
                             </div>
-                        </div>
-                    )}
+                            <span className="text-[10px] font-mono text-gray-700 group-hover:text-[#FFA500] transition-colors shrink-0">Try →</span>
+                        </button>
+                    ))}
+                </div>
+ 
+                {/* Keyboard shortcut hint */}
+                <div className="flex items-center gap-4 text-[10px] font-mono text-gray-700">
+                    <span><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded text-[9px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded text-[9px]">L</kbd> toggle view</span>
+                    <span className="text-[#2A2A2A]">·</span>
+                    <span><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded text-[9px]">R</kbd> redact flash</span>
+                    <span className="text-[#2A2A2A]">·</span>
+                    <span><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded text-[9px]">Ctrl+Shift+W</kbd> clear</span>
+                </div>
+            </div>
+        </div>
+    )}
                 </div>
 
                 {!splitView && (

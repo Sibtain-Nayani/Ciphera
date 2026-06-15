@@ -27,7 +27,7 @@ export function AppSidebar() {
         // Clear both cookies — real account and guest
         document.cookie = "ciphera_authed=; path=/; max-age=0; SameSite=Lax";
         document.cookie = "ciphera_guest=; path=/; max-age=0; SameSite=Lax";
-        router.replace("/login");
+        router.replace("/");
     };
 
     return (

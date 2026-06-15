@@ -89,7 +89,7 @@ Ramesh Kumar, Aadhaar: 2345 6789 0123, PAN: ABCDE1234F, IFSC: SBIN0001234
 
 /* ── Store ── */
 export const useDocumentStore = create<DocumentState>((set) => ({
-    rawText:      DEFAULT_DUMMY_TEXT,
+    rawText:      '',
     fileName:     'Workspace.txt',
     fileType:     'txt',
     originalFile: null,
