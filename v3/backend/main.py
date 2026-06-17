@@ -29,7 +29,8 @@ from feature13_ocr_hindi        import router as ocr_hindi_router
 from feature14_audit_report     import router as report_router
 from feature15_auth             import router as auth_router
 from feature16_organisations    import router as org_router
-from feature17_social_auth      import router as social_router      # NEW
+from feature17_social_auth      import router as social_router     
+from feature18_webhooks         import router as webhook_router, fire_webhook
 
 pipeline: Optional[DetectionPipeline] = None
 
@@ -80,6 +81,7 @@ app.include_router(classifier_router)
 app.include_router(hindi_router)
 app.include_router(ocr_hindi_router)
 app.include_router(report_router)
+app.include_router(webhook_router)
 
 
 @app.post("/api/v3/analyze", response_model=AnalyzeResponse)

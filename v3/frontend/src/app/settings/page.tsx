@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useDocumentStore, RuleType } from '@/store/documentStore';
 import { ApiKeyManager } from '@/components/settings/ApiKeyManager';
+import { WebhookManager } from '@/components/settings/WebhookManager';
 import { PageLoader } from '@/components/layout/PageLoader';
 import { useAuth } from '@/context/AuthContext';
 import { publicFetch } from '@/lib/api';
 
-type Tab = 'detection' | 'language' | 'api' | 'about';
+type Tab = 'detection' | 'language' | 'api' | 'webhooks' | 'about';
 
 
 
@@ -60,6 +61,7 @@ export default function SettingsPage() {
         { id: 'detection', label: 'DETECTION' },
         { id: 'language',  label: 'LANGUAGE'  },
         ...(!isGuest ? [{ id: 'api' as Tab, label: 'API KEYS' }] : []),
+        ...(!isGuest ? [{ id: 'webhooks' as Tab, label: 'WEBHOOKS' }] : []),
         { id: 'about',     label: 'SYSTEM'    },
     ];
     const [activeTab,     setActiveTab]     = useState<Tab>('detection');
@@ -287,6 +289,13 @@ export default function SettingsPage() {
                 {activeTab === 'api' && (
                     <div className="animate-tab-in">
                         <ApiKeyManager />
+                    </div>
+                )}
+
+                {/* ── WEBHOOKS TAB ──────────────────────────────────────────── */}
+                {activeTab === 'webhooks' && (
+                    <div className="animate-tab-in">
+                        <WebhookManager />
                     </div>
                 )}
 

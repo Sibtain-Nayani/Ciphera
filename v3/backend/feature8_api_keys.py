@@ -267,6 +267,20 @@ async def public_redact(
     ip = request.client.host if request.client else "unknown"
     _log_api_usage(key_data["key_id"], "/public/redact", 200, ms, len(entities_dicts), ip)
 
+    # Fire webhooks for API key consumers (non-blocking)
+    if key_data and key_data.get("key_id"):  # only fires when called via API key, not browser session
+        import asyncio
+        from feature18_webhooks import fire_webhook
+        asyncio.create_task(fire_webhook(
+            api_key_id       = key_data["key_id"],
+            user_id          = key_data.get("user_id"),
+            job_id           = f"RUN-{int(time.time())}",
+            entity_count     = len(entities_dicts),
+            processing_ms    = ms,
+            entities_by_type = counters,
+            document_type    = "unknown",
+        ))
+
     return PublicRedactResponse(
         redacted_text=redacted_text,
         entities_found=len(entities_dicts),
