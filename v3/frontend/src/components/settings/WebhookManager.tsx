@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Trash2, Plus, Activity, Loader2, RefreshCw, Eye } from 'lucide-react';
+import { Copy, Check, Trash2, Plus, Activity, Loader2, RefreshCw, Eye, Webhook as WebhookIcon } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface Webhook {
     webhook_id: string;
@@ -49,6 +51,7 @@ export const WebhookManager: React.FC = () => {
     const [deliveries, setDeliveries] = useState<Delivery[]>([]);
     const [pinging, setPinging] = useState<string | null>(null);
     const [pingStatus, setPingStatus] = useState<{ id: string, msg: string, ok: boolean } | null>(null);
+    const [deleteWebhookId, setDeleteWebhookId] = useState<string | null>(null);
 
     // Form state
     const [url, setUrl] = useState('');
@@ -114,13 +117,20 @@ export const WebhookManager: React.FC = () => {
         }
     };
 
-    const deleteWebhook = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this webhook?')) return;
+    const confirmDeleteWebhook = async () => {
+        if (!deleteWebhookId) return;
         try {
-            const res = await apiFetch(`/api/v3/webhooks/${id}`, { method: 'DELETE' });
-            if (res.ok) await load();
+            const res = await apiFetch(`/api/v3/webhooks/${deleteWebhookId}`, { method: 'DELETE' });
+            if (res.ok) {
+                // Optimistically remove from UI immediately
+                setWebhooks(prev => prev.filter(wh => wh.webhook_id !== deleteWebhookId));
+                // Also re-fetch for backend consistency
+                await load();
+            }
         } catch (e) {
             console.error(e);
+        } finally {
+            setDeleteWebhookId(null);
         }
     };
 
@@ -261,13 +271,26 @@ export const WebhookManager: React.FC = () => {
                             <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px' }}>LOADING WEBHOOKS...</p>
                         </div>
                     ) : webhooks.length === 0 ? (
-                        <div className="py-12 border border-dashed border-[rgba(239,239,239,0.15)] text-center text-[rgba(239,239,239,0.4)]">
-                            <Activity className="mx-auto mb-4 opacity-50" size={32} />
-                            <p style={{ fontFamily: '"SF Pro Display", sans-serif', fontSize: '14px' }}>No webhooks registered.</p>
+                        <div className="flex flex-col items-center justify-center py-16 bg-[#131315] border border-[rgba(239,239,239,0.15)] animate-stage-in relative overflow-hidden">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-[#F5C400] blur-[100px] rounded-full opacity-[0.03] pointer-events-none" />
+                            <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A] mb-4 relative z-10">
+                                <WebhookIcon className="w-8 h-8 text-[#F5C400]/60" />
+                            </div>
+                            <h4 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', marginBottom: '8px' }} className="relative z-10">
+                                No Webhooks Registered
+                            </h4>
+                            <p style={{ fontFamily: '"SF Pro Display", sans-serif', fontSize: '13px', color: 'rgba(239,239,239,0.5)', maxWidth: '300px', textAlign: 'center', marginBottom: '24px' }} className="relative z-10">
+                                Register a webhook to receive real-time push notifications when asynchronous redaction jobs complete.
+                            </p>
+                            <button onClick={() => setShowCreate(true)}
+                                className="flex items-center gap-2 bg-[rgba(245,196,0,0.1)] hover:bg-[rgba(245,196,0,0.2)] text-[#F5C400] transition-colors border border-[rgba(245,196,0,0.2)] px-6 py-2.5 relative z-10"
+                                style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
+                                <Plus size={14} /> NEW WEBHOOK
+                            </button>
                         </div>
                     ) : (
                         webhooks.map((wh) => (
-                            <div key={wh.webhook_id} className="bg-[#131315] border border-[rgba(239,239,239,0.15)] relative overflow-hidden group">
+                            <div key={wh.webhook_id} className="bg-[#131315] border border-[rgba(239,239,239,0.15)] relative group">
                                 <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[rgba(245,196,0,0.5)]" />
                                 
                                 <div className="p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -297,21 +320,24 @@ export const WebhookManager: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => pingWebhook(wh.webhook_id)} disabled={pinging === wh.webhook_id}
-                                            title="Send Test Ping"
-                                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(245,196,0,0.1)] hover:text-[#F5C400] hover:border-[#F5C400] text-[rgba(239,239,239,0.5)] transition-colors">
-                                            {pinging === wh.webhook_id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                                        </button>
-                                        <button onClick={() => loadDeliveries(wh.webhook_id)}
-                                            title="Delivery History"
-                                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,239,239,0.1)] text-[rgba(239,239,239,0.5)] hover:text-[#EFEFEF] transition-colors">
-                                            <Activity size={16} />
-                                        </button>
-                                        <button onClick={() => deleteWebhook(wh.webhook_id)}
-                                            title="Delete Webhook"
-                                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] hover:border-[#ef4444] text-[rgba(239,239,239,0.5)] transition-colors">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        <Tooltip content="Send Test Ping">
+                                            <button onClick={() => pingWebhook(wh.webhook_id)} disabled={pinging === wh.webhook_id}
+                                                className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(245,196,0,0.1)] hover:text-[#F5C400] hover:border-[#F5C400] text-[rgba(239,239,239,0.5)] transition-colors">
+                                                {pinging === wh.webhook_id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content="Delivery History">
+                                            <button onClick={() => loadDeliveries(wh.webhook_id)}
+                                                className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,239,239,0.1)] text-[rgba(239,239,239,0.5)] hover:text-[#EFEFEF] transition-colors">
+                                                <Activity size={16} />
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content="Delete Webhook">
+                                            <button onClick={() => setDeleteWebhookId(wh.webhook_id)}
+                                                className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] hover:border-[#ef4444] text-[rgba(239,239,239,0.5)] transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 </div>
 
@@ -340,7 +366,7 @@ export const WebhookManager: React.FC = () => {
                                                         <div className="flex items-center gap-4 text-[10px] text-[rgba(239,239,239,0.5)]" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
                                                             {d.http_status_code && <span>HTTP {d.http_status_code}</span>}
                                                             {d.response_time_ms && <span>{d.response_time_ms}ms</span>}
-                                                            <span>{new Date(d.delivered_at || '').toLocaleString()}</span>
+                                                            <span>{d.delivered_at ? new Date(d.delivered_at).toLocaleString() : '—'}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -353,6 +379,15 @@ export const WebhookManager: React.FC = () => {
                     )}
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!deleteWebhookId}
+                title="Delete Webhook"
+                message="Are you sure you want to delete this webhook integration? You will no longer receive push notifications to this URL."
+                confirmText="Delete Webhook"
+                onConfirm={confirmDeleteWebhook}
+                onCancel={() => setDeleteWebhookId(null)}
+            />
         </div>
     );
 };

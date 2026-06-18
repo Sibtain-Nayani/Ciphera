@@ -10,10 +10,10 @@ import {
 import { useAuth } from "@/context/AuthContext";
 
 const NAV = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Mission Control", sublabel: "Telemetry & audit"    },
-    { href: "/redact",    icon: ShieldCheck,      label: "Sanitize",        sublabel: "Redact & secure docs" },
-    { href: "/batch",     icon: Layers,           label: "Assembly Line",   sublabel: "Bulk processing queue"},
-    { href: "/settings",  icon: Settings,         label: "Engine Config",   sublabel: "Rules & preferences"  },
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard",        sublabel: "Analytics overview" },
+    { href: "/redact",    icon: ShieldCheck,     label: "Workspace",        sublabel: "Document sanitization" },
+    { href: "/batch",     icon: Layers,          label: "Batch Processing", sublabel: "Automated redaction" },
+    { href: "/settings",  icon: Settings,        label: "Settings",         sublabel: "Engine configuration" },
 ];
 
 export function AppSidebar() {
@@ -70,8 +70,8 @@ export function AppSidebar() {
                             <Icon style={{ width: "18px", height: "18px", color: active ? "#F5C400" : "rgba(239,239,239,0.4)", flexShrink: 0, transition: "color 0.15s" }} />
                             {!collapsed && (
                                 <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-                                    <div style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 700, fontSize: "15px", letterSpacing: "0.05em", textTransform: "uppercase", color: active ? "#EFEFEF" : "rgba(239,239,239,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
-                                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", whiteSpace: "nowrap" }}>{sublabel}</div>
+                                    <div style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 600, fontSize: "14px", letterSpacing: "0.02em", color: active ? "#EFEFEF" : "rgba(239,239,239,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: "color 0.15s" }}>{label}</div>
+                                    <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", color: "rgba(239,239,239,0.5)", whiteSpace: "nowrap" }}>{sublabel}</div>
                                 </div>
                             )}
                         </Link>
@@ -88,8 +88,8 @@ export function AppSidebar() {
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(239,239,239,0.04)"}
                         onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                         {/* Avatar */}
-                        <div style={{ width: "32px", height: "32px", background: "rgba(245,196,0,0.15)", border: "1px solid rgba(245,196,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "15px", color: "#F5C400" }}>
+                        <div style={{ width: "32px", height: "32px", background: "rgba(245,196,0,0.15)", border: "1px solid rgba(245,196,0,0.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 700, fontSize: "16px", color: "#F5C400" }}>
                                 {user.full_name?.[0]?.toUpperCase() || "U"}
                             </span>
                         </div>
@@ -106,8 +106,8 @@ export function AppSidebar() {
                 {user && isGuest && !collapsed && (
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(239,239,239,0.07)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                            <div style={{ width: "32px", height: "32px", background: "rgba(239,239,239,0.06)", border: "1px solid rgba(239,239,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "13px", color: "rgba(239,239,239,0.4)" }}>G</span>
+                            <div style={{ width: "32px", height: "32px", background: "rgba(239,239,239,0.06)", border: "1px solid rgba(239,239,239,0.12)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <span style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 700, fontSize: "16px", color: "rgba(239,239,239,0.4)" }}>G</span>
                             </div>
                             <div>
                                 <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 600, fontSize: "13px", color: "rgba(239,239,239,0.6)" }}>Guest Session</div>
@@ -126,8 +126,8 @@ export function AppSidebar() {
                 {/* Collapsed guest avatar */}
                 {user && isGuest && collapsed && (
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "center" }}>
-                        <div style={{ width: "32px", height: "32px", background: "rgba(239,239,239,0.06)", border: "1px solid rgba(239,239,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "13px", color: "rgba(239,239,239,0.4)" }}>G</span>
+                        <div style={{ width: "32px", height: "32px", background: "rgba(239,239,239,0.06)", border: "1px solid rgba(239,239,239,0.12)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 700, fontSize: "16px", color: "rgba(239,239,239,0.4)" }}>G</span>
                         </div>
                     </div>
                 )}

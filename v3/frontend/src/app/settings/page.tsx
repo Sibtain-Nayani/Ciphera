@@ -217,9 +217,12 @@ export default function SettingsPage() {
                         {/* Pipeline stages (unchanged) */}
                         <div className="relative overflow-hidden group">
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-[rgba(245,196,0,0.15)] z-10 pointer-events-none" style={{ animation: 'scanner 5s linear infinite' }} />
-                            <h3 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', marginTop: '8px', marginBottom: '20px', letterSpacing: '0.03em' }}>
+                            <h3 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', marginTop: '8px', marginBottom: '6px', letterSpacing: '0.03em' }}>
                                 DETECTION PIPELINE
                             </h3>
+                            <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '13px', fontWeight: 400, color: 'rgba(239,239,239,0.6)', lineHeight: 1.7, marginBottom: '20px' }}>
+                                Overview of the entity detection stages applied during document processing.
+                            </p>
                             <div className="space-y-[2px]">
                                 {[
                                     { stage: 'STAGE 01', name: 'Pattern-Based Regex Engine',    desc: 'Syntax-level detection for highly structured signatures (Aadhaar, PAN, UPI, phone). Verhoeff checksum for Aadhaar.', weight: '1.4× WEIGHT' },
@@ -252,7 +255,7 @@ export default function SettingsPage() {
                     <div className="space-y-8 animate-tab-in">
                         <div>
                             <h3 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', margin: '0 0 6px', letterSpacing: '0.03em' }}>LANGUAGE & PIPELINE DEFAULTS</h3>
-                            <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '13px', fontWeight: 400, color: 'rgba(239,239,239,0.55)', lineHeight: 1.7 }}>
+                            <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '13px', fontWeight: 400, color: 'rgba(239,239,239,0.6)', lineHeight: 1.7 }}>
                                 These are saved to your browser. The redact page uses them as defaults on every document load.
                             </p>
                         </div>
@@ -260,11 +263,13 @@ export default function SettingsPage() {
                         <div className="bg-[#131315] border border-[rgba(239,239,239,0.15)]">
 
                             {/* Language mode */}
-                            <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(239,239,239,0.07)' }}>
-                                <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: '14px', fontWeight: 700, color: '#EFEFEF', marginBottom: '4px' }}>Default Language Mode</div>
-                                <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: '12px', color: 'rgba(239,239,239,0.45)', marginBottom: '14px', lineHeight: 1.6 }}>
+                            <div style={{ padding: '24px' }}>
+                                <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                                    Default Language Mode
+                                </label>
+                                <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: '13px', color: 'rgba(239,239,239,0.5)', marginBottom: '16px', lineHeight: 1.6 }}>
                                     Auto-detect is recommended. Override if you always process a specific language.
-                                </div>
+                                </p>
                                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                     {([
                                         { value: 'auto',    label: 'Auto Detect',    sub: 'Recommended' },

@@ -34,7 +34,7 @@ function Divider({ label = "or" }: { label?: string }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "4px 0" }}>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
-            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.2)" }}>{label}</span>
+            <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)" }}>{label}</span>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
         </div>
     );
@@ -60,8 +60,8 @@ function LoginContent() {
         width: "100%", background: "#080808",
         border: "1px solid rgba(239,239,239,0.12)",
         padding: "10px 14px",
-        fontFamily: '"IBM Plex Mono", monospace',
-        fontSize: "12px", color: "#EFEFEF", outline: "none",
+        fontFamily: '"Barlow", sans-serif',
+        fontSize: "13px", color: "#EFEFEF", outline: "none",
         boxSizing: "border-box", transition: "border-color 0.15s",
     };
 
@@ -108,30 +108,27 @@ function LoginContent() {
                 <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "36px", background: "#0D0D0D" }}>
                     <div style={{ marginBottom: "24px" }}>
                         <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Sign In</h1>
-                        <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.32)", margin: 0 }}>Access your redaction workspace</p>
+                        <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", margin: 0 }}>Access your redaction workspace</p>
                     </div>
 
                     {/* Error banner */}
                     {error && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "rgba(185,28,28,0.1)", border: "1px solid rgba(185,28,28,0.3)", marginBottom: "20px" }}>
                             <AlertCircle style={{ width: 14, height: 14, color: "#B91C1C", flexShrink: 0 }} />
-                            <span style={{ fontFamily: "Barlow, sans-serif", fontSize: "12px", color: "#fca5a5" }}>{error}</span>
+                            <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "#fca5a5" }}>{error}</span>
                         </div>
                     )}
-
-                    <GoogleButton loading={googleBusy} onClick={handleGoogle} />
-                    <Divider />
 
                     {/* Email + password */}
                     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                         <div>
-                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Email</label>
+                            <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.6)", display: "block", marginBottom: "6px", fontWeight: 500 }}>Email</label>
                             <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="you@company.com"
                                 onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
                                 onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
                         </div>
                         <div>
-                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Password</label>
+                            <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.6)", display: "block", marginBottom: "6px", fontWeight: 500 }}>Password</label>
                             <div style={{ position: "relative" }}>
                                 <input type={showPass ? "text" : "password"} required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
                                     style={{ ...inputStyle, padding: "10px 40px 10px 14px" }} placeholder="••••••••"
@@ -144,29 +141,34 @@ function LoginContent() {
                             </div>
                         </div>
                         <button type="submit" disabled={busy || googleBusy}
-                            style={{ background: busy || googleBusy ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700, cursor: busy || googleBusy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s" }}>
-                            {busy && <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />}
-                            {busy ? "Signing In…" : "Sign In →"}
+                            style={{ background: busy || googleBusy ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"Barlow Condensed", sans-serif', fontSize: "18px", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 900, cursor: busy || googleBusy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s", marginTop: "8px" }}>
+                            {busy && <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />}
+                            {busy ? "Signing In…" : "Sign In"}
                         </button>
                     </form>
 
-                    {/* Guest divider + button */}
-                    <Divider label="or skip" />
-                    <button onClick={handleGuest}
-                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "11px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.08)", cursor: "pointer", transition: "all 0.15s" }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.2)"; e.currentTarget.style.background = "rgba(239,239,239,0.02)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.08)"; e.currentTarget.style.background = "transparent"; }}>
-                        <UserX style={{ width: 14, height: 14, color: "rgba(239,239,239,0.4)" }} />
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", fontWeight: 500 }}>
-                            Continue as Guest
-                        </span>
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.2)", letterSpacing: "0.1em" }}>— no account needed</span>
-                    </button>
+                    <div style={{ marginTop: "16px" }}>
+                        <Divider label="or you can sign in with" />
+                    </div>
 
-                    {/* Bottom row */}
-                    <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.14em", color: "rgba(239,239,239,0.25)" }}>No account?</span>
-                        <Link href="/register" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#F5C400", textDecoration: "none" }}>Create Account →</Link>
+                    <div style={{ marginTop: "16px" }}>
+                        <GoogleButton loading={googleBusy} onClick={handleGoogle} />
+                    </div>
+
+                    {/* Guest divider + button */}
+                    <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <button onClick={handleGuest}
+                            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.08)", cursor: "pointer", transition: "all 0.15s" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.2)"; e.currentTarget.style.background = "rgba(239,239,239,0.02)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.08)"; e.currentTarget.style.background = "transparent"; }}>
+                            <UserX style={{ width: 14, height: 14, color: "rgba(239,239,239,0.4)" }} />
+                            <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", fontWeight: 500, color: "rgba(239,239,239,0.7)" }}>Continue as Guest</span>
+                        </button>
+
+                        <div style={{ paddingTop: "20px", borderTop: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "rgba(239,239,239,0.5)" }}>No account?</span>
+                            <Link href="/register" style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", fontWeight: 600, color: "#F5C400", textDecoration: "none" }}>Create Account →</Link>
+                        </div>
                     </div>
                 </div>
 

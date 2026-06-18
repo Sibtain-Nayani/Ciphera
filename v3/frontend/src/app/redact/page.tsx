@@ -790,11 +790,20 @@ export default function WorkspacePage() {
                     )}
                 </div>
 
-                <div className={`flex-1 relative bg-[#1A1A1A] overflow-hidden ${isDragging ? 'bg-[#222]' : ''}`}
+                <div className={`flex-1 relative bg-[#1A1A1A] overflow-hidden transition-colors duration-300 ${isDragging ? 'bg-[#18181A]' : ''}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={onDrop}>
                     {isDragging && (
-                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#FFA500]/5 backdrop-blur-sm border-2 border-[#FFA500]/60 border-dashed">
-                            <div className="flex flex-col items-center gap-3"><UploadCloud className="w-10 h-10 text-[#FFA500] animate-bounce" /><span className="text-base font-medium text-[#FFA500]">Drop to analyze</span></div>
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md border-2 border-[#F5C400]/80 border-dashed m-4 rounded-3xl transition-all duration-300 shadow-[0_0_50px_rgba(245,196,0,0.15)] animate-pulse">
+                            <div className="absolute inset-0 bg-gradient-to-b from-[#F5C400]/5 to-transparent rounded-3xl pointer-events-none" />
+                            <div className="flex flex-col items-center gap-4 relative z-10">
+                                <div className="p-5 bg-[#F5C400]/10 rounded-full border border-[#F5C400]/20 shadow-[0_0_30px_rgba(245,196,0,0.2)]">
+                                    <UploadCloud className="w-12 h-12 text-[#F5C400] animate-bounce" />
+                                </div>
+                                <div className="text-center">
+                                    <span className="text-xl font-bold text-white tracking-wide" style={{ fontFamily: '"Barlow", sans-serif' }}>Drop to Analyze</span>
+                                    <p className="text-sm text-[#F5C400]/80 mt-1" style={{ fontFamily: '"SF Pro Display", sans-serif' }}>Secure workspace ready</p>
+                                </div>
+                            </div>
                         </div>
                     )}
                     {redactionFailed && (

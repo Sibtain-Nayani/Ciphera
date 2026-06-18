@@ -315,7 +315,7 @@ export default function DashboardPage() {
                         <div className="animate-subline-in opacity-0 flex items-center gap-3 flex-wrap mt-3">
                             {user && (
                                 <>
-                                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase' }}>
+                                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', color: 'rgba(239,239,239,0.5)' }}>
                                         {user.email}
                                     </span>
                                     <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 600, letterSpacing: '0.16em', color: '#F5C400', border: '1px solid rgba(245,196,0,0.3)', padding: '2px 8px', background: 'rgba(245,196,0,0.05)', textTransform: 'uppercase' }}>

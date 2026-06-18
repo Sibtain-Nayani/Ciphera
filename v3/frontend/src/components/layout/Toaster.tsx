@@ -5,23 +5,23 @@ import { CheckCircle2, AlertTriangle, Info, ShieldAlert, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 
 const iconMap: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle2 className="w-5 h-5 text-emerald-400" />,
-    error: <ShieldAlert className="w-5 h-5 text-red-400" />,
-    warning: <AlertTriangle className="w-5 h-5 text-[#FFA500]" />,
-    info: <Info className="w-5 h-5 text-blue-400" />
+    success: <CheckCircle2 className="w-5 h-5 text-[#4ade80]" />,
+    error: <ShieldAlert className="w-5 h-5 text-[#ef4444]" />,
+    warning: <AlertTriangle className="w-5 h-5 text-[#F5C400]" />,
+    info: <Info className="w-5 h-5 text-[#3b82f6]" />
 };
 
 const borderMap: Record<ToastType, string> = {
-    success: 'border-emerald-500/30',
-    error: 'border-red-500/30',
-    warning: 'border-[#FFA500]/30',
-    info: 'border-blue-500/30'
+    success: 'border-[#4ade80]/30',
+    error: 'border-[#ef4444]/30',
+    warning: 'border-[#F5C400]/30',
+    info: 'border-[#3b82f6]/30'
 };
 
 const glowMap: Record<ToastType, string> = {
-    success: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+    success: 'shadow-[0_0_15px_rgba(74,222,128,0.15)]',
     error: 'shadow-[0_0_15px_rgba(239,68,68,0.15)]',
-    warning: 'shadow-[0_0_15px_rgba(255,165,0,0.15)]',
+    warning: 'shadow-[0_0_15px_rgba(245,196,0,0.15)]',
     info: 'shadow-[0_0_15px_rgba(59,130,246,0.15)]'
 };
 
@@ -43,12 +43,12 @@ export function Toaster() {
                     >
                         {/* Background subtle glow */}
                         <div className={`absolute -left-10 -top-10 w-24 h-24 blur-3xl rounded-full opacity-20 pointer-events-none
-                            ${toast.type === 'success' ? 'bg-emerald-500' : toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-[#FFA500]' : 'bg-blue-500'}
+                            ${toast.type === 'success' ? 'bg-[#4ade80]' : toast.type === 'error' ? 'bg-[#ef4444]' : toast.type === 'warning' ? 'bg-[#F5C400]' : 'bg-[#3b82f6]'}
                         `} />
                         
                         <div className="shrink-0 mt-0.5 relative z-10">{iconMap[toast.type]}</div>
                         <div className="flex-1 relative z-10">
-                            <p className="text-sm font-medium text-white shadow-sm">{toast.message}</p>
+                            <p className="text-[13px] font-medium text-white shadow-sm tracking-wide" style={{ fontFamily: '"Barlow", sans-serif' }}>{toast.message}</p>
                         </div>
                         <button
                             onClick={() => removeToast(toast.id)}

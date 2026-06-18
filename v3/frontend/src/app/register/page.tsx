@@ -34,7 +34,7 @@ function Divider({ label = "or" }: { label?: string }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "4px 0" }}>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
-            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.2)" }}>{label}</span>
+            <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(239,239,239,0.3)" }}>{label}</span>
             <div style={{ flex: 1, height: "1px", background: "rgba(239,239,239,0.07)" }} />
         </div>
     );
@@ -51,6 +51,7 @@ export default function RegisterPage() {
     const [error,      setError]      = useState("");
     const [busy,       setBusy]       = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
+    const [showForm,   setShowForm]   = useState(false);
 
     useEffect(() => { if (!loading && user && !isGuest) router.replace("/dashboard"); }, [user, loading, isGuest]);
 
@@ -66,8 +67,8 @@ export default function RegisterPage() {
         width: "100%", background: "#080808",
         border: "1px solid rgba(239,239,239,0.12)",
         padding: "10px 14px",
-        fontFamily: '"IBM Plex Mono", monospace',
-        fontSize: "12px", color: "#EFEFEF", outline: "none",
+        fontFamily: '"Barlow", sans-serif',
+        fontSize: "13px", color: "#EFEFEF", outline: "none",
         boxSizing: "border-box", transition: "border-color 0.15s",
     };
 
@@ -112,89 +113,111 @@ export default function RegisterPage() {
                 </Link>
 
                 <div style={{ border: "1px solid rgba(239,239,239,0.07)", padding: "36px", background: "#0D0D0D" }}>
-                    <div style={{ marginBottom: "24px" }}>
-                        <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Create Account</h1>
-                        <p style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.32)", margin: 0 }}>Free plan · No credit card required</p>
-                    </div>
-
-                    {/* Error */}
-                    {error && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "rgba(185,28,28,0.1)", border: "1px solid rgba(185,28,28,0.3)", marginBottom: "20px" }}>
-                            <AlertCircle style={{ width: 14, height: 14, color: "#B91C1C", flexShrink: 0 }} />
-                            <span style={{ fontFamily: "Barlow, sans-serif", fontSize: "12px", color: "#fca5a5" }}>{error}</span>
-                        </div>
-                    )}
-
-                    <GoogleButton loading={googleBusy} onClick={handleGoogle} />
-                    <Divider />
-
-                    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                        {[
-                            { label: "Full Name",     type: "text",  val: fullName, set: setFullName, auto: "name",  ph: "Your full name"  },
-                            { label: "Email Address", type: "email", val: email,    set: setEmail,    auto: "email", ph: "you@company.com" },
-                        ].map(({ label, type, val, set, auto, ph }) => (
-                            <div key={label}>
-                                <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>{label}</label>
-                                <input type={type} required autoComplete={auto} value={val}
-                                    onChange={e => set(e.target.value)}
-                                    style={inputStyle} placeholder={ph}
-                                    onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
-                                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
+                    {!showForm ? (
+                        <>
+                            <div style={{ marginBottom: "24px", textAlign: "center" }}>
+                                <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Get Started</h1>
+                                <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", color: "rgba(239,239,239,0.5)", margin: 0 }}>Choose how you'd like to continue</p>
                             </div>
-                        ))}
-
-                        {/* Password + strength */}
-                        <div>
-                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "6px" }}>Password</label>
-                            <div style={{ position: "relative" }}>
-                                <input type={showPass ? "text" : "password"} required autoComplete="new-password"
-                                    value={password} onChange={e => setPassword(e.target.value)}
-                                    style={{ ...inputStyle, padding: "10px 40px 10px 14px" }} placeholder="Min. 8 characters"
-                                    onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
-                                    onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
-                                <button type="button" onClick={() => setShowPass(v => !v)}
-                                    style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(239,239,239,0.4)", padding: 0, display: "flex" }}>
-                                    {showPass ? <EyeOff style={{ width: 14, height: 14 }} /> : <Eye style={{ width: 14, height: 14 }} />}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                                <button onClick={() => setShowForm(true)}
+                                    style={{ width: "100%", background: "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"Barlow Condensed", sans-serif', fontSize: "18px", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "#ffe166"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "#F5C400"}>
+                                    Create Account
+                                </button>
+                                <button onClick={handleGuest}
+                                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.08)", cursor: "pointer", transition: "all 0.15s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.2)"; e.currentTarget.style.background = "rgba(239,239,239,0.02)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.08)"; e.currentTarget.style.background = "transparent"; }}>
+                                    <UserX style={{ width: 14, height: 14, color: "rgba(239,239,239,0.4)" }} />
+                                    <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", fontWeight: 500, color: "rgba(239,239,239,0.7)" }}>Try as Guest</span>
                                 </button>
                             </div>
-                            {password.length > 0 && (
-                                <div style={{ marginTop: "6px" }}>
-                                    <div style={{ height: "2px", background: "rgba(239,239,239,0.07)", display: "flex", gap: "2px" }}>
-                                        {[1,2,3].map(i => (
-                                            <div key={i} style={{ flex: 1, background: i <= strength ? strengthColor : "transparent", transition: "background 0.2s" }} />
-                                        ))}
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "3px" }}>
-                                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.14em", color: strengthColor, textTransform: "uppercase" }}>{strengthLabel}</span>
-                                    </div>
+                        </>
+                    ) : (
+                        <>
+                            <div style={{ marginBottom: "24px" }}>
+                                <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "28px", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, marginBottom: "6px" }}>Create Account</h1>
+                                <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", margin: 0 }}>Free plan · No credit card required</p>
+                            </div>
+
+                            {/* Error */}
+                            {error && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "rgba(185,28,28,0.1)", border: "1px solid rgba(185,28,28,0.3)", marginBottom: "20px" }}>
+                                    <AlertCircle style={{ width: 14, height: 14, color: "#B91C1C", flexShrink: 0 }} />
+                                    <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "#fca5a5" }}>{error}</span>
                                 </div>
                             )}
-                        </div>
 
-                        <button type="submit" disabled={busy || googleBusy}
-                            style={{ background: (busy || googleBusy) ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 700, cursor: (busy || googleBusy) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s" }}
-                            onMouseEnter={e => { if (!busy && !googleBusy) e.currentTarget.style.background = "#ffe166"; }}
-                            onMouseLeave={e => { if (!busy && !googleBusy) e.currentTarget.style.background = "#F5C400"; }}>
-                            {busy && <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} />}
-                            {busy ? "Creating Account…" : "Create Account →"}
-                        </button>
-                    </form>
+                            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                                {[
+                                    { label: "Full Name",     type: "text",  val: fullName, set: setFullName, auto: "name",  ph: "Your full name"  },
+                                    { label: "Email Address", type: "email", val: email,    set: setEmail,    auto: "email", ph: "you@company.com" },
+                                ].map(({ label, type, val, set, auto, ph }) => (
+                                    <div key={label}>
+                                        <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.6)", display: "block", marginBottom: "6px", fontWeight: 500 }}>{label}</label>
+                                        <input type={type} required autoComplete={auto} value={val}
+                                            onChange={e => set(e.target.value)}
+                                            style={inputStyle} placeholder={ph}
+                                            onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
+                                            onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
+                                    </div>
+                                ))}
 
-                    {/* Guest option */}
-                    <Divider label="or skip" />
-                    <button onClick={handleGuest}
-                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "11px 16px", background: "transparent", border: "1px solid rgba(239,239,239,0.08)", cursor: "pointer", transition: "all 0.15s" }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.2)"; e.currentTarget.style.background = "rgba(239,239,239,0.02)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.08)"; e.currentTarget.style.background = "transparent"; }}>
-                        <UserX style={{ width: 14, height: 14, color: "rgba(239,239,239,0.4)" }} />
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", fontWeight: 500 }}>Try as Guest</span>
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.2)", letterSpacing: "0.1em" }}>— no account needed</span>
-                    </button>
+                                <div>
+                                    <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(239,239,239,0.6)", display: "block", marginBottom: "6px", fontWeight: 500 }}>Password</label>
+                                    <div style={{ position: "relative" }}>
+                                        <input type={showPass ? "text" : "password"} required autoComplete="new-password"
+                                            value={password} onChange={e => setPassword(e.target.value)}
+                                            style={{ ...inputStyle, padding: "10px 40px 10px 14px" }} placeholder="Min. 8 characters"
+                                            onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
+                                            onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
+                                        <button type="button" onClick={() => setShowPass(v => !v)}
+                                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(239,239,239,0.4)", padding: 0, display: "flex" }}>
+                                            {showPass ? <EyeOff style={{ width: 14, height: 14 }} /> : <Eye style={{ width: 14, height: 14 }} />}
+                                        </button>
+                                    </div>
+                                    {password.length > 0 && (
+                                        <div style={{ marginTop: "6px" }}>
+                                            <div style={{ height: "2px", background: "rgba(239,239,239,0.07)", display: "flex", gap: "2px" }}>
+                                                {[1,2,3].map(i => (
+                                                    <div key={i} style={{ flex: 1, background: i <= strength ? strengthColor : "transparent", transition: "background 0.2s" }} />
+                                                ))}
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "3px" }}>
+                                                <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "10px", fontWeight: 600, color: strengthColor, textTransform: "uppercase" }}>{strengthLabel}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
 
-                    <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.14em", color: "rgba(239,239,239,0.25)" }}>Have an account?</span>
-                        <Link href="/login" style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#F5C400", textDecoration: "none" }}>Sign In →</Link>
+                                <button type="submit" disabled={busy || googleBusy}
+                                    style={{ background: (busy || googleBusy) ? "rgba(245,196,0,0.5)" : "#F5C400", color: "#080808", border: "none", padding: "12px 24px", fontFamily: '"Barlow Condensed", sans-serif', fontSize: "18px", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 900, cursor: (busy || googleBusy) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", transition: "background 0.15s", marginTop: "8px" }}
+                                    onMouseEnter={e => { if (!busy && !googleBusy) e.currentTarget.style.background = "#ffe166"; }}
+                                    onMouseLeave={e => { if (!busy && !googleBusy) e.currentTarget.style.background = "#F5C400"; }}>
+                                    {busy && <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />}
+                                    {busy ? "Creating Account…" : "Create Account"}
+                                </button>
+                            </form>
+
+                            <p style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", color: "rgba(239,239,239,0.4)", textAlign: "center", marginTop: "16px", marginBottom: "0" }}>
+                                By continuing, you agree to <Link href="/terms" style={{ color: "#F5C400", textDecoration: "none" }}>Terms</Link> & <Link href="/privacy" style={{ color: "#F5C400", textDecoration: "none" }}>Privacy Policy</Link>.
+                            </p>
+
+                            <Divider label="or you can sign in with" />
+
+                            <div style={{ marginTop: "16px" }}>
+                                <GoogleButton loading={googleBusy} onClick={handleGoogle} />
+                            </div>
+                        </>
+                    )}
+
+                    <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(239,239,239,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "rgba(239,239,239,0.5)" }}>Have an account?</span>
+                        <Link href="/login" style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", fontWeight: 600, color: "#F5C400", textDecoration: "none" }}>Sign In →</Link>
                     </div>
+
                 </div>
 
                 <p style={{ textAlign: "center", fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.15)", marginTop: "20px" }}>

@@ -132,11 +132,29 @@
   * {
     @apply border-border outline-ring/50;
     cursor: none !important;
-    scrollbar-width: none !important;
+    scrollbar-width: thin;
+    scrollbar-color: #3B3B3B transparent;
   }
+  
   *::-webkit-scrollbar {
-    display: none !important;
+    width: 6px;
+    height: 6px;
   }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background: #3B3B3B;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background: #F5C400;
+  }
+  
   html {
     scroll-behavior: smooth;
     overflow-x: hidden;

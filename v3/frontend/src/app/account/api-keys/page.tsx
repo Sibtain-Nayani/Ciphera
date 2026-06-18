@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Key, Plus, Trash2, Loader2, Copy, Check, BarChart3, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { useUiStore } from "@/store/uiStore";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 function TabBar() {
+    const pathname = usePathname();
     return (
         <div style={{ display: "flex", borderBottom: "1px solid rgba(239,239,239,0.08)", marginBottom: "28px" }}>
             {[
@@ -16,9 +19,9 @@ function TabBar() {
                 { label: "Organisation", href: "/account/organisation" },
                 { label: "API Keys",     href: "/account/api-keys" },
             ].map(tab => {
-                const active = typeof window !== "undefined" && window.location.pathname === tab.href;
+                const active = pathname === tab.href;
                 return (
-                    <Link key={tab.href} href={tab.href} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: active ? 700 : 500, color: active ? "#F5C400" : "rgba(239,239,239,0.4)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
+                    <Link key={tab.href} href={tab.href} style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: active ? 700 : 500, color: active ? "#F5C400" : "rgba(239,239,239,0.6)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
                         {tab.label}
                     </Link>
                 );
@@ -31,10 +34,11 @@ const INPUT: React.CSSProperties = {
     width: "100%", background: "#080808",
     border: "1px solid rgba(239,239,239,0.12)",
     padding: "9px 12px",
-    fontFamily: '"IBM Plex Mono", monospace',
-    fontSize: "11px", color: "#EFEFEF",
+    fontFamily: '"Barlow", sans-serif',
+    fontSize: "13px", color: "#EFEFEF",
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.15s",
+    letterSpacing: "0.04em",
 };
 
 export default function ApiKeysPage() {
@@ -50,6 +54,7 @@ export default function ApiKeysPage() {
     const [error,     setError]     = useState("");
     const [showUsage, setShowUsage] = useState<string | null>(null);
     const [usageData, setUsageData] = useState<any>(null);
+    const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
 
     const [name,    setName]    = useState("");
     const [desc,    setDesc]    = useState("");
@@ -86,11 +91,20 @@ export default function ApiKeysPage() {
         finally { setBusy(false); }
     };
 
-    const revokeKey = async (keyId: string) => {
-        if (!confirm("Revoke this API key? This cannot be undone.")) return;
-        await apiFetch(`/api/v3/keys/${keyId}`, { method: "DELETE" });
-        useUiStore.getState().addToast("Key revoked.", "success");
-        await loadKeys();
+    const confirmRevokeKey = async () => {
+        if (!revokeKeyId) return;
+        try {
+            await apiFetch(`/api/v3/keys/${revokeKeyId}`, { method: "DELETE" });
+            // Optimistically remove from UI immediately
+            setKeys(prev => prev.filter(k => k.key_id !== revokeKeyId));
+            useUiStore.getState().addToast("Key revoked.", "success");
+            // Also re-fetch for backend consistency
+            await loadKeys();
+        } catch {
+            useUiStore.getState().addToast("Failed to revoke key.", "error");
+        } finally {
+            setRevokeKeyId(null);
+        }
     };
 
     const loadUsage = async (keyId: string) => {
@@ -117,8 +131,8 @@ export default function ApiKeysPage() {
             {/* Header */}
             <header style={{ paddingBottom: "24px", borderBottom: "1px solid rgba(239,239,239,0.07)", marginBottom: "32px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                    <div style={{ width: "18px", height: "2px", background: "rgba(185,28,28,0.8)" }} />
-                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(185,28,28,0.8)" }}>// ACCOUNT</span>
+                    <div style={{ width: "18px", height: "2px", background: "#F5C400" }} />
+                <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "10px", letterSpacing: "0.26em", textTransform: "uppercase", color: "#F5C400" }}>// ACCOUNT</span>
                 </div>
                 <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "clamp(32px,4vw,48px)", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, lineHeight: 1 }}>API Keys</h1>
             </header>
@@ -144,16 +158,16 @@ export default function ApiKeysPage() {
 
             {/* Actions row */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)" }}>{keys.length} key{keys.length !== 1 ? "s" : ""}</span>
+                <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", fontWeight: 500 }}>{keys.length} key{keys.length !== 1 ? "s" : ""}</span>
                 <div style={{ display: "flex", gap: "8px" }}>
                     <button onClick={loadKeys}
-                        style={{ display: "flex", alignItems: "center", gap: "5px", background: "transparent", border: "1px solid rgba(239,239,239,0.1)", color: "rgba(239,239,239,0.4)", padding: "8px 12px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s" }}
+                        style={{ display: "flex", alignItems: "center", gap: "5px", background: "transparent", border: "1px solid rgba(239,239,239,0.1)", color: "rgba(239,239,239,0.4)", padding: "8px 12px", fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s", fontWeight: 500 }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,196,0,0.4)"; e.currentTarget.style.color = "#F5C400"; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(239,239,239,0.1)"; e.currentTarget.style.color = "rgba(239,239,239,0.4)"; }}>
                         <RefreshCw style={{ width: 11, height: 11 }} /> Refresh
                     </button>
                     <button onClick={() => setCreating(!creating)}
-                        style={{ display: "flex", alignItems: "center", gap: "6px", background: creating ? "rgba(245,196,0,0.08)" : "#F5C400", color: creating ? "#F5C400" : "#080808", border: creating ? "1px solid rgba(245,196,0,0.3)" : "none", padding: "8px 16px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                        style={{ display: "flex", alignItems: "center", gap: "6px", background: creating ? "rgba(245,196,0,0.08)" : "#F5C400", color: creating ? "#F5C400" : "#080808", border: creating ? "1px solid rgba(245,196,0,0.3)" : "none", padding: "8px 16px", fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
                         <Plus style={{ width: 11, height: 11 }} />
                         {creating ? "Cancel" : "New Key"}
                     </button>
@@ -164,7 +178,7 @@ export default function ApiKeysPage() {
             {creating && (
                 <div style={{ border: "1px solid rgba(239,239,239,0.1)", padding: "20px", marginBottom: "16px", position: "relative", overflow: "hidden", background: "#111113" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, #F5C400, transparent)", opacity: 0.4 }} />
-                    <div style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 700, fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#EFEFEF", marginBottom: "16px" }}>Generate New Key</div>
+                    <div style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 700, fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#EFEFEF", marginBottom: "16px" }}>Generate New Key</div>
                     {error && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "rgba(185,28,28,0.06)", border: "1px solid rgba(185,28,28,0.25)", marginBottom: "12px" }}>
                             <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", color: "#fca5a5" }}>{error}</span>
@@ -176,7 +190,7 @@ export default function ApiKeysPage() {
                             { label: "Description", val: desc, set: setDesc, req: false, ph: "Optional note" },
                         ].map(({ label, val, set, req, ph }) => (
                             <div key={label}>
-                                <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>{label}</label>
+                                <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#EFEFEF", display: "block", marginBottom: "5px" }}>{label}</label>
                                 <input type="text" required={req} value={val} onChange={e => set(e.target.value)} placeholder={ph} style={INPUT}
                                     onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
                                     onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
@@ -188,7 +202,7 @@ export default function ApiKeysPage() {
                                 { label: "Expires in days",      val: expDays, set: setExpDays, ph: "Never" },
                             ].map(({ label, val, set, ph }) => (
                                 <div key={label}>
-                                    <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", display: "block", marginBottom: "5px" }}>{label}</label>
+                                    <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#EFEFEF", display: "block", marginBottom: "5px" }}>{label}</label>
                                     <input type="number" value={val} onChange={e => set(e.target.value)} placeholder={ph} style={INPUT}
                                         onFocus={e => e.currentTarget.style.borderColor = "rgba(245,196,0,0.5)"}
                                         onBlur={e  => e.currentTarget.style.borderColor = "rgba(239,239,239,0.12)"} />
@@ -221,7 +235,7 @@ export default function ApiKeysPage() {
                     {/* Table header */}
                     <div style={{ display: "grid", gridTemplateColumns: "2fr 80px 80px 80px 100px 70px", gap: "0", padding: "10px 20px", borderBottom: "1px solid rgba(239,239,239,0.07)", background: "#0D0D0D" }}>
                         {["Key", "Status", "Rate", "Requests", "Last Used", ""].map((h, i) => (
-                            <div key={i} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.22)", textAlign: i > 1 ? "center" : "left" }}>{h}</div>
+                                <div key={i} style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#EFEFEF", textAlign: i > 1 ? "center" : "left", fontWeight: 600 }}>{h}</div>
                         ))}
                     </div>
 
@@ -236,33 +250,37 @@ export default function ApiKeysPage() {
                                     onMouseEnter={e => e.currentTarget.style.transform = "scaleY(1)"}
                                     onMouseLeave={e => e.currentTarget.style.transform = "scaleY(0)"} />
                                 <div style={{ minWidth: 0 }}>
-                                    <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: "13px", color: "#EFEFEF", fontWeight: 600, marginBottom: "2px" }}>{k.name}</div>
-                                    <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.3)", letterSpacing: "0.1em" }}>{k.key_prefix}</div>
+                                    <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "13px", color: "#EFEFEF", fontWeight: 600, marginBottom: "2px" }}>{k.name}</div>
+                                    <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: "10px", color: "rgba(239,239,239,0.3)", letterSpacing: "0.06em" }}>{k.key_prefix}</div>
                                 </div>
                                 <div>
                                     <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "7px", letterSpacing: "0.12em", textTransform: "uppercase", color: k.is_active ? "#4ade80" : "#ef4444", border: `1px solid ${k.is_active ? "rgba(74,222,128,0.25)" : "rgba(239,68,68,0.25)"}`, padding: "2px 7px", background: k.is_active ? "rgba(74,222,128,0.05)" : "transparent" }}>
                                         {k.is_active ? "Active" : "Revoked"}
                                     </span>
                                 </div>
-                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.45)", textAlign: "center" }}>{k.rate_limit_rpm}/m</div>
-                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", color: "rgba(239,239,239,0.45)", textAlign: "center" }}>{k.request_count.toLocaleString()}</div>
-                                <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "rgba(239,239,239,0.3)", textAlign: "center" }}>
+                                <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "#EFEFEF", textAlign: "center", fontWeight: 500 }}>{k.rate_limit_rpm}/m</div>
+                                <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", color: "#EFEFEF", textAlign: "center", fontWeight: 500 }}>{k.request_count.toLocaleString()}</div>
+                                <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: "11px", color: "rgba(239,239,239,0.6)", textAlign: "center" }}>
                                     {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "Never"}
                                 </div>
                                 <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                                    <button onClick={() => loadUsage(k.key_id)} title="Usage"
-                                        style={{ background: showUsage === k.key_id ? "rgba(245,196,0,0.08)" : "none", border: `1px solid ${showUsage === k.key_id ? "rgba(245,196,0,0.3)" : "transparent"}`, color: showUsage === k.key_id ? "#F5C400" : "rgba(239,239,239,0.3)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
-                                        onMouseEnter={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "#EFEFEF"; }}
-                                        onMouseLeave={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "rgba(239,239,239,0.3)"; }}>
-                                        <BarChart3 style={{ width: 12, height: 12 }} />
-                                    </button>
-                                    {k.is_active && (
-                                        <button onClick={() => revokeKey(k.key_id)} title="Revoke"
-                                            style={{ background: "none", border: "1px solid transparent", color: "rgba(239,239,239,0.22)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = "#fca5a5"; e.currentTarget.style.borderColor = "rgba(248,113,113,0.2)"; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = "rgba(239,239,239,0.22)"; e.currentTarget.style.borderColor = "transparent"; }}>
-                                            <Trash2 style={{ width: 12, height: 12 }} />
+                                    <Tooltip content="Usage" position="top">
+                                        <button onClick={() => loadUsage(k.key_id)}
+                                            style={{ background: showUsage === k.key_id ? "rgba(245,196,0,0.08)" : "none", border: `1px solid ${showUsage === k.key_id ? "rgba(245,196,0,0.3)" : "transparent"}`, color: showUsage === k.key_id ? "#F5C400" : "rgba(239,239,239,0.3)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
+                                            onMouseEnter={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "#EFEFEF"; }}
+                                            onMouseLeave={e => { if (showUsage !== k.key_id) e.currentTarget.style.color = "rgba(239,239,239,0.3)"; }}>
+                                            <BarChart3 style={{ width: 12, height: 12 }} />
                                         </button>
+                                    </Tooltip>
+                                    {k.is_active && (
+                                        <Tooltip content="Revoke" position="top">
+                                            <button onClick={() => setRevokeKeyId(k.key_id)}
+                                                style={{ background: "none", border: "1px solid transparent", color: "rgba(239,239,239,0.22)", padding: "4px 6px", cursor: "pointer", display: "flex", transition: "all 0.15s" }}
+                                                onMouseEnter={e => { e.currentTarget.style.color = "#fca5a5"; e.currentTarget.style.borderColor = "rgba(248,113,113,0.2)"; }}
+                                                onMouseLeave={e => { e.currentTarget.style.color = "rgba(239,239,239,0.22)"; e.currentTarget.style.borderColor = "transparent"; }}>
+                                                <Trash2 style={{ width: 12, height: 12 }} />
+                                            </button>
+                                        </Tooltip>
                                     )}
                                 </div>
                             </div>
@@ -301,6 +319,14 @@ export default function ApiKeysPage() {
                     ))}
                 </div>
             )}
+            <ConfirmModal
+                isOpen={!!revokeKeyId}
+                title="Revoke API Key"
+                message="Are you sure you want to revoke this API key? Any applications currently using it will be denied access instantly. This action cannot be undone."
+                confirmText="Revoke Key"
+                onConfirm={confirmRevokeKey}
+                onCancel={() => setRevokeKeyId(null)}
+            />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );

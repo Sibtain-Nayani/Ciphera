@@ -1366,8 +1366,8 @@ function NavAuthButtons() {
                 <Link href="/account" style={{ display:'flex', alignItems:'center', gap:'7px', fontFamily:'"SF Pro Display", -apple-system, sans-serif', fontSize:'11px', fontWeight:500, color:'rgba(239,239,239,0.7)', textDecoration:'none', transition:'color 0.15s' }}
                     onMouseEnter={e=>e.currentTarget.style.color='#EFEFEF'}
                     onMouseLeave={e=>e.currentTarget.style.color='rgba(239,239,239,0.7)'}>
-                    <div style={{ width:24, height:24, background:'rgba(245,196,0,0.15)', border:'1px solid rgba(245,196,0,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <span style={{ fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontSize:'10px', color:'#F5C400' }}>
+                    <div style={{ width:24, height:24, background:'rgba(245,196,0,0.15)', border:'1px solid rgba(245,196,0,0.3)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <span style={{ fontFamily:'"Barlow", sans-serif', fontWeight:700, fontSize:'12px', color:'#F5C400' }}>
                             {user.full_name?.[0]?.toUpperCase() || 'U'}
                         </span>
                     </div>
@@ -1846,11 +1846,11 @@ export default function LandingPage() {
 
                     {/* Bottom row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
+                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '13px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
                         © 2026 Ciphera systems.
                       </div>
-                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '15px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
-                        {'>'} Session terminated · 0 bytes retained <span style={{ color: '#F5C400', animation: 'blink 1s step-end infinite' }}>|</span>
+                      <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontWeight: 500, fontSize: '13px', color: '#EFEFEF', letterSpacing: '0.04em', textTransform: 'none' }}>
+                        Session terminated · 0 bytes retained <span style={{ color: '#F5C400', animation: 'blink 1s step-end infinite' }}>|</span>
                       </div>
                     </div>
                   </div>

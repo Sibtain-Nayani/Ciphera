@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Trash2, Plus, BarChart3, Loader2 } from 'lucide-react';
+import { Copy, Check, Trash2, Plus, BarChart3, Loader2, RefreshCw, Key } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useUiStore } from '@/store/uiStore';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface ApiKey {
     key_id:         string;
@@ -40,6 +42,7 @@ export const ApiKeyManager: React.FC = () => {
     const [copied,      setCopied]      = useState<string | null>(null);
     const [showUsage,   setShowUsage]   = useState<string | null>(null);
     const [usageData,   setUsageData]   = useState<any>(null);
+    const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
 
     // Create form state
     const [name,       setName]       = useState('');
@@ -99,14 +102,19 @@ export const ApiKeyManager: React.FC = () => {
         }
     };
 
-    const revokeKey = async (keyId: string) => {
-        if (!confirm('Revoke this API key? This cannot be undone.')) return;
+    const confirmRevokeKey = async () => {
+        if (!revokeKeyId) return;
         try {
-            await apiFetch(`/api/v3/keys/${keyId}`, { method: 'DELETE' });
-            await load();
+            await apiFetch(`/api/v3/keys/${revokeKeyId}`, { method: 'DELETE' });
+            // Optimistically remove from UI immediately
+            setKeys(prev => prev.filter(k => k.key_id !== revokeKeyId));
             useUiStore.getState().addToast('Key revoked.', 'success');
+            // Also re-fetch for backend consistency
+            await load();
         } catch {
             useUiStore.getState().addToast('Failed to revoke key.', 'error');
+        } finally {
+            setRevokeKeyId(null);
         }
     };
 
@@ -134,17 +142,19 @@ export const ApiKeyManager: React.FC = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={load} disabled={loading}
-                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.5)', border: '1px solid rgba(239,239,239,0.1)', background: 'transparent', padding: '8px 14px', cursor: 'pointer' }}
-                        className="hover:border-[rgba(245,196,0,0.4)] hover:text-[#F5C400] transition-all">
-                        {loading ? '…' : 'Refresh'}
-                    </button>
-                    <button onClick={() => setShowCreate(!showCreate)}
-                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', color: showCreate ? '#F5C400' : 'rgba(239,239,239,0.7)', border: showCreate ? '1px solid #F5C400' : '1px solid rgba(239,239,239,0.2)', padding: '10px 20px', background: showCreate ? 'rgba(245,196,0,0.05)' : 'transparent', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        className="hover:border-[#F5C400] hover:text-[#F5C400] transition-all">
-                        <Plus style={{ width: 11, height: 11 }} />
-                        {showCreate ? 'Cancel' : 'New Key'}
-                    </button>
+                    <Tooltip content="Refresh list">
+                        <button onClick={load} disabled={loading}
+                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(245,196,0,0.1)] hover:text-[#F5C400] hover:border-[#F5C400] text-[rgba(239,239,239,0.5)] transition-colors">
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                    </Tooltip>
+                    {!showCreate && !createdKey && (
+                        <button onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 bg-[rgba(245,196,0,0.1)] hover:bg-[rgba(245,196,0,0.2)] text-[#F5C400] transition-colors border border-[rgba(245,196,0,0.2)] px-4 py-2"
+                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
+                            <Plus size={14} /> NEW API KEY
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -176,41 +186,49 @@ export const ApiKeyManager: React.FC = () => {
             )}
 
             {/* Create form */}
-            {showCreate && (
-                <div style={{ padding: '24px', background: '#131315', border: '1px solid rgba(239,239,239,0.15)', position: 'relative', overflow: 'hidden' }} className="space-y-3">
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #F5C400, transparent)', opacity: 0.4 }} />
-                    <div>
-                        <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.4)', display: 'block', marginBottom: '5px' }}>Key Name *</label>
-                        <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production Integration" style={inputStyle}
-                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
-                            onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
-                    </div>
-                    <div>
-                        <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.4)', display: 'block', marginBottom: '5px' }}>Description</label>
-                        <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Optional note" style={inputStyle}
-                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
-                            onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div>
-                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.4)', display: 'block', marginBottom: '5px' }}>Rate Limit (req/min)</label>
-                            <input type="number" min="1" max="1000" value={rpm} onChange={e => setRpm(e.target.value)} style={{ ...inputStyle }}
+            {showCreate && !createdKey && (
+                <div className="p-6 bg-[#131315] border border-[rgba(239,239,239,0.15)] animate-stage-in">
+                    <h4 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '16px', fontWeight: 700, color: '#EFEFEF', marginBottom: '20px' }}>
+                        GENERATE API KEY
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2 md:col-span-2">
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase' }}>Key Name *</label>
+                            <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production Integration" style={inputStyle}
                                 onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
                                 onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
                         </div>
-                        <div>
-                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.4)', display: 'block', marginBottom: '5px' }}>Expires in days (optional)</label>
+                        <div className="space-y-2 md:col-span-2">
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase' }}>Description</label>
+                            <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Optional note" style={inputStyle}
+                                onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
+                                onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
+                        </div>
+                        <div className="space-y-2">
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase' }}>Rate Limit (req/min)</label>
+                            <input type="number" min="1" max="1000" value={rpm} onChange={e => setRpm(e.target.value)} style={inputStyle}
+                                onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
+                                onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
+                        </div>
+                        <div className="space-y-2">
+                            <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: 'rgba(239,239,239,0.5)', textTransform: 'uppercase' }}>Expires in days (optional)</label>
                             <input type="number" min="1" max="365" value={expDays} onChange={e => setExpDays(e.target.value)} placeholder="Never" style={inputStyle}
                                 onFocus={e => e.currentTarget.style.borderColor = 'rgba(245,196,0,0.5)'}
                                 onBlur={e  => e.currentTarget.style.borderColor = 'rgba(239,239,239,0.15)'} />
                         </div>
                     </div>
-                    <button onClick={createKey} disabled={!name.trim() || createBusy}
-                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', background: '#F5C400', color: '#080808', border: 'none', padding: '12px 20px', cursor: createBusy ? 'not-allowed' : 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px', opacity: (!name.trim() || createBusy) ? 0.5 : 1 }}
-                        className="hover:bg-[#ffe166] transition-all">
-                        {createBusy && <Loader2 style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} />}
-                        Generate Key
-                    </button>
+                    <div className="flex gap-4 mt-8">
+                        <button onClick={createKey} disabled={!name.trim() || createBusy}
+                            className="bg-[#F5C400] hover:bg-[#d4a900] text-black px-6 py-2 transition-colors flex items-center gap-2 disabled:opacity-50"
+                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
+                            {createBusy ? <Loader2 size={14} className="animate-spin" /> : 'GENERATE KEY'}
+                        </button>
+                        <button onClick={() => setShowCreate(false)}
+                            className="bg-transparent border border-[rgba(239,239,239,0.2)] hover:bg-[rgba(239,239,239,0.05)] text-[#EFEFEF] px-6 py-2 transition-colors"
+                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
+                            CANCEL
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -220,65 +238,109 @@ export const ApiKeyManager: React.FC = () => {
                     Loading keys…
                 </div>
             ) : keys.length === 0 && !showCreate ? (
-                <div style={{ padding: '40px', textAlign: 'center', background: '#131315', border: '1px solid rgba(239,239,239,0.07)', fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(239,239,239,0.3)' }}>
-                    No API keys yet. Generate one above.
+                <div className="flex flex-col items-center justify-center py-16 bg-[#131315] border border-[rgba(239,239,239,0.15)] animate-stage-in relative overflow-hidden">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-[#F5C400] blur-[100px] rounded-full opacity-[0.03] pointer-events-none" />
+                    <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A] mb-4 relative z-10">
+                        <Key className="w-8 h-8 text-[#F5C400]/60" />
+                    </div>
+                    <h4 style={{ fontFamily: '"Barlow", sans-serif', fontSize: '18px', fontWeight: 700, color: '#EFEFEF', marginBottom: '8px' }} className="relative z-10">
+                        No API Keys Generated
+                    </h4>
+                    <p style={{ fontFamily: '"SF Pro Display", sans-serif', fontSize: '13px', color: 'rgba(239,239,239,0.5)', maxWidth: '300px', textAlign: 'center', marginBottom: '24px' }} className="relative z-10">
+                        Create an API key to securely authenticate and interact with the Ciphera redaction engine programmatically.
+                    </p>
+                    <button onClick={() => setShowCreate(true)}
+                        className="flex items-center gap-2 bg-[rgba(245,196,0,0.1)] hover:bg-[rgba(245,196,0,0.2)] text-[#F5C400] transition-colors border border-[rgba(245,196,0,0.2)] px-6 py-2.5 relative z-10"
+                        style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
+                        <Plus size={14} /> GENERATE YOUR FIRST KEY
+                    </button>
                 </div>
             ) : (
                 <div className="space-y-[2px]">
                     {keys.map((key) => (
-                        <React.Fragment key={key.key_id}>
-                            <div className="group relative overflow-hidden"
-                                style={{ background: '#131315', border: '1px solid rgba(239,239,239,0.15)', padding: '16px 20px' }}>
-                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#F5C400] scale-y-0 group-hover:scale-y-100 transition-transform duration-300" />
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                    {/* Left: name + prefix + stats */}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '12px', fontWeight: 600, color: key.is_active ? '#EFEFEF' : 'rgba(239,239,239,0.3)' }} className="group-hover:text-[#F5C400] transition-colors">
-                                                {key.name}
-                                            </span>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '8px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: key.is_active ? '#4ade80' : '#ef4444', border: `1px solid ${key.is_active ? 'rgba(74,222,128,0.25)' : 'rgba(239,68,68,0.25)'}`, padding: '2px 7px', background: key.is_active ? 'rgba(74,222,128,0.05)' : 'transparent' }}>
-                                                {key.is_active ? 'ACTIVE' : 'REVOKED'}
-                                            </span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', color: 'rgba(239,239,239,0.35)', letterSpacing: '0.1em' }}>{key.key_prefix}</span>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', color: 'rgba(239,239,239,0.35)', letterSpacing: '0.1em' }}>{key.request_count.toLocaleString()} requests</span>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', color: 'rgba(239,239,239,0.35)', letterSpacing: '0.1em' }}>{key.rate_limit_rpm}/min</span>
-                                            <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', color: 'rgba(239,239,239,0.35)', letterSpacing: '0.1em' }}>
-                                                Last: {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}
-                                            </span>
-                                        </div>
+                        <div key={key.key_id} className="bg-[#131315] border border-[rgba(239,239,239,0.15)] relative group">
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[rgba(245,196,0,0.5)]" />
+                            
+                            <div className="p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '13px', color: '#EFEFEF' }}>{key.name}</span>
+                                        <span className={`px-2 py-0.5 text-[10px] ${key.is_active ? 'bg-[rgba(74,222,128,0.1)] text-[#4ade80]' : 'bg-[rgba(239,68,68,0.1)] text-[#ef4444]'}`} style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+                                            {key.is_active ? 'ACTIVE' : 'REVOKED'}
+                                        </span>
                                     </div>
-                                    {/* Right: actions */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                        <button onClick={() => copyText(key.key_prefix, key.key_id)}
-                                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 500, color: copied === key.key_id ? '#4ade80' : 'rgba(239,239,239,0.5)', border: `1px solid ${copied === key.key_id ? 'rgba(74,222,128,0.3)' : 'rgba(239,239,239,0.15)'}`, background: 'transparent', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                                            className="hover:border-[#F5C400] hover:text-[#F5C400] transition-all">
-                                            {copied === key.key_id ? <Check style={{ width: 10, height: 10 }} /> : <Copy style={{ width: 10, height: 10 }} />}
-                                            {copied === key.key_id ? 'Copied' : 'Copy ID'}
-                                        </button>
-                                        <button onClick={() => loadUsage(key.key_id)}
-                                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 500, color: showUsage === key.key_id ? '#F5C400' : 'rgba(239,239,239,0.5)', border: `1px solid ${showUsage === key.key_id ? 'rgba(245,196,0,0.3)' : 'rgba(239,239,239,0.15)'}`, background: showUsage === key.key_id ? 'rgba(245,196,0,0.05)' : 'transparent', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                                            className="hover:border-[rgba(245,196,0,0.4)] hover:text-[#F5C400] transition-all">
-                                            <BarChart3 style={{ width: 10, height: 10 }} />
-                                            Usage
-                                        </button>
-                                        {key.is_active && (
-                                            <button onClick={() => revokeKey(key.key_id)}
-                                                style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '9px', fontWeight: 500, color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', background: 'transparent', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                                                className="hover:bg-[rgba(248,113,113,0.08)] transition-all">
-                                                <Trash2 style={{ width: 10, height: 10 }} />
-                                                Revoke
-                                            </button>
-                                        )}
+                                    <p style={{ fontFamily: '"SF Pro Display", sans-serif', fontSize: '13px', color: 'rgba(239,239,239,0.5)', wordBreak: 'break-all' }}>
+                                        {key.description || 'No description provided'}
+                                    </p>
+                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                        <span className="px-2 py-0.5 border border-[rgba(239,239,239,0.1)] text-[10px] text-[#EFEFEF] opacity-70" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+                                            PREFIX: {key.key_prefix}
+                                        </span>
+                                        <span className="px-2 py-0.5 border border-[rgba(239,239,239,0.1)] text-[10px] text-[#EFEFEF] opacity-70" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+                                            {key.request_count.toLocaleString()} REQUESTS
+                                        </span>
+                                        <span className="px-2 py-0.5 border border-[rgba(239,239,239,0.1)] text-[10px] text-[#EFEFEF] opacity-70" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+                                            {key.rate_limit_rpm}/MIN
+                                        </span>
+                                        <span className="px-2 py-0.5 border border-[rgba(239,239,239,0.1)] text-[10px] text-[#EFEFEF] opacity-70" style={{ fontFamily: '"IBM Plex Mono", monospace' }}>
+                                            LAST: {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'NEVER'}
+                                        </span>
                                     </div>
                                 </div>
+                                <div className="flex gap-2">
+                                    <Tooltip content="Copy Key ID">
+                                        <button onClick={() => copyText(key.key_prefix, key.key_id)}
+                                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(245,196,0,0.1)] hover:text-[#F5C400] hover:border-[#F5C400] text-[rgba(239,239,239,0.5)] transition-colors">
+                                            {copied === key.key_id ? <Check size={16} className="text-[#4ade80]" /> : <Copy size={16} />}
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip content="Usage History">
+                                        <button onClick={() => loadUsage(key.key_id)}
+                                            className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,239,239,0.1)] text-[rgba(239,239,239,0.5)] hover:text-[#EFEFEF] transition-colors">
+                                            <BarChart3 size={16} />
+                                        </button>
+                                    </Tooltip>
+                                    {key.is_active && (
+                                        <Tooltip content="Revoke Key">
+                                            <button onClick={() => setRevokeKeyId(key.key_id)}
+                                                className="p-2 border border-[rgba(239,239,239,0.15)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] hover:border-[#ef4444] text-[rgba(239,239,239,0.5)] transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </Tooltip>
+                                    )}
+                                </div>
                             </div>
-                        </React.Fragment>
+                            
+                            {/* Usage section placeholder if needed */}
+                            {showUsage === key.key_id && usageData && (
+                                <div className="border-t border-[rgba(239,239,239,0.15)] bg-[#0d0d0d] p-5">
+                                    <h5 style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: '10px', color: '#EFEFEF', marginBottom: '12px' }}>RECENT USAGE ({usageData.total_calls} calls total)</h5>
+                                    {usageData.daily_volume?.length === 0 ? (
+                                        <p className="text-[12px] text-[rgba(239,239,239,0.4)]">No recent usage recorded.</p>
+                                    ) : (
+                                        <div className="flex items-end gap-2 h-16">
+                                            {usageData.daily_volume?.map((d: any, i: number) => (
+                                                <div key={i} className="flex-1 bg-[rgba(245,196,0,0.5)] hover:bg-[#F5C400] transition-colors"
+                                                    style={{ height: `${Math.max(10, (d.calls / usageData.total_calls) * 100)}%` }}
+                                                    title={`${d.day}: ${d.calls} calls`} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!revokeKeyId}
+                title="Revoke API Key"
+                message="Are you sure you want to revoke this API key? Any applications currently using it will be denied access instantly. This action cannot be undone."
+                confirmText="Revoke Key"
+                onConfirm={confirmRevokeKey}
+                onCancel={() => setRevokeKeyId(null)}
+            />
         </div>
     );
 };

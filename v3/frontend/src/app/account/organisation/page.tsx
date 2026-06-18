@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Building2, Users, Plus, Loader2, Copy, Check, Crown, Shield, Eye, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { useUiStore } from "@/store/uiStore";
 
 function TabBar() {
+    const pathname = usePathname();
     return (
         <div style={{ display: "flex", borderBottom: "1px solid rgba(239,239,239,0.08)", marginBottom: "28px" }}>
             {[
@@ -16,9 +17,9 @@ function TabBar() {
                 { label: "Organisation", href: "/account/organisation" },
                 { label: "API Keys",     href: "/account/api-keys" },
             ].map(tab => {
-                const active = typeof window !== "undefined" && window.location.pathname === tab.href;
+                const active = pathname === tab.href;
                 return (
-                    <Link key={tab.href} href={tab.href} style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: active ? 700 : 500, color: active ? "#F5C400" : "rgba(239,239,239,0.4)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
+                    <Link key={tab.href} href={tab.href} style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: active ? 700 : 500, color: active ? "#F5C400" : "rgba(239,239,239,0.6)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
                         {tab.label}
                     </Link>
                 );
@@ -138,8 +139,8 @@ export default function OrganisationPage() {
             {/* Header */}
             <header style={{ paddingBottom: "24px", borderBottom: "1px solid rgba(239,239,239,0.07)", marginBottom: "32px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                    <div style={{ width: "18px", height: "2px", background: "rgba(185,28,28,0.8)" }} />
-                    <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(185,28,28,0.8)" }}>// ACCOUNT</span>
+                    <div style={{ width: "18px", height: "2px", background: "#F5C400" }} />
+                    <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "12px", letterSpacing: "0.26em", textTransform: "uppercase", color: "#F5C400" }}>// ACCOUNT</span>
                 </div>
                 <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "clamp(32px,4vw,48px)", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, lineHeight: 1 }}>Organisation</h1>
             </header>

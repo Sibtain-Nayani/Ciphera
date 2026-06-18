@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
     LogOut, Eye, EyeOff, Loader2, AlertCircle,
     CheckCircle2, Monitor, RefreshCw,
@@ -16,8 +16,8 @@ const INPUT: React.CSSProperties = {
     background: "#0a0a0a",
     border: "1px solid rgba(239,239,239,0.15)",
     padding: "11px 42px 11px 14px",
-    fontFamily: '"IBM Plex Mono", monospace',
-    fontSize: "12px",
+    fontFamily: '"Barlow", sans-serif',
+    fontSize: "13px",
     color: "#EFEFEF",
     outline: "none",
     boxSizing: "border-box",
@@ -32,8 +32,8 @@ function Section({ title, children, eyebrow }: {
     return (
         <div style={{ marginBottom: "32px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-                <div style={{ width: "18px", height: "2px", background: "rgba(185,28,28,0.8)", flexShrink: 0 }} />
-                <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(185,28,28,0.8)" }}>
+                <div style={{ width: "18px", height: "2px", background: "#F5C400", flexShrink: 0 }} />
+                <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "10px", letterSpacing: "0.26em", textTransform: "uppercase", color: "#F5C400" }}>
                     {eyebrow || title}
                 </span>
             </div>
@@ -53,7 +53,7 @@ function Section({ title, children, eyebrow }: {
 function Field({ label, value }: { label: string; value: string }) {
     return (
         <div style={{ marginBottom: "16px" }}>
-            <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.35)", marginBottom: "5px" }}>{label}</div>
+            <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(239,239,239,0.5)", marginBottom: "5px", fontWeight: 500 }}>{label}</div>
             <div style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', fontSize: "15px", fontWeight: 500, color: "#EFEFEF" }}>{value || "—"}</div>
         </div>
     );
@@ -109,7 +109,7 @@ function ChangePasswordForm() {
                 { label: "New Password",     val: next,    set: setNext,    show: showNext, toggle: () => setShowNext(v => !v), auto: "new-password" },
             ] as const).map(({ label, val, set, show, toggle, auto }) => (
                 <div key={label}>
-                    <label style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(239,239,239,0.4)", display: "block", marginBottom: "5px" }}>{label}</label>
+                    <label style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#EFEFEF", display: "block", marginBottom: "5px" }}>{label}</label>
                     <div style={{ position: "relative" }}>
                         <input type={show ? "text" : "password"} required autoComplete={auto}
                             value={val} onChange={e => set(e.target.value)}
@@ -229,6 +229,7 @@ function ActiveSessions() {
 export default function AccountPage() {
     const { user, logout, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         if (!loading && !user) router.replace("/login");
@@ -255,8 +256,8 @@ export default function AccountPage() {
             <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "36px", flexWrap: "wrap", gap: "16px", paddingBottom: "24px", borderBottom: "1px solid rgba(239,239,239,0.07)" }}>
                 <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                        <div style={{ width: "18px", height: "2px", background: "rgba(185,28,28,0.8)" }} />
-                        <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: "9px", letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(185,28,28,0.8)" }}>// ACCOUNT</span>
+                        <div style={{ width: "18px", height: "2px", background: "#F5C400" }} />
+                        <span style={{ fontFamily: '"Barlow", sans-serif', fontSize: "10px", letterSpacing: "0.26em", textTransform: "uppercase", color: "#F5C400" }}>// ACCOUNT</span>
                     </div>
                     <h1 style={{ fontFamily: '"Barlow Condensed", sans-serif', fontWeight: 900, fontSize: "clamp(32px,4vw,48px)", textTransform: "uppercase", letterSpacing: "-0.01em", color: "#EFEFEF", margin: 0, lineHeight: 1 }}>
                         {user.full_name}
@@ -288,10 +289,10 @@ export default function AccountPage() {
                     { label: "Organisation", href: "/account/organisation" },
                     { label: "API Keys",     href: "/account/api-keys" },
                 ].map(tab => {
-                    const active = typeof window !== "undefined" && window.location.pathname === tab.href;
+                    const active = pathname === tab.href;
                     return (
                         <Link key={tab.href} href={tab.href}
-                            style={{ fontFamily: '"IBM Plex Mono", monospace', fontWeight: active ? 700 : 500, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: active ? "#F5C400" : "rgba(239,239,239,0.45)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
+                            style={{ fontFamily: '"Barlow", sans-serif', fontWeight: active ? 700 : 500, fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", color: active ? "#F5C400" : "rgba(239,239,239,0.6)", textDecoration: "none", padding: "12px 24px", borderBottom: `2px solid ${active ? "#F5C400" : "transparent"}`, background: active ? "rgba(245,196,0,0.03)" : "transparent", transition: "all 0.15s" }}>
                             {tab.label}
                         </Link>
                     );
