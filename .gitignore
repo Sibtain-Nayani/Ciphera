@@ -61,7 +61,22 @@ env/
 # All .env files — includes GROQ_API_KEY, ANTHROPIC_API_KEY, etc.
 .env
 .env.*
+.env*.local
 !.env.example        # allow a template file with no real keys
+
+# Credentials, Certificates & Private Keys
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+id_rsa*
+credentials.json
+client_secret*.json
+service_account*.json
+service-account*.json
+*secret*.json
 
 # ── ML Models (large files, not needed in repo) ───────────────────────────────
 v3/backend/models/
