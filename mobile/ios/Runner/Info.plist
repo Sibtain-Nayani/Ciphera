@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Ciphera needs camera access to scan documents for PII detection.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ciphera needs photo library access to select documents for PII detection.</string>
 </dict>
 </plist>

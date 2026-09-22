@@ -12,7 +12,13 @@ List<RedactToken> buildTokenStream(String text, List<DetectedEntity> entities) {
     if (e.start > cursor) {
       tokens.add(RedactToken(type: 'text', value: text.substring(cursor, e.start)));
     }
-    tokens.add(RedactToken(type: e.entityType, value: text.substring(e.start, end), score: e.score));
+    tokens.add(RedactToken(
+      type: e.entityType,
+      value: text.substring(e.start, end),
+      score: e.score,
+      start: e.start,
+      end: end,
+    ));
     cursor = end;
   }
 

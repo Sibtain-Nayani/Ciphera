@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
-import 'screens/redact_screen.dart';
 import 'auth_test_screen.dart';
+import 'screens/home_shell.dart';
+import 'providers/rules_provider.dart';
 
 void main() {
   runApp(const CipheraApp());
@@ -13,8 +14,11 @@ class CipheraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider()..tryAutoLogin(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..tryAutoLogin()),
+        ChangeNotifierProvider(create: (_) => RulesProvider()),
+      ],
       child: MaterialApp(
         title: 'Ciphera',
         theme: ThemeData(
@@ -37,7 +41,7 @@ class AuthGate extends StatelessWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (auth.isAuthenticated) {
-      return const RedactScreen();
+      return const HomeShell();
     }
     return const AuthTestScreen();
   }
