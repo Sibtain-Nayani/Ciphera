@@ -54,7 +54,7 @@ function LoginContent() {
     const [busy,       setBusy]       = useState(false);
     const [googleBusy, setGoogleBusy] = useState(false);
 
-    useEffect(() => { if (!loading && user && !isGuest) router.replace(from); }, [user, loading, isGuest]);
+    useEffect(() => { if (!loading && user && !isGuest) router.replace(from); }, [user, loading, isGuest, router, from]);
 
     const inputStyle: React.CSSProperties = {
         width: "100%", background: "#080808",
@@ -80,10 +80,13 @@ function LoginContent() {
         try {
             const res  = await fetch(api('/api/v3/auth/google/init'));
             const data = await res.json();
-            if (data.url) { window.location.href = data.url; }
-            else throw new Error("Could not get Google auth URL");
-        } catch {
-            setError("Could not connect to Google. Try again.");
+            if (res.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.detail || "Google OAuth is not configured on this server.");
+            }
+        } catch (err: any) {
+            setError(err.message || "Could not connect to Google. Try again.");
             setGoogleBusy(false);
         }
     };

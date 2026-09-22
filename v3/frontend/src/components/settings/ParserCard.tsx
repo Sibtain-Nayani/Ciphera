@@ -5,7 +5,8 @@ import {
     Mail, Phone, CreditCard, Fingerprint, User,
     ShieldCheck, AlertCircle, Building2, Car,
     BookKey, Landmark, Vote, IdCard, Calendar,
-    CalendarDays, Globe, Network,
+    CalendarDays, Globe, Network, Wallet,
+    QrCode, FileText, MapPin,
 } from 'lucide-react';
 import { useDocumentStore, RuleType, RedactionAction } from '@/store/documentStore';
 import { ToggleSwitch } from './ToggleSwitch';
@@ -142,6 +143,34 @@ const PARSER_META: Record<RuleType, ParserMeta> = {
         icon: <Car className="w-5 h-5" />,
         iconBgClass: 'bg-rose-500/10', iconBorderClass: 'border-rose-500/20', iconTextClass: 'text-rose-400',
         regex: '/[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}/',
+        regexLabel: 'RegEx', actions: STANDARD_ACTIONS,
+    },
+    upi: {
+        label: 'UPI ID / VPA',
+        icon: <QrCode className="w-5 h-5" />,
+        iconBgClass: 'bg-emerald-500/10', iconBorderClass: 'border-emerald-500/20', iconTextClass: 'text-emerald-400',
+        regex: '/[a-zA-Z0-9.\\-_]{2,256}@[a-zA-Z]{2,64}/',
+        regexLabel: 'RegEx', actions: STANDARD_ACTIONS,
+    },
+    bankAccount: {
+        label: 'Bank Account Number',
+        icon: <Wallet className="w-5 h-5" />,
+        iconBgClass: 'bg-amber-500/10', iconBorderClass: 'border-amber-500/20', iconTextClass: 'text-amber-400',
+        regex: '/\\b\\d{9,18}\\b/ (Contextual)',
+        regexLabel: 'RegEx', actions: STANDARD_ACTIONS,
+    },
+    drivingLicence: {
+        label: 'Driving Licence',
+        icon: <FileText className="w-5 h-5" />,
+        iconBgClass: 'bg-violet-500/10', iconBorderClass: 'border-violet-500/20', iconTextClass: 'text-violet-400',
+        regex: '/[A-Z]{2}[0-9]{2}[0-9]{11}|[A-Z]{2}-\\d{13}/',
+        regexLabel: 'RegEx', actions: STANDARD_ACTIONS,
+    },
+    pinCode: {
+        label: 'Postal PIN Code',
+        icon: <MapPin className="w-5 h-5" />,
+        iconBgClass: 'bg-cyan-500/10', iconBorderClass: 'border-cyan-500/20', iconTextClass: 'text-cyan-400',
+        regex: '/\\b[1-9][0-9]{5}\\b/',
         regexLabel: 'RegEx', actions: STANDARD_ACTIONS,
     },
 };

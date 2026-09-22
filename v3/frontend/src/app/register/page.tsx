@@ -53,7 +53,7 @@ export default function RegisterPage() {
     const [googleBusy, setGoogleBusy] = useState(false);
     const [showForm,   setShowForm]   = useState(false);
 
-    useEffect(() => { if (!loading && user && !isGuest) router.replace("/dashboard"); }, [user, loading, isGuest]);
+    useEffect(() => { if (!loading && user && !isGuest) router.replace("/dashboard"); }, [user, loading, isGuest, router]);
 
     // Password strength
     const strength = password.length === 0 ? 0
@@ -90,9 +90,15 @@ export default function RegisterPage() {
         try {
             const res  = await fetch(api('/api/v3/auth/google/init'));
             const data = await res.json();
-            if (data.url) { window.location.href = data.url; }
-            else throw new Error("Could not get Google auth URL");
-        } catch { setError("Could not connect to Google. Try again."); setGoogleBusy(false); }
+            if (res.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.detail || "Google OAuth is not configured on this server.");
+            }
+        } catch (err: any) {
+            setError(err.message || "Could not connect to Google. Try again.");
+            setGoogleBusy(false);
+        }
     };
 
     const handleGuest = () => {

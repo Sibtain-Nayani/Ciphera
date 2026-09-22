@@ -4,7 +4,8 @@ import { create } from 'zustand';
 export type RuleType =
     | 'email' | 'phone' | 'creditCard' | 'ssn' | 'names' | 'date' | 'dob' | 'url' | 'ip'
     // Indian PII
-    | 'aadhaar' | 'pan' | 'gst' | 'ifsc' | 'voterId' | 'passport' | 'vehicleReg';
+    | 'aadhaar' | 'pan' | 'gst' | 'ifsc' | 'voterId' | 'passport' | 'vehicleReg'
+    | 'upi' | 'bankAccount' | 'drivingLicence' | 'pinCode';
 
 export type RedactionAction = 'mask' | 'blackout' | 'replace';
 
@@ -97,23 +98,27 @@ export const useDocumentStore = create<DocumentState>((set) => ({
 
     rules: {
         // Standard
-        email:      { isActive: true,  action: 'replace' },
-        phone:      { isActive: true,  action: 'replace' },
-        creditCard: { isActive: true,  action: 'replace' },
-        ssn:        { isActive: true,  action: 'replace' },
-        names:      { isActive: true,  action: 'replace' },
-        dob:        { isActive: true,  action: 'replace' },   // Date of Birth
-        date:       { isActive: true,  action: 'replace' },   // General dates
-        url:        { isActive: true,  action: 'replace' },
-        ip:         { isActive: true,  action: 'replace' },
+        email:          { isActive: true,  action: 'replace' },
+        phone:          { isActive: true,  action: 'replace' },
+        creditCard:     { isActive: true,  action: 'replace' },
+        ssn:            { isActive: true,  action: 'replace' },
+        names:          { isActive: true,  action: 'replace' },
+        dob:            { isActive: true,  action: 'replace' },   // Date of Birth
+        date:           { isActive: true,  action: 'replace' },   // General dates
+        url:            { isActive: true,  action: 'replace' },
+        ip:             { isActive: true,  action: 'replace' },
         // Indian PII
-        aadhaar:    { isActive: true,  action: 'replace' },
-        pan:        { isActive: true,  action: 'replace' },
-        gst:        { isActive: true,  action: 'replace' },
-        ifsc:       { isActive: true,  action: 'replace' },
-        voterId:    { isActive: true,  action: 'replace' },
-        passport:   { isActive: true,  action: 'replace' },
-        vehicleReg: { isActive: true,  action: 'replace' },
+        aadhaar:        { isActive: true,  action: 'replace' },
+        pan:            { isActive: true,  action: 'replace' },
+        gst:            { isActive: true,  action: 'replace' },
+        ifsc:           { isActive: true,  action: 'replace' },
+        voterId:        { isActive: true,  action: 'replace' },
+        passport:       { isActive: true,  action: 'replace' },
+        vehicleReg:     { isActive: true,  action: 'replace' },
+        upi:            { isActive: true,  action: 'replace' },
+        bankAccount:    { isActive: true,  action: 'replace' },
+        drivingLicence: { isActive: true,  action: 'replace' },
+        pinCode:        { isActive: true,  action: 'replace' },
     },
 
     customRules: loadCustomRules(),
@@ -128,19 +133,25 @@ export const useDocumentStore = create<DocumentState>((set) => ({
         fileType: 'txt', originalFile: null, previewMode: 'original',
     }),
 
-    toggleRule: (rule) => set((state) => ({
-        rules: {
-            ...state.rules,
-            [rule]: { ...state.rules[rule], isActive: !state.rules[rule].isActive },
-        },
-    })),
+    toggleRule: (rule) => set((state) => {
+        const current = state.rules[rule] ?? { isActive: false, action: 'replace' };
+        return {
+            rules: {
+                ...state.rules,
+                [rule]: { ...current, isActive: !current.isActive },
+            },
+        };
+    }),
 
-    setRuleAction: (rule, action) => set((state) => ({
-        rules: {
-            ...state.rules,
-            [rule]: { ...state.rules[rule], action },
-        },
-    })),
+    setRuleAction: (rule, action) => set((state) => {
+        const current = state.rules[rule] ?? { isActive: true, action: 'replace' };
+        return {
+            rules: {
+                ...state.rules,
+                [rule]: { ...current, action },
+            },
+        };
+    }),
 
     addCustomRule: (rule) => set((state) => {
         if (state.customRules.length >= MAX_CUSTOM_RULES) return state;

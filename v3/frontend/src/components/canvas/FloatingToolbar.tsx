@@ -3,7 +3,7 @@ import { useCanvasStore } from '@/store/canvasStore';
 import { MousePointer2, PaintBucket, Ghost, Eraser, SquareSquare, LocateFixed } from 'lucide-react';
 
 export const FloatingToolbar: React.FC = () => {
-    const { activeTool, setActiveTool, setScale, setPosition } = useCanvasStore();
+    const { activeTool, setActiveTool, recenter } = useCanvasStore();
 
     const tools = [
         { id: 'select', icon: MousePointer2, label: 'Select & Move' },
@@ -41,10 +41,7 @@ export const FloatingToolbar: React.FC = () => {
             {/* Recenter Button */}
             <div className="w-full h-px bg-[#3B3B3B] my-1" />
             <button
-                onClick={() => {
-                    setScale(0);
-                    setPosition({ x: 0, y: 0 });
-                }}
+                onClick={() => recenter()}
                 className="p-3 rounded-lg transition-all duration-200 group relative text-gray-400 hover:text-white hover:bg-[#2A2A2A]"
                 title="Recenter Canvas"
             >

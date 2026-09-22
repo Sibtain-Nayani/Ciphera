@@ -31,10 +31,6 @@ numpy==1.26.4
 groq==0.9.0
 anthropic==0.34.2
 
-bcrypt==4.1.3
-PyJWT==2.8.0
-pydantic[email]==2.8.2
-reportlab==4.2.2
-
+# Social Auth & HTTP
 google-auth==2.29.0
-httpx==0.27.0
+httpx==0.27.0

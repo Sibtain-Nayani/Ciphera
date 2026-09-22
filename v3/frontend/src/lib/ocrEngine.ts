@@ -9,6 +9,7 @@ export interface OcrWord {
     startIndex: number;
     endIndex: number;
     confidence: number;
+    symbols?: { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } }[];
 }
 
 export interface OcrResult {
@@ -66,6 +67,7 @@ export async function extractOcrData(imageUrl: string): Promise<OcrResult> {
             startIndex,
             endIndex:   startIndex + w.text.length,
             confidence: w.confidence ?? 0,
+            symbols:    w.symbols ? w.symbols.map((s: any) => ({ text: s.text, bbox: s.bbox })) : undefined,
         });
 
         currentString += w.text + spacer;
@@ -89,15 +91,11 @@ function getImageDimensions(url: string): Promise<{ width: number; height: numbe
 }
 
 /**
- * Maps V3 entity tokens → canvas RedactionShape bounding boxes.
- *
- * FIX for toggle lag: shapes are tagged with their ruleType so the
- * caller can remove only the shapes belonging to a toggled-off rule
- * without re-running the full OCR pipeline.
- *
- * Improvement for small entities: padding is now proportional to
- * the entity height rather than a fixed 4px, so small printed text
- * (e.g. Aadhaar numbers in a 6pt font) still gets covered fully.
+ * Maps V3 entity tokens → canvas RedactionShape bounding boxes with high precision.
+ * Features:
+ * - Sub-word character slicing: redacts only the sensitive characters (e.g. ignores "Label:").
+ * - Multi-segment row grouping: doesn't blackout unrelated gaps between distant words on the same line.
+ * - Disciplined padding: avoids bleeding into lines above and below.
  */
 export async function mapOcrToShapes(
     ocrResult:   OcrResult,
@@ -122,58 +120,108 @@ export async function mapOcrToShapes(
             );
 
             if (intersecting.length > 0) {
-                // Group words into visual rows by vertical overlap
-                const rows: OcrWord[][] = [];
-                for (const word of intersecting) {
-                    let placed = false;
-                    for (const row of rows) {
-                        const ref         = row[0];
-                        const overlapTop  = Math.max(word.bbox.y0, ref.bbox.y0);
-                        const overlapBot  = Math.min(word.bbox.y1, ref.bbox.y1);
-                        const overlap     = Math.max(0, overlapBot - overlapTop);
-                        const minH        = Math.min(
-                            word.bbox.y1 - word.bbox.y0,
-                            ref.bbox.y1  - ref.bbox.y0,
-                        );
-                        if (minH > 0 && overlap > minH * 0.4) {  // 40% overlap threshold (was 50%)
-                            row.push(word); placed = true; break;
+                // Compute exact sub-bounding boxes for each intersecting word
+                const wordBBoxes = intersecting.map(w => {
+                    const charStart = Math.max(0, tokenStart - w.startIndex);
+                    const charEnd   = Math.min(w.text.length, tokenEnd - w.startIndex);
+
+                    // If full word is covered, use word bbox
+                    if (charStart <= 0 && charEnd >= w.text.length) {
+                        return { ...w.bbox };
+                    }
+
+                    // Use character symbols if available
+                    if (w.symbols && w.symbols.length === w.text.length && charEnd > charStart) {
+                        const symSlice = w.symbols.slice(charStart, charEnd);
+                        if (symSlice.length > 0) {
+                            return {
+                                x0: Math.min(...symSlice.map(s => s.bbox.x0)),
+                                y0: Math.min(...symSlice.map(s => s.bbox.y0)),
+                                x1: Math.max(...symSlice.map(s => s.bbox.x1)),
+                                y1: Math.max(...symSlice.map(s => s.bbox.y1)),
+                            };
                         }
                     }
-                    if (!placed) rows.push([word]);
+
+                    // Fallback to linear horizontal interpolation
+                    const frac0 = charStart / Math.max(1, w.text.length);
+                    const frac1 = charEnd   / Math.max(1, w.text.length);
+                    const width = w.bbox.x1 - w.bbox.x0;
+                    return {
+                        x0: Math.round(w.bbox.x0 + width * frac0),
+                        y0: w.bbox.y0,
+                        x1: Math.round(w.bbox.x0 + width * frac1),
+                        y1: w.bbox.y1,
+                    };
+                });
+
+                // Group boxes into visual lines by vertical overlap
+                const rows: { x0: number; y0: number; x1: number; y1: number }[][] = [];
+                for (const bbox of wordBBoxes) {
+                    let placed = false;
+                    for (const row of rows) {
+                        const ref        = row[0];
+                        const overlapTop = Math.max(bbox.y0, ref.y0);
+                        const overlapBot = Math.min(bbox.y1, ref.y1);
+                        const overlap    = Math.max(0, overlapBot - overlapTop);
+                        const minH       = Math.min(bbox.y1 - bbox.y0, ref.y1 - ref.y0);
+                        if (minH > 0 && overlap > minH * 0.45) {
+                            row.push(bbox);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) rows.push([bbox]);
                 }
 
                 for (const row of rows) {
-                    const rMinX = Math.min(...row.map(w => w.bbox.x0));
-                    const rMinY = Math.min(...row.map(w => w.bbox.y0));
-                    const rMaxX = Math.max(...row.map(w => w.bbox.x1));
-                    const rMaxY = Math.max(...row.map(w => w.bbox.y1));
+                    // Sort items horizontally
+                    row.sort((a, b) => a.x0 - b.x0);
 
-                    const rowH = rMaxY - rMinY;
+                    // Segment row if there are large gaps between words
+                    const segments: { x0: number; y0: number; x1: number; y1: number }[][] = [];
+                    let currentSegment = [row[0]];
 
-                    // Proportional padding: 15% of row height, min 3px, max 12px
-                    // This ensures tiny text gets covered fully
-                    const pad = Math.min(12, Math.max(3, Math.round(rowH * 0.15)));
+                    for (let i = 1; i < row.length; i++) {
+                        const prev = row[i - 1];
+                        const curr = row[i];
+                        const rowH = Math.max(prev.y1 - prev.y0, curr.y1 - curr.y0);
+                        // If gap between words exceeds 2x line height, break into separate boxes
+                        if (curr.x0 - prev.x1 > Math.max(rowH * 2.0, 35)) {
+                            segments.push(currentSegment);
+                            currentSegment = [curr];
+                        } else {
+                            currentSegment.push(curr);
+                        }
+                    }
+                    segments.push(currentSegment);
 
-                    shapes.push({
-                        id:     `auto_${token.type}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                        type:   'blackout',
-                        x:      rMinX - pad,
-                        y:      rMinY - pad,
-                        width:  (rMaxX - rMinX) + pad * 2,
-                        height: rowH + pad * 2,
-                        // Store the rule type so toggle-off can surgically remove only these shapes
-                        ruleType: token.type,
-                    } as any);
+                    for (const seg of segments) {
+                        const rMinX = Math.min(...seg.map(b => b.x0));
+                        const rMinY = Math.min(...seg.map(b => b.y0));
+                        const rMaxX = Math.max(...seg.map(b => b.x1));
+                        const rMaxY = Math.max(...seg.map(b => b.y1));
+
+                        const rowH = rMaxY - rMinY;
+
+                        // Disciplined padding: tight vertical padding prevents bleeding into adjacent lines
+                        const padX = Math.min(4, Math.max(1, Math.round(rowH * 0.08)));
+                        const padY = Math.min(3, Math.max(1, Math.round(rowH * 0.05)));
+
+                        shapes.push({
+                            id:       `auto_${token.type}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                            type:     'blackout',
+                            x:        rMinX - padX,
+                            y:        rMinY - padY,
+                            width:    (rMaxX - rMinX) + padX * 2,
+                            height:   rowH + padY * 2,
+                            ruleType: token.type,
+                        });
+                    }
                 }
             }
         }
         cursor += token.value.length;
-
-        // Account for the space separator between OCR words
-        // (OCR text joins words with single spaces)
-        if (token.type === 'text' && token.value.endsWith(' ')) {
-            // already included in token.value length
-        }
     }
 
     return shapes;
@@ -188,9 +236,8 @@ export function removeShapesByRule(
     ruleType: string,
 ): RedactionShape[] {
     return shapes.filter(s => {
-        const s_ = s as any;
         // Keep if: manually drawn (no ruleType tag), or belongs to a DIFFERENT rule
-        return !s_.ruleType || s_.ruleType !== ruleType;
+        return !s.ruleType || s.ruleType !== ruleType;
     });
 }
 
@@ -201,5 +248,5 @@ export function getShapesByRule(
     shapes:   RedactionShape[],
     ruleType: string,
 ): RedactionShape[] {
-    return shapes.filter(s => (s as any).ruleType === ruleType);
+    return shapes.filter(s => s.ruleType === ruleType);
 }

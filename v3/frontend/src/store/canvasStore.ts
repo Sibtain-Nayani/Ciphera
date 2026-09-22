@@ -12,6 +12,7 @@ export interface RedactionShape {
     width: number;
     height: number;
     type: ShapeType;
+    ruleType?: string;
 }
 
 interface CanvasState {
@@ -38,6 +39,7 @@ interface CanvasState {
     setSelectedShapeId: (id: string | null) => void;
     setOcrResult: (result: OcrResult | null) => void;
     setImageDimensions: (dims: { width: number; height: number } | null) => void;
+    recenter: () => void;
     resetCanvas: () => void;
 }
 
@@ -73,6 +75,24 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     setSelectedShapeId: (id) => set({ selectedShapeId: id }),
     setOcrResult: (result) => set({ ocrResult: result }),
     setImageDimensions: (dims) => set({ imageDimensions: dims }),
+    recenter: () => set((state) => {
+        if (!state.stageRef || !state.imageDimensions) {
+            return { scale: 1, position: { x: 0, y: 0 } };
+        }
+        const cW = state.stageRef.width();
+        const cH = state.stageRef.height();
+        const pad = 60;
+        const scaleX = (cW - pad) / state.imageDimensions.width;
+        const scaleY = (cH - pad) / state.imageDimensions.height;
+        const fit = Math.max(0.1, Math.min(scaleX, scaleY, 1));
+        return {
+            scale: fit,
+            position: {
+                x: (cW - state.imageDimensions.width * fit) / 2,
+                y: (cH - state.imageDimensions.height * fit) / 2,
+            },
+        };
+    }),
     resetCanvas: () => set({
         imageSrc: null,
         scale: 1,

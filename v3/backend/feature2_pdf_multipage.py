@@ -92,12 +92,21 @@ class PDFProcessor:
         return full_text, page_map
 
     def find_text_quads(self, page: fitz.Page, search_text: str) -> list[fitz.Quad]:
-        """Find all bounding boxes for a text string on a page."""
-        if not search_text.strip():
+        """Find all bounding boxes for a text string on a page with whitespace tolerance."""
+        text_to_search = search_text.strip()
+        if not text_to_search:
             return []
         try:
-            instances = page.search_for(search_text, quads=True)
-            return instances
+            instances = page.search_for(text_to_search, quads=True)
+            if instances:
+                return instances
+            # If not found directly, try normalizing internal whitespace
+            normalized = " ".join(text_to_search.split())
+            if normalized != text_to_search:
+                instances = page.search_for(normalized, quads=True)
+                if instances:
+                    return instances
+            return []
         except Exception:
             return []
 
@@ -127,6 +136,7 @@ class PDFProcessor:
             if page_idx < 0 or page_idx >= len(doc):
                 continue
             page = doc[page_idx]
+            has_annots = False
 
             for entity in page_entities:
                 # Search for the exact text on this page
@@ -136,21 +146,24 @@ class PDFProcessor:
                     # Found via text search — redact all instances
                     for quad in quads:
                         rect = quad.rect
-                        # Add redaction annotation (PyMuPDF standard approach)
-                        annot = page.add_redact_annot(rect)
+                        # Add redaction annotation with filled color
+                        annot = page.add_redact_annot(rect, fill=redaction_color)
                         annot.update()
-
-                    # Apply all redactions on this page
-                    page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
+                    has_annots = True
 
                 else:
                     # Fallback: draw a filled rectangle using char offset positions
                     # This handles cases where text search fails (OCR'd PDFs)
                     try:
                         blocks = page.get_text("rawdict", sort=True)["blocks"]
-                        self._redact_by_offset(page, entity, blocks, redaction_color)
+                        if self._redact_by_offset(page, entity, blocks, redaction_color):
+                            has_annots = True
                     except Exception as ex:
                         logger.warning("Offset redaction failed for '%s': %s", entity.text[:20], ex)
+
+            # Apply all redactions ONCE per page after all annotations have been placed
+            if has_annots:
+                page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
 
         # Flatten/deflate the document — removes redaction annotations, embeds changes
         out_buf = io.BytesIO()
@@ -164,27 +177,36 @@ class PDFProcessor:
         entity: PageEntity,
         blocks: list,
         color: tuple[float, float, float],
-    ):
+    ) -> bool:
         """
-        Fallback: draw filled rectangles based on character positions
-        in the raw text dict. Used when search_for() can't find the text
-        (common in scanned/OCR'd PDFs).
+        Fallback: calculate bounding boxes from character positions
+        in the raw text dict and add redaction annotations.
         """
         char_pos = 0
         target_start = entity.start
         target_end = entity.end
+        added = False
 
         for block in blocks:
             if block.get("type") != 0:  # 0 = text block
                 continue
             for line in block.get("lines", []):
+                line_rects: list[fitz.Rect] = []
                 for span in line.get("spans", []):
                     for char in span.get("chars", []):
                         if target_start <= char_pos < target_end:
-                            bbox = fitz.Rect(char["bbox"])
-                            page.draw_rect(bbox, color=color, fill=color)
+                            line_rects.append(fitz.Rect(char["bbox"]))
                         char_pos += 1
-                    char_pos += 1  # newline between spans
+                if line_rects:
+                    u_rect = line_rects[0]
+                    for r in line_rects[1:]:
+                        u_rect |= r
+                    annot = page.add_redact_annot(u_rect, fill=color)
+                    annot.update()
+                    added = True
+                char_pos += 1  # newline between lines in get_text("text")
+
+        return added
 
 
 pdf_processor = PDFProcessor()

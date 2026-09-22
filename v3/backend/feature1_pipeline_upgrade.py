@@ -509,8 +509,10 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
         if wscore < floor:
             continue
 
-        best    = max(group, key=lambda e: e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0))
-        sources = list({e.source for e in group})
+        # Pick best span from candidates matching the elected type
+        matching = [e for e in group if e.entity_type == elected_type]
+        best     = max(matching or group, key=lambda e: e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0))
+        sources  = list({e.source for e in group})
         merged.append(DetectedEntity(
             start=best.start, end=best.end,
             entity_type=elected_type, text=best.text,

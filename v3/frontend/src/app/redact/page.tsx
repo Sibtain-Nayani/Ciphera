@@ -74,10 +74,10 @@ const RULE_GROUPS: { label: string; accent: string; icon: React.ReactNode; rules
             { id: 'voterId',        label: 'Voter ID',        icon: <Vote className="w-3.5 h-3.5" />,       color: '#EC4899' },
             { id: 'passport',       label: 'Passport',        icon: <MapPin className="w-3.5 h-3.5" />,     color: '#818CF8' },
             { id: 'vehicleReg',     label: 'Vehicle Reg',     icon: <Car className="w-3.5 h-3.5" />,        color: '#FB7185' },
-            { id: 'upi' as RuleType,            label: 'UPI ID',          icon: <Hash className="w-3.5 h-3.5" />,       color: '#A78BFA' },
-            { id: 'bankAccount' as RuleType,    label: 'Bank Account',    icon: <Landmark className="w-3.5 h-3.5" />,   color: '#34D399' },
-            { id: 'drivingLicence' as RuleType, label: 'Driving Licence', icon: <Car className="w-3.5 h-3.5" />,        color: '#F472B6' },
-            { id: 'pinCode' as RuleType,        label: 'PIN Code',        icon: <MapPin className="w-3.5 h-3.5" />,     color: '#60A5FA' },
+            { id: 'upi',            label: 'UPI ID',          icon: <Hash className="w-3.5 h-3.5" />,       color: '#A78BFA' },
+            { id: 'bankAccount',    label: 'Bank Account',    icon: <Landmark className="w-3.5 h-3.5" />,   color: '#34D399' },
+            { id: 'drivingLicence', label: 'Driving Licence', icon: <Car className="w-3.5 h-3.5" />,        color: '#F472B6' },
+            { id: 'pinCode',        label: 'PIN Code',        icon: <MapPin className="w-3.5 h-3.5" />,     color: '#60A5FA' },
         ],
     },
     {
@@ -206,7 +206,7 @@ export default function WorkspacePage() {
             else { setRedactionFailed(false); setTokens(result.tokens); }
         }, 500);
         return () => clearTimeout(t);
-    }, [rawText, rules, customRules, threshold]);
+    }, [rawText, rules, customRules, threshold, fileName, languageMode]);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches     = tokens.filter(t => t.type !== 'text').length;
@@ -276,9 +276,9 @@ export default function WorkspacePage() {
             } else {
                 const updatedRules = { ...rules, [ruleId]: { ...rules[ruleId], isActive: true } };
                 const newShapes    = await mapOcrToShapes(ocrResult, updatedRules, customRules);
-                const filtered     = newShapes.filter((s: any) => s.ruleType === ruleId);
+                const filtered     = newShapes.filter(s => s.ruleType === ruleId);
                 useCanvasStore.getState().setShapes(prev => [
-                    ...prev.filter((s: any) => s.ruleType !== ruleId),
+                    ...prev.filter(s => s.ruleType !== ruleId),
                     ...filtered,
                 ]);
             }
@@ -294,7 +294,7 @@ export default function WorkspacePage() {
             setLoaderStage('mapping');
             const autoShapes = await mapOcrToShapes(ocrData, rules, customRules);
             useCanvasStore.getState().setShapes(prev => [
-                ...prev.filter((s: any) => !s.ruleType),
+                ...prev.filter(s => !s.ruleType),
                 ...autoShapes,
             ]);
         } catch (e) {
@@ -373,10 +373,18 @@ export default function WorkspacePage() {
             if (!resp.ok) throw new Error(`${resp.status}`);
             const data = await resp.json();
             if (data.face_count === 0) { useUiStore.getState().addToast("No faces detected.", "info"); return; }
-            const faceShapes = data.faces.map((f: any, i: number) => ({
-                id: `face_${Date.now()}_${i}`, type: 'blackout' as const,
-                x: f.x, y: f.y, width: f.width, height: f.height,
-            }));
+            const faceShapes = data.faces.map((f: any, i: number) => {
+                const padX = Math.round(f.width * 0.12);
+                const padY = Math.round(f.height * 0.14);
+                return {
+                    id: `face_${Date.now()}_${i}`,
+                    type: 'blackout' as const,
+                    x: Math.max(0, f.x - padX),
+                    y: Math.max(0, f.y - padY),
+                    width: f.width + padX * 2,
+                    height: f.height + padY * 2,
+                };
+            });
             useCanvasStore.getState().setShapes(prev => [
                 ...prev.filter((s: any) => !s.id.startsWith('face_')),
                 ...faceShapes,

@@ -30,14 +30,16 @@ const replace = (isActive: boolean): RuleConfig => ({ isActive, action: 'replace
 const blackout = (isActive: boolean): RuleConfig => ({ isActive, action: 'blackout' });
 
 const BASE_RULES: Record<RuleType, RuleConfig> = {
-    email:      replace(false), phone:      replace(false),
-    creditCard: replace(false), ssn:        replace(false),
-    names:      replace(false), dob:        replace(false),
-    date:       replace(false), url:        replace(false),
-    ip:         replace(false), aadhaar:    replace(false),
-    pan:        replace(false), gst:        replace(false),
-    ifsc:       replace(false), voterId:    replace(false),
-    passport:   replace(false), vehicleReg: replace(false),
+    email:          replace(false), phone:          replace(false),
+    creditCard:     replace(false), ssn:            replace(false),
+    names:          replace(false), dob:            replace(false),
+    date:           replace(false), url:            replace(false),
+    ip:             replace(false), aadhaar:        replace(false),
+    pan:            replace(false), gst:            replace(false),
+    ifsc:           replace(false), voterId:        replace(false),
+    passport:       replace(false), vehicleReg:     replace(false),
+    upi:            replace(false), bankAccount:    replace(false),
+    drivingLicence: replace(false), pinCode:        replace(false),
 };
 
 export const BUILT_IN_TEMPLATES: RedactionTemplate[] = [
