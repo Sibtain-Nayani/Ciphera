@@ -25,7 +25,12 @@ async def upload_document(
     
     # Process through Phase 4 Detection Engine
     from app.services.detection_engine import DetectionEngine
-    entities = DetectionEngine.run_detection(canonical_doc)
+    raw_entities = DetectionEngine.run_detection(canonical_doc)
+    
+    # Process through Phase 5 Decision Engine
+    from app.services.decision_engine import DecisionEngine
+    # In a real app we fetch org.policy_config. Using default standard policy.
+    entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "standard"})
     
     # Save to database
     db_doc = Document(
