@@ -128,3 +128,21 @@ def redact_document(
         media_type=doc.file_type or "application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename=redacted_{doc.filename}"}
     )
+from typing import List
+
+@router.put("/{document_id}/entities")
+def update_detected_entities(
+    document_id: str,
+    updated_entities: List[RedactionEntity],
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Replace the stored entities with the updated list from human review
+    doc.detected_entities = [e.model_dump() for e in updated_entities]
+    db.commit()
+    
+    return {"message": "Entities updated successfully", "entity_count": len(updated_entities)}
