@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session as DBSession
 import uuid
 
@@ -23,6 +23,10 @@ async def upload_document(
     # Process through Phase 2 Canonical Engine
     canonical_doc = DocumentParser.parse(file_bytes, file.filename)
     
+    # Process through Phase 4 Detection Engine
+    from app.services.detection_engine import DetectionEngine
+    entities = DetectionEngine.run_detection(canonical_doc)
+    
     # Save to database
     db_doc = Document(
         id=str(uuid.uuid4()),
@@ -32,7 +36,8 @@ async def upload_document(
         file_type=file.content_type,
         status=JobStatus.COMPLETED,
         safety_status=SafetyStatus.UNVERIFIED,
-        canonical_representation=canonical_doc.model_dump()
+        canonical_representation=canonical_doc.model_dump(),
+        detected_entities=[e.model_dump() for e in entities]
     )
     
     db.add(db_doc)
@@ -57,3 +62,14 @@ def get_canonical_document(
         raise HTTPException(status_code=404, detail="Document not found")
         
     return doc.canonical_representation
+@router.get("/{document_id}/entities")
+def get_detected_entities(
+    document_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    return {"entities": doc.detected_entities or []}

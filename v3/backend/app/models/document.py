@@ -38,6 +38,7 @@ class Document(Base):
     
     # Simple JSON representation of the "Canonical Document" for now
     canonical_representation = Column(JSON, nullable=True) 
+    detected_entities = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

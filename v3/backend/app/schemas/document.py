@@ -20,3 +20,12 @@ class CanonicalDocument(BaseModel):
     blocks: List[CanonicalBlock]
     full_text: str
     page_count: int
+
+class RedactionEntity(BaseModel):
+    id: str
+    entity_type: str
+    text: str
+    score: float
+    page_num: int
+    bbox: Optional[BoundingBox] = None
+    status: str = "pending" # pending, accepted, rejected, modified
