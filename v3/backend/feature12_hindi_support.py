@@ -94,6 +94,33 @@ class HindiEntity:
         }
 
 
+HINDI_SUPPRESSION_WORDS: set[str] = {
+    "पहचान", "सत्यापन", "अभिलेख", "विवरण", "आवेदक", "पता", "स्थायी", "निवास",
+    "नाम", "संख्या", "दिनांक", "तारीख", "जन्मतिथि", "जन्म", "तिथि", "मोबाइल",
+    "दूरभाष", "संपर्क", "वित्तीय", "हस्ताक्षर", "घोषणा", "खाता", "बैंक", "आईडी",
+    "कार्ड", "दस्तावेज", "प्रारूप", "पिन", "पिनकोड", "कोड", "मतदाता", "पहचान पत्र",
+    "आवेदक का विवरण", "स्थायी निवास पता", "वित्तीय विवरण", "टिप्पणी एवं घोषणा",
+    "सत्यापितकर्ता", "निवास पता", "हस्ताक्षरकर्ता", "पहचान सत्यापन", "केवाईसी",
+}
+
+SUPPRESSION_WORDS: set[str] = {
+    "upi", "upi id", "mobile", "name", "full name", "dob", "address", "contact",
+    "email", "state", "city", "document ref", "verification date", "ifsc",
+    "ifsc code", "pan", "pan number", "gstin", "gst", "gst number", "aadhaar",
+    "aadhaar number", "voter id", "bank account", "driving licence", "ref", "id",
+}
+
+def is_hindi_suppressed(span: str) -> bool:
+    s = span.strip()
+    if not s or len(s) < 2:
+        return True
+    if s in HINDI_SUPPRESSION_WORDS or s.lower() in SUPPRESSION_WORDS:
+        return True
+    if s.startswith(("#", "##", "###", "---", "**", "- ", "* ")):
+        return True
+    return False
+
+
 # ── Utility ───────────────────────────────────────────────────────────────────
 
 def normalise_devanagari_digits(text: str) -> str:
@@ -112,8 +139,8 @@ def detect_script(text: str) -> dict:
     latin_count = sum(1 for c in text if c.isascii() and c.isalpha())
     deva_ratio  = deva_count / total_alpha
 
-    has_deva  = deva_ratio > 0.05
-    has_latin = latin_count / total_alpha > 0.05
+    has_deva  = deva_count >= 3 or deva_ratio > 0.02
+    has_latin = latin_count >= 3 or (latin_count / total_alpha > 0.05)
 
     if has_deva and has_latin:
         mode = "mixed"
@@ -152,6 +179,36 @@ def _extract_devanagari_segments(text: str) -> list[tuple[int, int, str]]:
 
 # ── Stage 1: Hindi Regex ──────────────────────────────────────────────────────
 
+HI_SURNAMES = (
+    r"शर्मा|वर्मा|गुप्ता|पटेल|सिंह|यादव|कुमार|नायर|मेहता|रेड्डी|चव्हाण|पाटिल|जोशी|शाह|राव|"
+    r"मिश्रा|पांडेय|तिवारी|दुबे|झा|दास|मुखर्जी|बैनर्जी|चौधरी|अग्रवाल|जैन|खान|अहमद|अली|"
+    r"दीक्षित|शुक्ला|सेन|घोष|कपूर|खन्ना|मल्होत्रा|भट्ट|देशमुख|गांधी|मोदी|नेहरू|नायडू|पिल्लई|"
+    r"नारायण|नाडार|गोयल|बंसल|मित्तल|खन्ना|कौशिक|त्यागी|चौहान|राठौड़|तोमर|जाट|वत्स"
+)
+HI_NAME_TITLE = r"(?:श्री|श्रीमती|सुश्री|डॉ\.?|कु\.?|कुमार|डॉक्टर)"
+HI_NAME_LABELS = (
+    r"(?:(?:पूरा\s*)?नाम|आवेदक(?:\s*का\s*नाम)?|उम्मीदवार(?:\s*का\s*नाम)?|"
+    r"पिता(?:\s*का\s*नाम)?|पति(?:\s*का\s*नाम)?|सत्यापितकर्ता|हस्ताक्षरकर्ता|"
+    r"Full\s*Name|Name|Father'?s\s*Name|Applicant\s*Name)"
+)
+HI_CITIES = (
+    r"सांगली|पुणे|मुंबई|दिल्ली|नई दिल्ली|बेंगलुरु|बैंगलोर|हैदराबाद|चेन्नई|कोलकाता|"
+    r"अहमदाबाद|सूरत|जयपुर|लखनऊ|कानपुर|नागपुर|इंदौर|ठाणे|भोपाल|पटना|वडोदरा|"
+    r"गाजियाबाद|लुधियाना|आगरा|नासिक|औरंगाबाद|वाराणसी|मेरठ|प्रयागराज|इलाहाबाद|"
+    r"अमृतसर|जोधपुर|कोयंबटूर|विशाखापट्टनम|चंडीगढ़|गुवाहाटी|भुवनेश्वर|देहरादून|"
+    r"महाराष्ट्र|गुजरात|राजस्थान|उत्तर प्रदेश|मध्य प्रदेश|कर्नाटक|तमिलनाडु|केरल"
+)
+
+HINDI_SUPPRESSION_WORDS: set[str] = {
+    "पहचान", "सत्यापन", "अभिलेख", "विवरण", "आवेदक", "पता", "स्थायी", "निवास",
+    "नाम", "संख्या", "दिनांक", "तारीख", "जन्मतिथि", "जन्म", "तिथि", "मोबाइल",
+    "दूरभाष", "संपर्क", "वित्तीय", "हस्ताक्षर", "घोषणा", "खाता", "बैंक", "आईडी",
+    "कार्ड", "दस्तावेज", "प्रारूप", "पिन", "पिनकोड", "कोड", "मतदाता", "पहचान पत्र",
+    "आवेदक का विवरण", "स्थायी निवास पता", "वित्तीय विवरण", "टिप्पणी एवं घोषणा",
+    "सत्यापितकर्ता", "निवास पता", "हस्ताक्षरकर्ता", "पहचान सत्यापन", "केवाईसी",
+    "सत्यापन एवं", "सत्यापन एवं केवाईसी",
+}
+
 class HindiRegexStage:
     _AADHAAR_WITH_LABEL = re.compile(
         r'(?:आधार(?:\s*संख्या|\s*नं\.?|\s*नंबर)?\s*[:\-]?\s*)'
@@ -176,6 +233,9 @@ class HindiRegexStage:
     _PINCODE_HINDI = re.compile(
         r'(?:पिन\s*(?:कोड)?\s*[:\-]?\s*)(\d{6})\b', re.UNICODE
     )
+    _DEVANAGARI_PINCODE = re.compile(
+        r'(?<![\u0900-\u097F0-9])([०-९]{6})(?![\u0900-\u097F0-9])', re.UNICODE
+    )
     _GST_HINDI = re.compile(
         r'(?:(?:जीएसटी(?:आईएन)?|gst(?:in)?)\s*[:\-]?\s*)'
         r'(\d{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z])',
@@ -189,24 +249,64 @@ class HindiRegexStage:
         r'(?:(?:आईएफएससी|ifsc)\s*[:\-]?\s*)([A-Z]{4}0[A-Z0-9]{6})',
         re.UNICODE | re.IGNORECASE
     )
+    _BANK_HINDI = re.compile(
+        r'(?:(?:खाता\s*(?:संख्या|नं\.?|नंबर)?|बैंक\s*खाता)\s*[:\-–—]?\s*)([०-९0-9]{9,18})',
+        re.UNICODE
+    )
+    _UPI_HINDI = re.compile(
+        r'(?:(?:यूपीआई(?:\s*आईडी)?|upi(?:\s*id)?)\s*[:\-–—]?\s*)([a-zA-Z0-9.\-_]{2,64}@[a-zA-Z]{2,20})',
+        re.UNICODE | re.IGNORECASE
+    )
+    _PAREN_BILINGUAL_NAME = re.compile(
+        r'\b[A-Za-z][a-zA-Z\s]{1,30}\s*\(([\u0900-\u097F]{2,25}(?:\s+[\u0900-\u097F]{2,25}){1,3})\)',
+        re.UNICODE
+    )
+    _LABELED_NAME = re.compile(
+        rf'(?:{HI_NAME_LABELS}\s*[:\-–—]\s*)([\u0900-\u097F]{{2,25}}(?:\s+[\u0900-\u097F]{{2,25}}){{1,3}})',
+        re.UNICODE | re.IGNORECASE
+    )
+    _TITLED_NAME = re.compile(
+        rf'(?<![\u0900-\u097F])({HI_NAME_TITLE}\s+[\u0900-\u097F]{{2,25}}(?:\s+[\u0900-\u097F]{{2,25}}){{1,3}})(?![\u0900-\u097F])',
+        re.UNICODE
+    )
+    _SURNAME_NAME = re.compile(
+        rf'(?<![\u0900-\u097F])([\u0900-\u097F]{{2,20}}\s+(?:[\u0900-\u097F]{{2,20}}\s+)?(?:{HI_SURNAMES}))(?![\u0900-\u097F])',
+        re.UNICODE
+    )
+    _CITY_HINDI = re.compile(
+        rf'(?<![\u0900-\u097F])({HI_CITIES})(?![\u0900-\u097F])',
+        re.UNICODE
+    )
+    _ADDRESS_LINE_HINDI = re.compile(
+        r'(?:(?:पता|स्थायी\s*पता|निवास(?:\s*पता)?)\s*[:\-–—]\s*)([^\n\r]+)',
+        re.UNICODE | re.IGNORECASE
+    )
 
     def analyse(self, text: str) -> list[HindiEntity]:
         norm    = normalise_devanagari_digits(text)
         results: list[HindiEntity] = []
 
         patterns = [
-            (self._AADHAAR_WITH_LABEL, "AADHAAR_NUMBER", 0.92),
-            (self._PAN_WITH_LABEL,     "PAN_NUMBER",     0.95),
-            (self._DOB_HINDI,          "DATE_OF_BIRTH",  0.92),
-            (self._PHONE_HINDI,        "PHONE_NUMBER",   0.88),
-            (self._PINCODE_HINDI,      "PIN_CODE",       0.85),
-            (self._GST_HINDI,          "GST_NUMBER",     0.93),
-            (self._VOTER_HINDI,        "VOTER_ID",       0.82),
-            (self._IFSC_HINDI,         "IFSC_CODE",      0.90),
+            (self._AADHAAR_WITH_LABEL,   "AADHAAR_NUMBER", 0.95),
+            (self._PAN_WITH_LABEL,       "PAN_NUMBER",     0.95),
+            (self._DOB_HINDI,            "DATE_OF_BIRTH",  0.94),
+            (self._PHONE_HINDI,          "PHONE_NUMBER",   0.90),
+            (self._PINCODE_HINDI,        "PIN_CODE",       0.88),
+            (self._DEVANAGARI_PINCODE,   "PIN_CODE",       0.86),
+            (self._GST_HINDI,            "GST_NUMBER",     0.93),
+            (self._VOTER_HINDI,          "VOTER_ID",       0.85),
+            (self._IFSC_HINDI,           "IFSC_CODE",      0.90),
+            (self._BANK_HINDI,           "BANK_ACCOUNT",   0.92),
+            (self._UPI_HINDI,            "UPI_ID",         0.92),
+            (self._PAREN_BILINGUAL_NAME, "PERSON",         0.96),
+            (self._LABELED_NAME,         "PERSON",         0.95),
+            (self._TITLED_NAME,          "PERSON",         0.92),
+            (self._SURNAME_NAME,         "PERSON",         0.88),
+            (self._CITY_HINDI,           "LOCATION",       0.88),
         ]
 
         for regex, entity_type, score in patterns:
-            for m in regex.finditer(norm):
+            for m in regex.finditer(norm if entity_type in ("AADHAAR_NUMBER", "PIN_CODE") else text):
                 # Validate Aadhaar digits
                 if entity_type == "AADHAAR_NUMBER":
                     digits = re.sub(r'\D', '', m.group(1))
@@ -220,11 +320,31 @@ class HindiRegexStage:
                     s, e = m.start(), m.end()
                     val  = text[s:e]
 
+                val_clean = val.strip()
+                if not val_clean or val_clean in HINDI_SUPPRESSION_WORDS:
+                    continue
+
                 results.append(HindiEntity(
                     start=s, end=e,
                     entity_type=entity_type,
                     text=val,
                     score=score, source=DetectionSource.REGEX,
+                    context=get_context(text, s, e),
+                ))
+
+        # Also extract structured address lines
+        for m in self._ADDRESS_LINE_HINDI.finditer(text):
+            raw_addr = m.group(1)
+            # Remove trailing parens e.g. (पिनकोड: 411001)
+            clean_addr = re.sub(r'\s*\([^\)]*\)', '', raw_addr).strip()
+            if clean_addr and clean_addr not in HINDI_SUPPRESSION_WORDS and len(clean_addr) > 5:
+                s = m.start(1)
+                e = s + len(clean_addr)
+                results.append(HindiEntity(
+                    start=s, end=e,
+                    entity_type="LOCATION",
+                    text=clean_addr,
+                    score=0.85, source=DetectionSource.REGEX,
                     context=get_context(text, s, e),
                 ))
 
@@ -319,6 +439,10 @@ class HindiPresidioStage:
             return []
         for r in detections:
             span = text[r.start:r.end]
+            if is_hindi_suppressed(span):
+                continue
+            if "\n" in span and r.entity_type in ("PERSON", "LOCATION", "ORGANIZATION"):
+                continue
             results.append(HindiEntity(
                 start=r.start, end=r.end,
                 entity_type=r.entity_type,
@@ -366,7 +490,12 @@ class SpacyHindiNERStage:
                 mapped = self.LABEL_MAP.get(ent.label_)
                 if not mapped:
                     continue
-                if len(ent.text.strip()) < 2:
+                clean_ent = ent.text.strip()
+                if len(clean_ent) < 2 or clean_ent in HINDI_SUPPRESSION_WORDS:
+                    continue
+                if clean_ent.startswith(("#", "##", "###", "---", "**", "- ")):
+                    continue
+                if "\n" in ent.text and mapped in ("PERSON", "LOCATION", "ORGANIZATION"):
                     continue
 
                 # Map offsets back to original document position
@@ -520,6 +649,15 @@ class MixedDocumentHandler:
         # Normalise Hindi entities → dict with language="hi"
         for e in hindi_entities:
             combined.append(e.to_dict())   # already has language="hi"
+
+        # Filter out suppression words, headers, and labels
+        filtered_combined: list[dict] = []
+        for e in combined:
+            t = e["text"].strip()
+            if is_hindi_suppressed(t):
+                continue
+            filtered_combined.append(e)
+        combined = filtered_combined
 
         if not combined:
             return []

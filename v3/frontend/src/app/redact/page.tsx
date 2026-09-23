@@ -203,7 +203,20 @@ export default function WorkspacePage() {
                 : 'english',
             );
             if (result.failed) { setRedactionFailed(true); setTokens([]); }
-            else { setRedactionFailed(false); setTokens(result.tokens); }
+            else {
+                setRedactionFailed(false);
+                setTokens(result.tokens);
+                if (result.language && result.language !== languageMode && (languageMode === 'english' || !languageMode)) {
+                    setLanguageMode(result.language);
+                    if (result.language === 'mixed') {
+                        setLanguageBanner('LANGUAGE DETECTED: BILINGUAL (HINDI + ENGLISH) · Using bilingual pipeline');
+                        setTimeout(() => setLanguageBanner(null), 8000);
+                    } else if (result.language === 'hindi') {
+                        setLanguageBanner('LANGUAGE DETECTED: HINDI · Using Hindi pipeline');
+                        setTimeout(() => setLanguageBanner(null), 8000);
+                    }
+                }
+            }
         }, 500);
         return () => clearTimeout(t);
     }, [rawText, rules, customRules, threshold, fileName, languageMode]);

@@ -192,23 +192,31 @@ export const redactionEngine = {
         if (!rawText.trim()) return { tokens: [], failed: false };
 
         // ── Step 1: Call the right endpoint ──────────────────────────────────
+        // Auto-detect script: if text has Devanagari characters, automatically use mixed or hindi
+        const hasDevanagari = /[\u0900-\u097F]/.test(rawText);
+        const hasLatin      = /[A-Za-z]/.test(rawText);
+        let effectiveMode: 'english' | 'hindi' | 'mixed' = languageMode;
+        if (hasDevanagari && (languageMode === 'english' || !languageMode)) {
+            effectiveMode = hasLatin ? 'mixed' : 'hindi';
+        }
+
         let normEntities: NormalisedEntity[] = [];
 
         try {
             const endpoint =
-                languageMode === 'hindi' ? api('/api/v3/analyze-hindi')
-              : languageMode === 'mixed' ? api('/api/v3/analyze-mixed')
+                effectiveMode === 'hindi' ? api('/api/v3/analyze-hindi')
+              : effectiveMode === 'mixed' ? api('/api/v3/analyze-mixed')
               :                           api('/api/v3/analyze');
 
             // Payload differs slightly per endpoint
             let body: Record<string, unknown>;
-            if (languageMode === 'mixed') {
+            if (effectiveMode === 'mixed') {
                 body = {
                     text:               rawText,
                     threshold_english:  threshold,
                     threshold_hindi:    Math.max(0.40, threshold - 0.05), // slightly lower for Hindi
                 };
-            } else if (languageMode === 'hindi') {
+            } else if (effectiveMode === 'hindi') {
                 body = {
                     text:          rawText,
                     threshold,
@@ -235,7 +243,7 @@ export const redactionEngine = {
             }
 
             const data = await resp.json();
-            normEntities = normaliseEntities(data, languageMode);
+            normEntities = normaliseEntities(data, effectiveMode);
 
         } catch (err) {
             console.error('[Ciphera] Backend unreachable:', err);
@@ -287,7 +295,7 @@ export const redactionEngine = {
             rawText, normEntities, activeRuleSet, customRules, mlScoreMap
         );
 
-        return { tokens, failed: false, mlScored, language: languageMode };
+        return { tokens, failed: false, mlScored, language: effectiveMode };
     },
 
     _buildTokenStream(

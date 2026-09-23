@@ -33,7 +33,35 @@ SUPPRESSION_LIST: set[str] = {
     "aadhaar","aadhar","pan","ifsc","gst","gstin","passport","voter","voterid",
     "email","phone","mobile","address","dob","name","uid","uidai",
     "date","year","month","day","time","number","ref","id","total","amount",
+    "kyc","record","applicant","verification","details","signature","declaration",
 }
+
+HINDI_SUPPRESSION_WORDS: set[str] = {
+    "पहचान", "सत्यापन", "अभिलेख", "विवरण", "आवेदक", "पता", "स्थायी", "निवास",
+    "नाम", "संख्या", "दिनांक", "तारीख", "जन्मतिथि", "जन्म", "तिथि", "मोबाइल",
+    "दूरभाष", "संपर्क", "वित्तीय", "हस्ताक्षर", "घोषणा", "खाता", "बैंक", "आईडी",
+    "कार्ड", "दस्तावेज", "प्रारूप", "पिन", "पिनकोड", "कोड", "मतदाता", "पहचान पत्र",
+    "आवेदक का विवरण", "स्थायी निवास पता", "वित्तीय विवरण", "टिप्पणी एवं घोषणा",
+    "सत्यापितकर्ता", "निवास पता", "हस्ताक्षरकर्ता", "पहचान सत्यापन", "केवाईसी",
+}
+
+def is_suppressed(span: str) -> bool:
+    s = span.strip()
+    if not s:
+        return True
+    if s.lower() in SUPPRESSION_LIST or s in HINDI_SUPPRESSION_WORDS:
+        return True
+    # Strip markdown header syntax or bullet markers
+    if s.startswith(("#", "##", "###", "####", "---", "**", "- ", "* ")):
+        return True
+    if s in {
+        "Mobile", "Name", "Full Name", "DOB", "Address", "Contact", "Email",
+        "State", "City", "Document Ref", "Verification Date", "UPI", "UPI ID",
+        "IFSC", "IFSC Code", "PAN", "PAN Number", "GSTIN", "GST", "GST Number",
+        "Aadhaar", "Aadhaar Number", "Voter ID", "Bank Account", "Driving Licence",
+    }:
+        return True
+    return False
 
 SPACY_IGNORE_LABELS: set[str] = {
     "CARDINAL","ORDINAL","QUANTITY","PERCENT","MONEY",
@@ -427,7 +455,9 @@ class PresidioStage:
             text=text, entities=self.TARGET_ENTITIES, language="en"
         ):
             span = text[r.start:r.end]
-            if span.strip().lower() in SUPPRESSION_LIST:
+            if is_suppressed(span):
+                continue
+            if "\n" in span and r.entity_type in ("PERSON", "LOCATION", "ORGANIZATION"):
                 continue
             results.append(DetectedEntity(
                 start=r.start, end=r.end, entity_type=r.entity_type,
@@ -457,7 +487,9 @@ class SpacyNERStage:
             mapped = self.LABEL_MAP.get(ent.label_)
             if not mapped:
                 continue
-            if ent.text.strip().lower() in SUPPRESSION_LIST:
+            if is_suppressed(ent.text):
+                continue
+            if "\n" in ent.text and mapped in ("PERSON", "LOCATION", "ORGANIZATION"):
                 continue
             if mapped == "DATE_TIME" and re.match(r"^\d{10}$", ent.text.strip()):
                 continue
