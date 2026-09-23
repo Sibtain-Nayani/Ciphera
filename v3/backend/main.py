@@ -27,7 +27,7 @@ from feature11_doc_classifier   import router as classifier_router
 from feature12_hindi_support    import router as hindi_router
 from feature13_ocr_hindi        import router as ocr_hindi_router
 from feature14_audit_report     import router as report_router
-from feature15_auth             import router as auth_router
+from app.api.auth                 import router as auth_router
 from feature16_organisations    import router as org_router
 from feature17_social_auth      import router as social_router     
 from feature18_webhooks         import router as webhook_router, fire_webhook
