@@ -1,0 +1,47 @@
+[
+  {
+    "id": "doc_001",
+    "type": "clean_digital",
+    "content": "Patient Name: Rahul Sharma\nDOB: 15/08/1985\nAadhaar: 4532 8812 9901\nPAN: ABCDE1234F\nContact: 9876543210 or test.user@example.com\nAddress: Flat 402, Lotus Enclave, Pune 411001\nDiagnosis: Hypertension",
+    "expected_entities": [
+      {"type": "PERSON", "value": "Rahul Sharma"},
+      {"type": "DATE_OF_BIRTH", "value": "15/08/1985"},
+      {"type": "AADHAAR_NUMBER", "value": "4532 8812 9901"},
+      {"type": "PAN_NUMBER", "value": "ABCDE1234F"},
+      {"type": "PHONE_NUMBER", "value": "9876543210"},
+      {"type": "EMAIL_ADDRESS", "value": "test.user@example.com"},
+      {"type": "LOCATION", "value": "Pune"},
+      {"type": "PIN_CODE", "value": "411001"}
+    ]
+  },
+  {
+    "id": "doc_002",
+    "type": "ocr_noise",
+    "content": "Aadhaar Number: 4532 88I2 9901\nPAN: ABCD E1234F\nContact: +91-987654321O",
+    "expected_entities": [
+      {"type": "AADHAAR_NUMBER", "value": "4532 88I2 9901"},
+      {"type": "PAN_NUMBER", "value": "ABCD E1234F"},
+      {"type": "PHONE_NUMBER", "value": "+91-987654321O"}
+    ]
+  },
+  {
+    "id": "doc_003",
+    "type": "hindi_digital",
+    "content": "नाम: सुनीता देवी\nजन्म तिथि: 12.05.1990\nआधार: 9876 5432 1098\nमोबाइल: 9876543210",
+    "expected_entities": [
+      {"type": "PERSON", "value": "सुनीता देवी"},
+      {"type": "DATE_OF_BIRTH", "value": "12.05.1990"},
+      {"type": "AADHAAR_NUMBER", "value": "9876 5432 1098"},
+      {"type": "PHONE_NUMBER", "value": "9876543210"}
+    ]
+  },
+  {
+    "id": "doc_004",
+    "type": "context_gating",
+    "content": "My order number is 123456789012. My bank account number is 123456789012. Also, my postal pin is 416416.",
+    "expected_entities": [
+      {"type": "BANK_ACCOUNT", "value": "123456789012"},
+      {"type": "PIN_CODE", "value": "416416"}
+    ]
+  }
+]
