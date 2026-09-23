@@ -44,21 +44,71 @@ class ImageRedactResponse(BaseModel):
 class FaceRedactor:
 
     def __init__(self):
+        self.yunet = None
         self.dnn_net = None
         self.detector_type = "haar"
-        self._load_dnn()
-        if self.dnn_net is None:
+        self._load_yunet()
+        if self.yunet is None:
+            self._load_dnn()
+        if self.yunet is None and self.dnn_net is None:
             self._load_haar()
+
+    def _load_yunet(self):
+        target_dir = os.path.join(os.path.dirname(__file__), "models")
+        os.makedirs(target_dir, exist_ok=True)
+        model_path = os.path.join(target_dir, "face_detection_yunet_2023mar.onnx")
+
+        possible_paths = [
+            model_path,
+            os.path.join("v3", "backend", "models", "face_detection_yunet_2023mar.onnx"),
+            os.path.join("models", "face_detection_yunet_2023mar.onnx"),
+            "face_detection_yunet_2023mar.onnx",
+        ]
+
+        found_path = None
+        for p in possible_paths:
+            if os.path.exists(p) and os.path.getsize(p) > 10000:
+                found_path = p
+                break
+
+        if found_path is None:
+            try:
+                import urllib.request
+                url = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    with open(model_path, "wb") as f:
+                        f.write(resp.read())
+                if os.path.exists(model_path) and os.path.getsize(model_path) > 10000:
+                    found_path = model_path
+                    logger.info("Auto-downloaded YuNet model to %s", model_path)
+            except Exception as e:
+                logger.warning("Could not auto-download YuNet face model: %s", e)
+
+        if found_path:
+            try:
+                self.yunet = cv2.FaceDetectorYN.create(
+                    model=found_path,
+                    config="",
+                    input_size=(320, 320),
+                    score_threshold=0.4,
+                    nms_threshold=0.3,
+                    top_k=5000,
+                )
+                self.detector_type = "yunet"
+                logger.info("YuNet DNN face detector loaded successfully: %s", found_path)
+                return
+            except Exception as e:
+                logger.warning("Failed to initialize FaceDetectorYN from %s: %s", found_path, e)
 
     def _load_dnn(self):
         """
-        Try to load OpenCV DNN face detector.
-        Model files ship with OpenCV — look in standard locations.
+        Try to load OpenCV DNN face detector if model files are found.
         """
-        # Possible locations for the model files
         search_dirs = [
             os.path.dirname(cv2.__file__),
             os.path.join(os.path.dirname(cv2.__file__), "data"),
+            os.path.join(os.path.dirname(__file__), "models"),
             "/usr/share/opencv4",
             "/usr/local/share/opencv4",
             str(Path.home() / ".local" / "share" / "opencv"),
@@ -75,7 +125,6 @@ class FaceRedactor:
                 proto_file = p
                 model_file = m
                 break
-            # Also check common alternative names
             p2 = os.path.join(d, "opencv_face_detector.prototxt")
             m2 = os.path.join(d, "opencv_face_detector_uint8.pb")
             if os.path.exists(p2) and os.path.exists(m2):
@@ -87,12 +136,10 @@ class FaceRedactor:
             try:
                 self.dnn_net = cv2.dnn.readNet(model_file, proto_file)
                 self.detector_type = "dnn_ssd"
-                logger.info("DNN face detector loaded: %s", model_file)
+                logger.info("DNN SSD face detector loaded: %s", model_file)
             except Exception as e:
-                logger.warning("DNN load failed: %s — using Haar", e)
+                logger.warning("DNN load failed: %s", e)
                 self.dnn_net = None
-        else:
-            logger.info("DNN model files not found — using Haar cascade fallback")
 
     def _load_haar(self):
         base = cv2.data.haarcascades
@@ -103,6 +150,27 @@ class FaceRedactor:
             raise RuntimeError("Could not load any face detector")
         self.detector_type = "haar_cascade"
         logger.info("Haar cascade face detector loaded (fallback)")
+
+    # ── YuNet detection ───────────────────────────────────────────────────────
+
+    def _detect_yunet(self, img: np.ndarray, score_thresh: float = 0.4) -> list[FaceBox]:
+        h, w = img.shape[:2]
+        self.yunet.setInputSize((w, h))
+        self.yunet.setScoreThreshold(score_thresh)
+        _, faces = self.yunet.detect(img)
+        if faces is None:
+            return []
+        boxes: list[FaceBox] = []
+        for f in faces:
+            x, y, bw, bh = int(f[0]), int(f[1]), int(f[2]), int(f[3])
+            conf = float(f[14])
+            x1 = max(0, x)
+            y1 = max(0, y)
+            bw = min(bw, w - x1)
+            bh = min(bh, h - y1)
+            if bw >= 12 and bh >= 12:
+                boxes.append(FaceBox(x=x1, y=y1, width=bw, height=bh, confidence=round(conf, 3), scale_hint="yunet"))
+        return boxes
 
     # ── DNN detection ─────────────────────────────────────────────────────────
 
@@ -125,7 +193,7 @@ class FaceRedactor:
             x1, y1 = max(0, x1), max(0, y1)
             x2, y2 = min(w, x2), min(h, y2)
             bw, bh = x2 - x1, y2 - y1
-            if bw < 20 or bh < 20:
+            if bw < 15 or bh < 15:
                 continue
             raw_boxes.append((x1, y1, bw, bh, conf))
 
@@ -134,13 +202,12 @@ class FaceRedactor:
 
         boxes  = [(x, y, bw, bh) for x, y, bw, bh, _ in raw_boxes]
         scores = [s for _, _, _, _, s in raw_boxes]
-        kept   = self._nms(boxes, scores, iou_threshold=0.4)
-        kept   = self._dedup_by_centroid([(boxes[i], scores[i]) for i in kept], w)
+        kept   = self._nms(boxes, scores, iou_threshold=0.35)
 
         return [
             FaceBox(x=x, y=y, width=bw, height=bh,
                     confidence=round(s, 3), scale_hint="dnn")
-            for (x, y, bw, bh), s in kept
+            for (x, y, bw, bh), s in [(boxes[i], scores[i]) for i in kept]
         ]
 
     # ── Haar fallback detection ───────────────────────────────────────────────
@@ -149,15 +216,13 @@ class FaceRedactor:
         h, w   = img.shape[:2]
         gray   = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray   = cv2.equalizeHist(gray)
-        area   = h * w
-        min_face_area = area * 0.008
-        short  = min(h, w)
+        min_face_area = 300  # min ~18x18 px, allowing small ID and passport photos
 
         params = {
-            "low":    {"scaleFactor":1.3,  "minNeighbors":7, "minSize":(max(80,int(short*0.08)),)*2},
-            "medium": {"scaleFactor":1.15, "minNeighbors":5, "minSize":(max(50,int(short*0.05)),)*2},
-            "high":   {"scaleFactor":1.1,  "minNeighbors":4, "minSize":(max(30,int(short*0.03)),)*2},
-        }.get(sensitivity, {"scaleFactor":1.15,"minNeighbors":5,"minSize":(50,50)})
+            "low":    {"scaleFactor": 1.2,  "minNeighbors": 5, "minSize": (30, 30)},
+            "medium": {"scaleFactor": 1.1,  "minNeighbors": 4, "minSize": (20, 20)},
+            "high":   {"scaleFactor": 1.05, "minNeighbors": 3, "minSize": (15, 15)},
+        }.get(sensitivity, {"scaleFactor": 1.1, "minNeighbors": 4, "minSize": (20, 20)})
 
         all_boxes: list[tuple[int,int,int,int,float]] = []
 
@@ -167,7 +232,7 @@ class FaceRedactor:
             if len(dets) > 0:
                 for (x, y, bw, bh) in dets:
                     if bw * bh >= min_face_area:
-                        score = min(0.85, 0.5 + (bw*bh)/area*8)
+                        score = min(0.85, 0.55 + (bw * bh) / (h * w) * 4)
                         all_boxes.append((x, y, bw, bh, score))
 
         # Profile face (catches side-facing faces)
@@ -176,53 +241,43 @@ class FaceRedactor:
             if len(dets) > 0:
                 for (x, y, bw, bh) in dets:
                     if bw * bh >= min_face_area:
-                        score = min(0.75, 0.45 + (bw*bh)/area*8)
+                        score = min(0.78, 0.50 + (bw * bh) / (h * w) * 4)
                         all_boxes.append((x, y, bw, bh, score))
             # Mirror image and run profile again (catches left-facing profiles)
             gray_flipped = cv2.flip(gray, 1)
             dets2 = self.haar_profile.detectMultiScale(gray_flipped, **params, flags=cv2.CASCADE_SCALE_IMAGE)
             if len(dets2) > 0:
                 for (x, y, bw, bh) in dets2:
-                    # Mirror x back
                     mx = w - x - bw
                     if bw * bh >= min_face_area:
-                        score = min(0.72, 0.45 + (bw*bh)/area*8)
+                        score = min(0.75, 0.48 + (bw * bh) / (h * w) * 4)
                         all_boxes.append((mx, y, bw, bh, score))
-
-        # 1.5x upscale pass (catches small faces)
-        scale = 1.5
-        gray2 = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-        params2 = {**params, "minSize": (int(params["minSize"][0]*scale),)*2}
-        dets3 = self.haar_frontal.detectMultiScale(gray2, **params2, flags=cv2.CASCADE_SCALE_IMAGE)
-        if len(dets3) > 0:
-            for (x, y, bw, bh) in dets3:
-                rx,ry,rbw,rbh = int(x/scale),int(y/scale),int(bw/scale),int(bh/scale)
-                if rbw*rbh >= min_face_area:
-                    score = min(0.80, 0.5+(rbw*rbh)/area*8)
-                    all_boxes.append((rx,ry,rbw,rbh,score))
 
         if not all_boxes:
             return []
 
         boxes  = [(x,y,bw,bh) for x,y,bw,bh,_ in all_boxes]
         scores = [s for _,_,_,_,s in all_boxes]
-        kept   = self._nms(boxes, scores, iou_threshold=0.45)
-        kept   = self._dedup_by_centroid([(boxes[i], scores[i]) for i in kept], w)
+        kept   = self._nms(boxes, scores, iou_threshold=0.35)
 
         return [
             FaceBox(x=max(0,x), y=max(0,y),
                     width=min(bw,img.shape[1]-x), height=min(bh,img.shape[0]-y),
                     confidence=round(s,3), scale_hint="haar")
-            for (x,y,bw,bh), s in kept
+            for (x,y,bw,bh), s in [(boxes[i], scores[i]) for i in kept]
         ]
 
     # ── Public API ────────────────────────────────────────────────────────────
 
     def detect_faces(self, img: np.ndarray, sensitivity: str = "medium") -> list[FaceBox]:
+        thresh_map = {"high": 0.28, "medium": 0.42, "low": 0.60}
+        score_thresh = thresh_map.get(sensitivity, 0.42)
+        if self.yunet is not None:
+            faces = self._detect_yunet(img, score_thresh=score_thresh)
+            if faces:
+                return faces
         if self.dnn_net is not None:
-            # Map sensitivity to DNN confidence threshold
-            conf_map = {"low": 0.3, "medium": 0.5, "high": 0.65}
-            return self._detect_dnn(img, confidence_threshold=conf_map.get(sensitivity, 0.5))
+            return self._detect_dnn(img, confidence_threshold=score_thresh)
         return self._detect_haar(img, sensitivity)
 
     def redact_faces(self, img: np.ndarray, faces: list[FaceBox], mode: str = "blur") -> np.ndarray:

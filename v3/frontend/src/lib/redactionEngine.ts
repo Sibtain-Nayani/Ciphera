@@ -45,8 +45,6 @@ const V3_ENTITY_TO_RULE: Record<string, RuleType | string> = {
     CREDIT_CARD:      'creditCard',
     US_SSN:           'ssn',
     PERSON:           'names',
-    LOCATION:         'names',
-    ORGANIZATION:     'names',
     DATE_TIME:        'date',
     DATE_OF_BIRTH:    'dob',
     URL:              'url',
@@ -63,8 +61,6 @@ const V3_ENTITY_TO_RULE: Record<string, RuleType | string> = {
     BANK_ACCOUNT:     'bankAccount',
     DRIVING_LICENCE:  'drivingLicence',
     PIN_CODE:         'pinCode',
-    // Hindi pipeline returns same entity_type strings — same map works
-    NRP:              'names',
 };
 
 // ── Normalised entity shape (common across all 3 endpoints) ───────────────────

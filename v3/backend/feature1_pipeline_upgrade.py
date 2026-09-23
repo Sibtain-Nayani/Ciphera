@@ -409,8 +409,8 @@ class RegexStage:
 # ── Presidio Stage ────────────────────────────────────────────────────────────
 class PresidioStage:
     TARGET_ENTITIES = [
-        "PERSON", "LOCATION", "ORGANIZATION",
-        "PHONE_NUMBER", "EMAIL_ADDRESS", "CREDIT_CARD", "DATE_TIME", "NRP",
+        "PERSON",
+        "PHONE_NUMBER", "EMAIL_ADDRESS", "CREDIT_CARD", "DATE_TIME",
     ]
 
     def __init__(self, nlp_model_name: str):
@@ -457,8 +457,11 @@ class PresidioStage:
             span = text[r.start:r.end]
             if is_suppressed(span):
                 continue
-            if "\n" in span and r.entity_type in ("PERSON", "LOCATION", "ORGANIZATION"):
+            if "\n" in span:
                 continue
+            if r.entity_type == "DATE_TIME":
+                if any(w in span.lower() for w in ["सिविल", "लाइंस", "फ्लैट", "मकान", "road", "street", "lane", "flat", "floor", "near"]):
+                    continue
             results.append(DetectedEntity(
                 start=r.start, end=r.end, entity_type=r.entity_type,
                 text=span, score=r.score, source=DetectionSource.PRESIDIO,
@@ -470,9 +473,9 @@ class PresidioStage:
 # ── spaCy Stage ───────────────────────────────────────────────────────────────
 class SpacyNERStage:
     LABEL_MAP = {
-        "PERSON": "PERSON", "ORG": "ORGANIZATION",
-        "GPE": "LOCATION",  "LOC": "LOCATION",
-        "FAC": "LOCATION",  "DATE": "DATE_TIME", "TIME": "DATE_TIME",
+        "PERSON": "PERSON",
+        "DATE":   "DATE_TIME",
+        "TIME":   "DATE_TIME",
     }
 
     def __init__(self, nlp: spacy.Language):
@@ -487,18 +490,34 @@ class SpacyNERStage:
             mapped = self.LABEL_MAP.get(ent.label_)
             if not mapped:
                 continue
-            if is_suppressed(ent.text):
+            clean = ent.text.strip()
+            if is_suppressed(clean):
                 continue
-            if "\n" in ent.text and mapped in ("PERSON", "LOCATION", "ORGANIZATION"):
+            if "\n" in ent.text:
                 continue
-            if mapped == "DATE_TIME" and re.match(r"^\d{10}$", ent.text.strip()):
+            if mapped == "DATE_TIME" and re.match(r"^\d{10}$", clean):
                 continue
-            score = 0.72
+
+            if mapped == "PERSON":
+                # Person names must not have markdown symbols, digits, or structural punctuation
+                if any(c in clean for c in "#*_-:;/\\{}[]()~`@!$?+=|<>"):
+                    continue
+                if any(c.isdigit() for c in clean):
+                    continue
+                words = clean.split()
+                # Single-word name without context is usually a false positive (e.g. headers, nouns)
+                if len(words) == 1:
+                    ctx = _get_context(text, ent.start_char, ent.end_char, 40).lower()
+                    has_name_kw = any(t in ctx for t in ["mr", "mrs", "ms", "dr", "shri", "smt", "kumari", "name", "नाम", "applicant", "son", "daughter"])
+                    if not has_name_kw:
+                        continue
+
+            score = 0.75
             ctx = _get_context(text, ent.start_char, ent.end_char, 40).lower()
             if mapped == "PERSON" and any(
-                t in ctx for t in ["mr", "mrs", "ms", "dr", "shri", "smt", "kumari", "sh.", "smt."]
+                t in ctx for t in ["mr", "mrs", "ms", "dr", "shri", "smt", "kumari", "sh.", "smt.", "name", "नाम"]
             ):
-                score = 0.82
+                score = 0.85
             results.append(DetectedEntity(
                 start=ent.start_char, end=ent.end_char,
                 entity_type=mapped, text=ent.text,

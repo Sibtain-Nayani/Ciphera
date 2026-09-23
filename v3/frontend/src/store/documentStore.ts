@@ -103,8 +103,8 @@ export const useDocumentStore = create<DocumentState>((set) => ({
         creditCard:     { isActive: true,  action: 'replace' },
         ssn:            { isActive: true,  action: 'replace' },
         names:          { isActive: true,  action: 'replace' },
-        dob:            { isActive: true,  action: 'replace' },   // Date of Birth
-        date:           { isActive: true,  action: 'replace' },   // General dates
+        dob:            { isActive: true,  action: 'replace' },   // Date of Birth (Confidential)
+        date:           { isActive: false, action: 'replace' },   // General dates (Off by default so document timestamps/verification dates are not blacked out)
         url:            { isActive: true,  action: 'replace' },
         ip:             { isActive: true,  action: 'replace' },
         // Indian PII

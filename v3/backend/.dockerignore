@@ -8,8 +8,8 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
-.env
-models/
+models/*
+!models/face_detection_yunet_2023mar.onnx
 *.spacy
 data/
 .git/

@@ -101,6 +101,9 @@ HINDI_SUPPRESSION_WORDS: set[str] = {
     "कार्ड", "दस्तावेज", "प्रारूप", "पिन", "पिनकोड", "कोड", "मतदाता", "पहचान पत्र",
     "आवेदक का विवरण", "स्थायी निवास पता", "वित्तीय विवरण", "टिप्पणी एवं घोषणा",
     "सत्यापितकर्ता", "निवास पता", "हस्ताक्षरकर्ता", "पहचान सत्यापन", "केवाईसी",
+    "सिविल", "लाइंस", "सिविल लाइंस", "फ्लैट", "मकान", "सड़क", "मार्ग", "गली",
+    "मोहल्ला", "कॉलोनी", "नगर", "अपार्टमेंट", "सोसायटी", "रेजीडेंसी", "मंदिर",
+    "मार्केट", "यार्ड", "अन्य पता", "पता:", "हिंदी पता:",
 }
 
 SUPPRESSION_WORDS: set[str] = {
@@ -302,7 +305,6 @@ class HindiRegexStage:
             (self._LABELED_NAME,         "PERSON",         0.95),
             (self._TITLED_NAME,          "PERSON",         0.92),
             (self._SURNAME_NAME,         "PERSON",         0.88),
-            (self._CITY_HINDI,           "LOCATION",       0.88),
         ]
 
         for regex, entity_type, score in patterns:
@@ -329,22 +331,6 @@ class HindiRegexStage:
                     entity_type=entity_type,
                     text=val,
                     score=score, source=DetectionSource.REGEX,
-                    context=get_context(text, s, e),
-                ))
-
-        # Also extract structured address lines
-        for m in self._ADDRESS_LINE_HINDI.finditer(text):
-            raw_addr = m.group(1)
-            # Remove trailing parens e.g. (पिनकोड: 411001)
-            clean_addr = re.sub(r'\s*\([^\)]*\)', '', raw_addr).strip()
-            if clean_addr and clean_addr not in HINDI_SUPPRESSION_WORDS and len(clean_addr) > 5:
-                s = m.start(1)
-                e = s + len(clean_addr)
-                results.append(HindiEntity(
-                    start=s, end=e,
-                    entity_type="LOCATION",
-                    text=clean_addr,
-                    score=0.85, source=DetectionSource.REGEX,
                     context=get_context(text, s, e),
                 ))
 
@@ -416,7 +402,7 @@ def build_hindi_presidio_engine(nlp_model: str = "xx_ent_wiki_sm") -> AnalyzerEn
 
 class HindiPresidioStage:
     TARGET_ENTITIES = [
-        "PERSON","LOCATION","ORGANIZATION",
+        "PERSON",
         "AADHAAR_NUMBER","PAN_NUMBER","PHONE_NUMBER",
         "EMAIL_ADDRESS","GST_NUMBER","IFSC_CODE",
         "VOTER_ID","PIN_CODE","DATE_TIME",
@@ -441,8 +427,11 @@ class HindiPresidioStage:
             span = text[r.start:r.end]
             if is_hindi_suppressed(span):
                 continue
-            if "\n" in span and r.entity_type in ("PERSON", "LOCATION", "ORGANIZATION"):
+            if "\n" in span:
                 continue
+            if r.entity_type == "DATE_TIME":
+                if any(w in span.lower() for w in ["सिविल", "लाइंस", "फ्लैट", "मकान", "road", "street", "lane", "flat", "floor", "near"]):
+                    continue
             results.append(HindiEntity(
                 start=r.start, end=r.end,
                 entity_type=r.entity_type,
@@ -464,8 +453,6 @@ class SpacyHindiNERStage:
 
     LABEL_MAP = {
         "PERSON": "PERSON", "PER": "PERSON",
-        "ORG":    "ORGANIZATION",
-        "GPE":    "LOCATION", "LOC": "LOCATION", "GEO": "LOCATION",
     }
 
     def __init__(self, nlp: spacy.Language):
@@ -491,23 +478,25 @@ class SpacyHindiNERStage:
                 if not mapped:
                     continue
                 clean_ent = ent.text.strip()
-                if len(clean_ent) < 2 or clean_ent in HINDI_SUPPRESSION_WORDS:
+                if is_hindi_suppressed(clean_ent):
                     continue
                 if clean_ent.startswith(("#", "##", "###", "---", "**", "- ")):
                     continue
-                if "\n" in ent.text and mapped in ("PERSON", "LOCATION", "ORGANIZATION"):
+                if "\n" in ent.text:
                     continue
 
                 # Map offsets back to original document position
                 orig_start = seg_start + ent.start_char
                 orig_end   = seg_start + ent.end_char
 
-                score = 0.68
-                ctx   = get_context(text, orig_start, orig_end, 40).lower()
-                if mapped == "PERSON" and any(
-                    t in ctx for t in ["श्री","श्रीमती","कुमारी","डॉ","shri","smt","dr"]
-                ):
-                    score = 0.80
+                ctx = get_context(text, orig_start, orig_end, 40).lower()
+                has_title = any(t in ctx for t in ["श्री","श्रीमती","कुमारी","डॉ","shri","smt","dr","नाम","name","applicant"])
+                has_surname = bool(re.search(HI_SURNAMES, clean_ent))
+                # Skip words that do not have a title or known surname
+                if not (has_title or has_surname):
+                    continue
+
+                score = 0.85
 
                 results.append(HindiEntity(
                     start=orig_start, end=orig_end,

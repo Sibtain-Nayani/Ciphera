@@ -393,19 +393,32 @@ export default function WorkspacePage() {
     const handleFaceRedaction = async () => {
         const src = useCanvasStore.getState().imageSrc;
         if (!src) { useUiStore.getState().addToast("No image loaded.", "warning"); return; }
-        if (isGuest) { useUiStore.getState().addToast("Create an account to use face redaction.", "info"); return; }
         setLoaderStage('face');
         try {
             const blob = await (await fetch(src)).blob();
-            const fd   = new FormData();
+            let fd = new FormData();
             fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'medium');
-            const resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
+            let resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
             if (!resp.ok) throw new Error(`${resp.status}`);
-            const data = await resp.json();
-            if (data.face_count === 0) { useUiStore.getState().addToast("No faces detected.", "info"); return; }
+            let data = await resp.json();
+
+            // If 0 faces found at medium sensitivity, try high sensitivity
+            if (data.face_count === 0) {
+                fd = new FormData();
+                fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'high');
+                resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
+                if (resp.ok) {
+                    data = await resp.json();
+                }
+            }
+
+            if (data.face_count === 0) {
+                useUiStore.getState().addToast("No faces detected in document.", "info");
+                return;
+            }
             const faceShapes = data.faces.map((f: any, i: number) => {
-                const padX = Math.round(f.width * 0.12);
-                const padY = Math.round(f.height * 0.14);
+                const padX = Math.round(f.width * 0.10);
+                const padY = Math.round(f.height * 0.12);
                 return {
                     id: `face_${Date.now()}_${i}`,
                     type: 'blackout' as const,
@@ -734,9 +747,9 @@ export default function WorkspacePage() {
                         <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-[#2A2A2A] px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border border-[#2A2A2A]">
                             <UploadCloud className="w-3.5 h-3.5" /><span className="hidden sm:inline">Load File</span>
                         </button>
-                        {isCanvas && !isGuest && (
-                            <button onClick={handleFaceRedaction} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-purple-500/15 border border-[#2A2A2A] hover:border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer">
-                                <ScanFace className="w-3.5 h-3.5" /><span className="hidden sm:inline">Faces</span>
+                        {isCanvas && (
+                            <button onClick={handleFaceRedaction} className="flex items-center gap-1.5 text-gray-300 hover:text-white bg-[#252525] hover:bg-purple-500/15 border border-[#2A2A2A] hover:border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer" title="Auto-detect and redact faces">
+                                <ScanFace className="w-3.5 h-3.5 text-purple-400" /><span className="hidden sm:inline">Faces</span>
                             </button>
                         )}
                         <button onClick={() => setSplitView(v => !v)}

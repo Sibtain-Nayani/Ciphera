@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl
 RUN pip install --no-cache-dir https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.7.0/xx_ent_wiki_sm-3.7.0-py3-none-any.whl
 
+# Ensure YuNet face detection model is downloaded (232 KB)
+RUN python -c "import urllib.request, os; os.makedirs('models', exist_ok=True); p='models/face_detection_yunet_2023mar.onnx'; os.path.exists(p) or urllib.request.urlretrieve('https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx', p)"
+
 # Copy source
 COPY . .
 
