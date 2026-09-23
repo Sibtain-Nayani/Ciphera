@@ -20,6 +20,11 @@ async def upload_document(
     # Read file
     file_bytes = await file.read()
     
+    # Save file to local storage
+    storage_key = f"data/uploads/{uuid.uuid4()}_{file.filename}"
+    with open(storage_key, "wb") as f:
+        f.write(file_bytes)
+    
     # Process through Phase 2 Canonical Engine
     canonical_doc = DocumentParser.parse(file_bytes, file.filename)
     
@@ -39,6 +44,7 @@ async def upload_document(
         uploaded_by=current_user.id,
         filename=file.filename,
         file_type=file.content_type,
+        storage_key=storage_key,
         status=JobStatus.COMPLETED,
         safety_status=SafetyStatus.UNVERIFIED,
         canonical_representation=canonical_doc.model_dump(),
@@ -78,3 +84,41 @@ def get_detected_entities(
         raise HTTPException(status_code=404, detail="Document not found")
         
     return {"entities": doc.detected_entities or []}
+from fastapi.responses import StreamingResponse
+from app.schemas.document import RedactionEntity
+import io
+
+@router.post("/{document_id}/redact")
+def redact_document(
+    document_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if not doc.storage_key:
+        raise HTTPException(status_code=400, detail="Document file not found on server")
+        
+    try:
+        with open(doc.storage_key, "rb") as f:
+            file_bytes = f.read()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Could not read original file")
+        
+    # Reconstruct RedactionEntity objects from the DB JSON
+    entities = []
+    if doc.detected_entities:
+        for ent_data in doc.detected_entities:
+            entities.append(RedactionEntity(**ent_data))
+            
+    from app.services.redaction_engine import SecureRedactionEngine
+    redacted_bytes = SecureRedactionEngine.redact_document(file_bytes, doc.filename, entities)
+    
+    # Return as downloadable file
+    return StreamingResponse(
+        io.BytesIO(redacted_bytes),
+        media_type=doc.file_type or "application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename=redacted_{doc.filename}"}
+    )
