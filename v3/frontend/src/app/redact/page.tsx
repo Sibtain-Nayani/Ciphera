@@ -1022,14 +1022,49 @@ TRANSACTIONS:
 Closing Balance: ₹1,23,456.78
 For queries: vikram.singh@company.in | +91 8800991234`,
                         },
+                        {
+                            label: "Bilingual KYC Record (.md)",
+                            desc:  "Bilingual (English + हिंदी) PII, Aadhaar, DOB, PAN, PIN",
+                            color: "#8B5CF6",
+                            ext:   "md",
+                            text:  `# Identity Verification & KYC Record / पहचान सत्यापन एवं केवाईसी अभिलेख
+
+**Document Ref**: CIPHERA-KYC-2026-8841
+**Verification Date**: 23.09.2026
+
+## 1. Applicant Details / आवेदक का विवरण
+- Full Name: Rahul Sharma (राहुल शर्मा)
+- Date of Birth / जन्म तिथि: 03.12.2005
+- Alternate DOB Format: 15/08/1992
+- जन्मतिथि: 22-03-1985
+- Mobile / दूरभाष: +91 9876543210 / 9823456789
+- Email: rahul.sharma@example.com
+
+## 2. Identifiers / पहचान पत्र
+- PAN Number: ABCDE1234F / BKRPK9876G
+- Aadhaar Number: 2345 6789 0123 / आधार: 9876 5432 1098
+- Voter ID: ABC1234567
+- Driving Licence: MH1420110062821
+
+## 3. Financial / वित्तीय विवरण
+- Bank Account: 30894512901 (State Bank of India)
+- IFSC Code: SBIN0001234
+- UPI ID: rahul.verma@okhdfcbank
+- GSTIN: 27AAAAA0000A1Z5
+
+## 4. Residential Address / स्थायी निवास पता
+- Flat 402, Lotus Residency, Sangli 416416, Maharashtra
+- PIN Code: 416416
+- पता: फ्लैट १२, सिविल लाइंस, पुणे ४११००१ (पिनकोड: 411001)`,
+                        },
                     ].map((sample) => (
                         <button
                             key={sample.label}
                             onClick={() => {
                                 setRawText(sample.text);
                                 useDocumentStore.getState().setFileMetadata(
-                                    `${sample.label.replace(/\s+/g, '_')}_Sample.txt`,
-                                    'txt',
+                                    `${sample.label.replace(/\s+/g, '_')}.${(sample as any).ext || 'txt'}`,
+                                    ((sample as any).ext as any) || 'txt',
                                 );
                             }}
                             className="w-full flex items-center gap-3 px-4 py-3 bg-[#181818] border border-[#2A2A2A] hover:border-[#FFA500]/40 hover:bg-[#1E1E1E] transition-all text-left group cursor-pointer rounded-lg"
