@@ -114,7 +114,13 @@ def redact_document(
             entities.append(RedactionEntity(**ent_data))
             
     from app.services.redaction_engine import SecureRedactionEngine
+    from app.services.verification_engine import VerificationEngine
+    
     redacted_bytes = SecureRedactionEngine.redact_document(file_bytes, doc.filename, entities)
+    
+    # Phase 7: Verification Engine (Zero-Trust)
+    # Ensure no sensitive data leaked into the redacted bytes
+    VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}")
     
     # Return as downloadable file
     return StreamingResponse(
