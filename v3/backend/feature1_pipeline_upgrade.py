@@ -125,18 +125,31 @@ _MONTHS = (
     r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 )
 
+# Robust date patterns (allowing optional OCR whitespace around separators)
 _DOB_PATTERNS = [
-    # DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
-    r"\b(?:0?[1-9]|[12]\d|3[01])[\/\-\.](?:0?[1-9]|1[0-2])[\/\-\.](?:19|20)\d{2}\b",
-    # YYYY-MM-DD ISO
-    r"\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b",
+    # DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
+    r"\b(?:0?[1-9]|[12]\d|3[01])\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*(?:19|20)\d{2}\b",
+    # YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD ISO
+    r"\b(?:19|20)\d{2}\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*(?:0?[1-9]|[12]\d|3[01])\b",
     # DD Month YYYY
     rf"\b(?:0?[1-9]|[12]\d|3[01])\s+{_MONTHS}\s+(?:19|20)\d{{2}}\b",
     # Month DD, YYYY
     rf"\b{_MONTHS}\s+(?:0?[1-9]|[12]\d|3[01]),?\s+(?:19|20)\d{{2}}\b",
+    # 2-digit year: DD/MM/YY, DD-MM-YY, DD.MM.YY
+    r"\b(?:0?[1-9]|[12]\d|3[01])\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*\d{2}\b",
 ]
-_DOB_RE      = re.compile("|".join(f"(?:{p})" for p in _DOB_PATTERNS), re.IGNORECASE)
-_VERSION_RE  = re.compile(r"\d+\.\d+\.\d+")
+_DOB_RE = re.compile("|".join(f"(?:{p})" for p in _DOB_PATTERNS), re.IGNORECASE)
+
+# Labeled DOB regex — captures the exact date value following an explicit birth or date label
+_LABELED_DOB_RE = re.compile(
+    r"(?i)\b(?:date\s+of\s+birth|d\.?o\.?b\.?|birth\s*date|born|year\s+of\s+birth|y\.?o\.?b\.?|जन्म\s*(?:तिथि|दिनांक|तारीख|वर्ष)?)\s*[:\-–—]?\s*"
+    r"((?:0?[1-9]|[12]\d|3[01])\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*(?:19|20)\d{2}"
+    r"|(?:19|20)\d{2}\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*(?:0?[1-9]|[12]\d|3[01])"
+    r"|(?:0?[1-9]|[12]\d|3[01])\s*[\/\-\.]\s*(?:0?[1-9]|1[0-2])\s*[\/\-\.]\s*\d{2}"
+    r"|(?:19|20)\d{2}"
+    r"|(?:0?[1-9]|[12]\d|3[01])\s+[A-Za-z\u0900-\u097F]+\s+(?:19|20)\d{2})",
+    re.UNICODE
+)
 
 # UPI: handle@bank — bank is 2-64 alpha chars, handle must NOT look like email
 # (email has dots in domain like .com / .in — UPI bank handles don't)
@@ -190,13 +203,23 @@ class RegexStage:
         # Credit card
         (r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b",
                                                           "CREDIT_CARD",      0.88),
-        # PIN Code — 6-digit Indian postal, context-gated (see analyze())
-        (r"\b([1-9]\d{5})\b",                             "PIN_CODE",         0.68),
+        # PIN Code — 6-digit Indian postal starting 1-8
+        (r"\b([1-8]\d{5})\b",                             "PIN_CODE",         0.70),
+        # City PIN code pair: e.g. "SANGLI 416416"
+        (r"\b([A-Z][a-zA-Z]{2,20})\s+([1-8]\d{5})\b",   "PIN_CODE",         0.88),
     ]
 
     # Context keywords for context-gated patterns
     _BANK_CTX_KW   = {"account","a/c","acc","bank","savings","current","neft","rtgs","imps"}
-    _PIN_CTX_KW    = {"pin","pincode","postal","zip","post","पिन","पिन कोड"}
+    _PIN_CTX_KW    = {
+        "pin", "pincode", "postal", "zip", "post", "पिन", "पिन कोड",
+        "address", "addr", "dist", "district", "city", "state", "taluka", "tal",
+        "village", "road", "street", "marg", "lane", "colony", "nagar", "enclave",
+        "sangli", "pune", "mumbai", "delhi", "bangalore", "bengaluru", "hyderabad",
+        "chennai", "kolkata", "ahmedabad", "surat", "jaipur", "lucknow", "kanpur",
+        "nagpur", "indore", "thane", "bhopal", "patna", "vadodara", "ghaziabad",
+        "ludhiana", "agra", "nashik", "aurangabad", "maharashtra", "gujarat",
+    }
     # Context window in chars
     _CTX_WINDOW    = 80
 
@@ -254,40 +277,67 @@ class RegexStage:
                     if not any(kw in ctx for kw in self._BANK_CTX_KW):
                         continue
 
-                # PIN Code: require postal context within 80 chars
+                # PIN Code: require postal/address context or city name pairing
+                start_pos = m.start()
+                end_pos   = m.end()
                 if entity_type == "PIN_CODE":
-                    ctx = _get_context(text, m.start(), m.end(), self._CTX_WINDOW).lower()
-                    if not any(kw in ctx for kw in self._PIN_CTX_KW):
-                        continue
-                    # Reject if it overlaps a phone number pattern
-                    if re.match(r'^[6-9]\d{5}$', raw):
-                        continue
+                    if m.lastindex and m.lastindex >= 2:
+                        # Matched city + PIN pattern (e.g., "SANGLI 416416")
+                        start_pos = m.start(2)
+                        end_pos   = m.end(2)
+                        raw       = m.group(2)
+                    else:
+                        ctx = _get_context(text, m.start(), m.end(), self._CTX_WINDOW).lower()
+                        if not any(kw in ctx for kw in self._PIN_CTX_KW):
+                            continue
 
                 score = self._validate(raw, entity_type, base_score)
                 if score == 0:
                     continue
 
                 results.append(DetectedEntity(
-                    start=m.start(), end=m.end(),
+                    start=start_pos, end=end_pos,
                     entity_type=entity_type, text=raw,
                     score=score, source=DetectionSource.REGEX,
-                    context=_get_context(text, m.start(), m.end()),
+                    context=_get_context(text, start_pos, end_pos),
                     type_locked=(score >= REGEX_TYPE_LOCK_THRESHOLD),
                 ))
 
-        # ── DOB ───────────────────────────────────────────────────────────────
+        # ── DOB (Explicit contextual labels: "Date of Birth: 03.12.2005", "DOB: ...") ──
+        seen_dob_spans = set()
+        for m in _LABELED_DOB_RE.finditer(text):
+            val = m.group(1).strip()
+            if val:
+                s, e = m.start(1), m.end(1)
+                seen_dob_spans.add((s, e))
+                results.append(DetectedEntity(
+                    start=s, end=e,
+                    entity_type="DATE_OF_BIRTH", text=val,
+                    score=0.96, source=DetectionSource.REGEX,
+                    context=_get_context(text, s, e),
+                    type_locked=True,
+                ))
+
+        # ── Standalone DOB / Date patterns ────────────────────────────────────
         for m in _DOB_RE.finditer(text):
             raw = m.group().strip()
             if not raw:
                 continue
-            if _VERSION_RE.match(raw):
+            s, e = m.start(), m.end()
+            # Skip if already captured by labeled regex
+            if any(s >= es and e <= ee for es, ee in seen_dob_spans):
                 continue
+
+            ctx = _get_context(text, s, e, 60).lower()
+            # If context indicates birth, give higher score
+            has_birth_ctx = any(kw in ctx for kw in ["dob", "birth", "born", "जन्म", "d.o.b", "आयु", "age"])
+            score = 0.90 if has_birth_ctx else 0.78
             results.append(DetectedEntity(
-                start=m.start(), end=m.end(),
+                start=s, end=e,
                 entity_type="DATE_OF_BIRTH", text=raw,
-                score=0.82, source=DetectionSource.REGEX,
-                context=_get_context(text, m.start(), m.end()),
-                type_locked=True,
+                score=score, source=DetectionSource.REGEX,
+                context=_get_context(text, s, e),
+                type_locked=has_birth_ctx,
             ))
 
         return results
@@ -467,7 +517,10 @@ def apply_context_scoring(
 
 
 # ── Voting + merge ────────────────────────────────────────────────────────────
-def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
+def merge_and_vote(
+    candidates: list[DetectedEntity],
+    threshold: float = CONFIDENCE_THRESHOLD,
+) -> list[DetectedEntity]:
     if not candidates:
         return []
 
@@ -486,6 +539,9 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
             end = entity.end
     groups.append(cur)
 
+    # Scaling ratio for type floors based on user threshold vs default
+    ratio = threshold / CONFIDENCE_THRESHOLD if CONFIDENCE_THRESHOLD > 0 else 1.0
+
     merged = []
     for group in groups:
         locked = [e for e in group if e.type_locked]
@@ -503,10 +559,14 @@ def merge_and_vote(candidates: list[DetectedEntity]) -> list[DetectedEntity]:
             e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group
         ) / total_w
 
-        if wscore < CONFIDENCE_THRESHOLD:
+        # Check against requested threshold
+        if wscore < threshold:
             continue
-        floor = TYPE_FLOOR.get(elected_type, CONFIDENCE_THRESHOLD)
-        if wscore < floor:
+
+        # Scale floor dynamically with sensitivity
+        base_floor = TYPE_FLOOR.get(elected_type, CONFIDENCE_THRESHOLD)
+        effective_floor = min(base_floor * ratio, base_floor) if ratio < 1.0 else max(base_floor, threshold)
+        if wscore < min(threshold, effective_floor):
             continue
 
         # Pick best span from candidates matching the elected type
@@ -567,7 +627,7 @@ class DetectionPipeline:
         if "spacy"    in stages: all_candidates.extend(self.spacy_stage.analyze(text))
 
         all_candidates = apply_context_scoring(all_candidates, text)
-        merged = merge_and_vote(all_candidates)
+        merged = merge_and_vote(all_candidates, threshold=threshold)
         result = sorted(
             [e for e in merged if e.score >= threshold],
             key=lambda e: e.start,

@@ -98,13 +98,17 @@ function getImageDimensions(url: string): Promise<{ width: number; height: numbe
  * - Disciplined padding: avoids bleeding into lines above and below.
  */
 export async function mapOcrToShapes(
-    ocrResult:   OcrResult,
-    activeRules: Record<RuleType, any>,
-    customRules: import('@/store/documentStore').CustomRule[] = [],
+    ocrResult:    OcrResult,
+    activeRules:  Record<RuleType, any>,
+    customRules:  import('@/store/documentStore').CustomRule[] = [],
+    threshold:    number = 0.50,
+    languageMode: 'english' | 'hindi' | 'mixed' = 'english',
 ): Promise<RedactionShape[]> {
     if (!ocrResult.rawText.trim()) return [];
 
-    const result = await redactionEngine.tokenize(ocrResult.rawText, activeRules, customRules);
+    const result = await redactionEngine.tokenize(
+        ocrResult.rawText, activeRules, customRules, threshold, false, false, undefined, languageMode
+    );
     const tokens = result.tokens;
 
     const shapes: RedactionShape[] = [];

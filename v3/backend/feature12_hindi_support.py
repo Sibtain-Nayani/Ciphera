@@ -162,10 +162,12 @@ class HindiRegexStage:
         r'([A-Z]{5}[0-9]{4}[A-Z])', re.UNICODE | re.IGNORECASE
     )
     _DOB_HINDI = re.compile(
-        r'(?:जन्म\s*(?:तिथि|दिनांक)\s*[:\-]?\s*)'
+        r'(?:(?:जन्म\s*(?:तिथि|दिनांक|तारीख|वर्ष)?|जन्मतिथि|dob|date\s+of\s+birth)\s*[:\-–—]?\s*)'
         r'((?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.](?:19|20)\d{2})'
-        r'|(?:\d{1,2}\s+' + _HI_MONTHS + r'\s+(?:19|20)\d{2}))',
-        re.UNICODE
+        r'|(?:\d{1,2}\s+' + _HI_MONTHS + r'\s+(?:19|20)\d{2})'
+        r'|(?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2})'
+        r'|(?:19|20)\d{2})',
+        re.UNICODE | re.IGNORECASE
     )
     _PHONE_HINDI = re.compile(
         r'(?:(?:मोबाइल|फोन|दूरभाष|संपर्क)\s*(?:नं\.?|नंबर)?\s*[:\-]?\s*)'
@@ -195,7 +197,7 @@ class HindiRegexStage:
         patterns = [
             (self._AADHAAR_WITH_LABEL, "AADHAAR_NUMBER", 0.92),
             (self._PAN_WITH_LABEL,     "PAN_NUMBER",     0.95),
-            (self._DOB_HINDI,          "DATE_OF_BIRTH",  0.90),
+            (self._DOB_HINDI,          "DATE_OF_BIRTH",  0.92),
             (self._PHONE_HINDI,        "PHONE_NUMBER",   0.88),
             (self._PINCODE_HINDI,      "PIN_CODE",       0.85),
             (self._GST_HINDI,          "GST_NUMBER",     0.93),
@@ -210,12 +212,20 @@ class HindiRegexStage:
                     digits = re.sub(r'\D', '', m.group(1))
                     if len(digits) != 12 or digits[0] in '01':
                         continue
+                # If a value group is captured, extract the value span specifically
+                if m.lastindex and m.lastindex >= 1:
+                    s, e = m.start(1), m.end(1)
+                    val  = text[s:e]
+                else:
+                    s, e = m.start(), m.end()
+                    val  = text[s:e]
+
                 results.append(HindiEntity(
-                    start=m.start(), end=m.end(),
+                    start=s, end=e,
                     entity_type=entity_type,
-                    text=text[m.start():m.end()],
+                    text=val,
                     score=score, source=DetectionSource.REGEX,
-                    context=get_context(text, m.start(), m.end()),
+                    context=get_context(text, s, e),
                 ))
 
         return results
@@ -223,19 +233,33 @@ class HindiRegexStage:
 
 # ── Stage 2: Hindi Presidio ───────────────────────────────────────────────────
 
-def build_hindi_presidio_engine(nlp_model: str = "hi_core_news_sm") -> AnalyzerEngine:
+def build_hindi_presidio_engine(nlp_model: str = "xx_ent_wiki_sm") -> AnalyzerEngine:
     try:
         provider = NlpEngineProvider(nlp_configuration={
             "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "hi", "model_name": nlp_model}],
+            "models": [
+                {"lang_code": "hi", "model_name": nlp_model},
+                {"lang_code": "en", "model_name": "en_core_web_lg"},
+            ],
         })
         engine = AnalyzerEngine(
             nlp_engine=provider.create_engine(),
             supported_languages=["hi", "en"],
         )
     except Exception as e:
-        logger.warning("Hindi Presidio engine failed: %s — using English fallback", e)
-        engine = AnalyzerEngine(supported_languages=["en"])
+        logger.warning("Hindi Presidio engine failed: %s — trying English fallback", e)
+        try:
+            provider = NlpEngineProvider(nlp_configuration={
+                "nlp_engine_name": "spacy",
+                "models": [{"lang_code": "en", "model_name": "en_core_web_lg"}],
+            })
+            engine = AnalyzerEngine(
+                nlp_engine=provider.create_engine(),
+                supported_languages=["en"],
+            )
+        except Exception as e2:
+            logger.warning("English Presidio fallback failed: %s — using default", e2)
+            engine = AnalyzerEngine(supported_languages=["en"])
 
     hindi_recognisers = [
         PatternRecognizer("AADHAAR_NUMBER", supported_language="hi", patterns=[
@@ -395,7 +419,10 @@ SOURCE_WEIGHTS_HI = {
 CONFIDENCE_THRESHOLD_HI = 0.48
 
 
-def merge_hindi_entities(candidates: list[HindiEntity]) -> list[HindiEntity]:
+def merge_hindi_entities(
+    candidates: list[HindiEntity],
+    threshold: float = CONFIDENCE_THRESHOLD_HI,
+) -> list[HindiEntity]:
     if not candidates:
         return []
 
@@ -431,7 +458,7 @@ def merge_hindi_entities(candidates: list[HindiEntity]) -> list[HindiEntity]:
             e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0) for e in group
         ) / total_w
 
-        if wscore < CONFIDENCE_THRESHOLD_HI:
+        if wscore < threshold:
             continue
 
         best    = max(group, key=lambda e: e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0))
@@ -567,7 +594,7 @@ class HindiPipeline:
         self._load()
 
     def _load(self):
-        for model_name in ["hi_core_news_md", "hi_core_news_sm"]:
+        for model_name in ["xx_ent_wiki_sm", "hi_core_news_md", "hi_core_news_sm"]:
             try:
                 nlp      = spacy.load(model_name)
                 disabled = [p for p in ["parser","lemmatizer","morphologizer"]
@@ -576,18 +603,18 @@ class HindiPipeline:
                     nlp.disable_pipes(*disabled)
                 self._nlp_hi = nlp
                 self._spacy  = SpacyHindiNERStage(nlp)
-                logger.info("Hindi spaCy model loaded: %s", model_name)
+                logger.info("Hindi/multilingual spaCy model loaded: %s", model_name)
                 break
             except OSError:
                 logger.warning("spaCy model %s not found", model_name)
 
         if self._nlp_hi is None:
             logger.warning(
-                "No Hindi spaCy model found. "
-                "Install: python -m spacy download hi_core_news_sm"
+                "No multilingual/Hindi spaCy model found. "
+                "Install: python -m spacy download xx_ent_wiki_sm"
             )
 
-        hindi_model = "hi_core_news_sm" if self._nlp_hi else "en_core_web_sm"
+        hindi_model = "xx_ent_wiki_sm" if self._nlp_hi else "en_core_web_lg"
         try:
             engine         = build_hindi_presidio_engine(hindi_model)
             self._presidio = HindiPresidioStage(engine)
@@ -633,7 +660,7 @@ class HindiPipeline:
             all_candidates.extend(self._spacy.analyse(text))
 
         all_candidates = apply_hindi_context_scoring(all_candidates, text)
-        merged         = merge_hindi_entities(all_candidates)
+        merged         = merge_hindi_entities(all_candidates, threshold=threshold)
 
         result = sorted(
             [e for e in merged if e.score >= threshold],

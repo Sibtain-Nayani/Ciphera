@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
     LayoutDashboard, ShieldCheck, Settings,
-    Layers, ChevronLeft, ChevronRight, LogOut, UserPlus,
+    Layers, ChevronLeft, ChevronRight, LogOut, UserPlus, Lock,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -57,20 +57,31 @@ export function AppSidebar() {
             <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "4px", overflow: "hidden" }}>
                 {NAV.map(({ href, icon: Icon, label, sublabel }) => {
                     const active = pathname === href || pathname.startsWith(href + "/");
+                    const isLocked = isGuest && href === "/batch";
                     return (
-                        <Link key={href} href={href} style={{
+                        <Link key={href} href={isLocked ? "/register?prompt=batch_restricted" : href} style={{
                             display: "flex", alignItems: "center", gap: "12px",
                             padding: "12px 14px",
                             borderLeft: active ? "3px solid #F5C400" : "3px solid transparent",
                             background: active ? "rgba(245,196,0,0.06)" : "transparent",
+                            opacity: isLocked ? 0.65 : 1,
                             textDecoration: "none", transition: "all 0.15s",
+                            position: "relative",
                         }}
                             onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "rgba(239,239,239,0.03)"; e.currentTarget.style.borderLeft = "3px solid rgba(245,196,0,0.3)"; } }}
                             onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderLeft = "3px solid transparent"; } }}>
                             <Icon style={{ width: "18px", height: "18px", color: active ? "#F5C400" : "rgba(239,239,239,0.4)", flexShrink: 0, transition: "color 0.15s" }} />
                             {!collapsed && (
-                                <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-                                    <div style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 600, fontSize: "14px", letterSpacing: "0.02em", color: active ? "#EFEFEF" : "rgba(239,239,239,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: "color 0.15s" }}>{label}</div>
+                                <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                        <div style={{ fontFamily: '"Barlow", sans-serif', fontWeight: 600, fontSize: "14px", letterSpacing: "0.02em", color: active ? "#EFEFEF" : "rgba(239,239,239,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: "color 0.15s" }}>{label}</div>
+                                        {isLocked && (
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontFamily: '"IBM Plex Mono", monospace', fontSize: "8px", color: "#F5C400", background: "rgba(245,196,0,0.12)", border: "1px solid rgba(245,196,0,0.3)", padding: "1px 5px", borderRadius: "2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                                <Lock style={{ width: 8, height: 8 }} />
+                                                PRO
+                                            </span>
+                                        )}
+                                    </div>
                                     <div style={{ fontFamily: '"Barlow", sans-serif', fontSize: "11px", color: "rgba(239,239,239,0.5)", whiteSpace: "nowrap" }}>{sublabel}</div>
                                 </div>
                             )}

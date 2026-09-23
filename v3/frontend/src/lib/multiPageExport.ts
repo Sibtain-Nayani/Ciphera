@@ -28,6 +28,8 @@ export interface MultiPageExportOptions {
     fileName:     string;
     format:       'pdf' | 'png';
     onProgress:   (current: number, total: number, status: string) => void;
+    threshold?:   number;
+    languageMode?: 'english' | 'hindi' | 'mixed';
 }
 
 /**
@@ -65,7 +67,9 @@ export async function exportMultiplePages(opts: MultiPageExportOptions): Promise
         try {
             const ocrData = await extractOcrData(pageData.dataUri);
             useCanvasStore.getState().setOcrResult(ocrData);
-            const autoShapes = await mapOcrToShapes(ocrData, rules, customRules);
+            const autoShapes = await mapOcrToShapes(
+                ocrData, rules, customRules, opts.threshold ?? 0.50, opts.languageMode ?? 'english'
+            );
             useCanvasStore.getState().setShapes(autoShapes);
         } catch (e) {
             console.warn(`OCR failed for page ${pageNum}, exporting without text redaction:`, e);

@@ -275,7 +275,7 @@ export default function WorkspacePage() {
                 useCanvasStore.getState().setShapes(prev => removeShapesByRule(prev, ruleId));
             } else {
                 const updatedRules = { ...rules, [ruleId]: { ...rules[ruleId], isActive: true } };
-                const newShapes    = await mapOcrToShapes(ocrResult, updatedRules, customRules);
+                const newShapes    = await mapOcrToShapes(ocrResult, updatedRules, customRules, threshold, languageMode);
                 const filtered     = newShapes.filter(s => s.ruleType === ruleId);
                 useCanvasStore.getState().setShapes(prev => [
                     ...prev.filter(s => s.ruleType !== ruleId),
@@ -283,7 +283,7 @@ export default function WorkspacePage() {
                 ]);
             }
         }
-    }, [rules, fileType, ocrResult, customRules, toggleRule]);
+    }, [rules, fileType, ocrResult, customRules, toggleRule, threshold, languageMode]);
 
     const processImageForOcr = async (dataUrl: string) => {
         try {
@@ -292,7 +292,7 @@ export default function WorkspacePage() {
             useDocumentStore.getState().setRawText(ocrData.rawText);
             useCanvasStore.getState().setOcrResult(ocrData);
             setLoaderStage('mapping');
-            const autoShapes = await mapOcrToShapes(ocrData, rules, customRules);
+            const autoShapes = await mapOcrToShapes(ocrData, rules, customRules, threshold, languageMode);
             useCanvasStore.getState().setShapes(prev => [
                 ...prev.filter(s => !s.ruleType),
                 ...autoShapes,
@@ -304,6 +304,23 @@ export default function WorkspacePage() {
             setLoaderStage('idle');
         }
     };
+
+    // Live re-mapping of canvas shapes when sensitivity threshold or languageMode changes
+    useEffect(() => {
+        if ((fileType !== 'image' && fileType !== 'pdf') || !ocrResult) return;
+        const timer = setTimeout(async () => {
+            try {
+                const autoShapes = await mapOcrToShapes(ocrResult, rules, customRules, threshold, languageMode);
+                useCanvasStore.getState().setShapes(prev => [
+                    ...prev.filter(s => !s.ruleType),
+                    ...autoShapes,
+                ]);
+            } catch (err) {
+                console.error("Failed to re-map shapes on threshold/mode change:", err);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [threshold, languageMode, fileType, ocrResult, rules, customRules]);
 
     const goToPage = async (page: number) => {
         if (page < 1 || page > pdfPages.length) return;
@@ -519,7 +536,17 @@ export default function WorkspacePage() {
                     await exportSecureFile(format); return;
                 }
                 const savedPage = currentPage;
-                await exportMultiplePages({ pages: pdfPages, selectedPages: selectedPageNums, rules, customRules, fileName, format: format as 'pdf' | 'png', onProgress: (current, total, status) => setExportProgress({ current, total, status }) });
+                await exportMultiplePages({
+                    pages: pdfPages,
+                    selectedPages: selectedPageNums,
+                    rules,
+                    customRules,
+                    fileName,
+                    format: format as 'pdf' | 'png',
+                    threshold,
+                    languageMode,
+                    onProgress: (current, total, status) => setExportProgress({ current, total, status }),
+                });
                 useUiStore.getState().addToast(`Exported ${selectedPageNums.length} pages`, 'success');
                 if (savedPage !== currentPage) await goToPage(savedPage);
             } else {
