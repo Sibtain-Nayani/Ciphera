@@ -1,4 +1,4 @@
-"""
+﻿"""
 Ciphera V3.4 — main.py
 Adds: Google OAuth (feature17)
 """
@@ -29,6 +29,7 @@ from feature13_ocr_hindi        import router as ocr_hindi_router
 from feature14_audit_report     import router as report_router
 from app.api.auth                 import router as auth_router
 from app.api.org                  import router as org_router
+from app.api.documents            import router as doc_router
 from feature17_social_auth      import router as social_router     
 from feature18_webhooks         import router as webhook_router, fire_webhook
 
@@ -70,6 +71,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(social_router)       # NEW — mount before org so /auth prefix works
 app.include_router(org_router)
+app.include_router(doc_router)
 app.include_router(pdf_router)
 app.include_router(image_router)
 app.include_router(scoring_router)
