@@ -1,4 +1,4 @@
-ï»¿from pydantic import BaseModel
+ÿþfrom pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 
 class BoundingBox(BaseModel):
@@ -8,16 +8,21 @@ class BoundingBox(BaseModel):
     y1: float
 
 class CanonicalBlock(BaseModel):
-    page_num: int
     text: str
     bbox: Optional[BoundingBox] = None
     block_type: str = "text" # e.g. text, image, table
     start_index: int = 0
     end_index: int = 0
 
+class CanonicalPage(BaseModel):
+    page_num: int
+    width: float
+    height: float
+    blocks: List[CanonicalBlock]
+
 class CanonicalDocument(BaseModel):
     metadata: Dict[str, Any]
-    blocks: List[CanonicalBlock]
+    pages: List[CanonicalPage]
     full_text: str
     page_count: int
 

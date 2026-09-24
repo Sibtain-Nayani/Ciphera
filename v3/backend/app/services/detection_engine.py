@@ -30,44 +30,39 @@ class DetectionEngine:
         
         # 2. Map back to canonical blocks
         for ent in raw_entities:
-            # Find which block(s) this entity belongs to based on character indices
-            for block in doc.blocks:
-                # Check for overlap
-                overlap_start = max(ent.start, block.start_index)
-                overlap_end = min(ent.end, block.end_index)
-                
-                if overlap_start < overlap_end:
-                    # There is an overlap! This block contains (part of) the entity.
-                    # We compute the exact bounding box proportionally for PDF text.
-                    # (In Phase 3 OCR, each word is a block, so we just take the block's bbox)
+            for page in doc.pages:
+                for block in page.blocks:
+                    # Check for overlap
+                    overlap_start = max(ent.start, block.start_index)
+                    overlap_end = min(ent.end, block.end_index)
                     
-                    bbox = block.bbox
-                    if bbox and block.start_index < block.end_index:
-                        # Estimate horizontal proportional bounding box for the substring
-                        block_len = block.end_index - block.start_index
-                        char_width = (bbox.x1 - bbox.x0) / block_len
-                        
-                        rel_start = overlap_start - block.start_index
-                        rel_end = overlap_end - block.start_index
-                        
-                        exact_x0 = bbox.x0 + (rel_start * char_width)
-                        exact_x1 = bbox.x0 + (rel_end * char_width)
-                        
-                        bbox = BoundingBox(
-                            x0=exact_x0,
-                            y0=bbox.y0,
-                            x1=exact_x1,
-                            y1=bbox.y1
-                        )
+                    if overlap_start < overlap_end:
+                        bbox = block.bbox
+                        if bbox and block.start_index < block.end_index:
+                            block_len = block.end_index - block.start_index
+                            char_width = (bbox.x1 - bbox.x0) / block_len
+                            
+                            rel_start = overlap_start - block.start_index
+                            rel_end = overlap_end - block.start_index
+                            
+                            exact_x0 = bbox.x0 + (rel_start * char_width)
+                            exact_x1 = bbox.x0 + (rel_end * char_width)
+                            
+                            bbox = BoundingBox(
+                                x0=exact_x0,
+                                y0=bbox.y0,
+                                x1=exact_x1,
+                                y1=bbox.y1
+                            )
 
-                    redactions.append(RedactionEntity(
-                        id=str(uuid.uuid4()),
-                        entity_type=ent.entity_type,
-                        text=doc.full_text[overlap_start:overlap_end],
-                        score=ent.score,
-                        page_num=block.page_num,
-                        bbox=bbox,
-                        status="pending"
-                    ))
+                        redactions.append(RedactionEntity(
+                            id=str(uuid.uuid4()),
+                            entity_type=ent.entity_type,
+                            text=doc.full_text[overlap_start:overlap_end],
+                            score=ent.score,
+                            page_num=page.page_num,
+                            bbox=bbox,
+                            status="pending"
+                        ))
                     
         return redactions

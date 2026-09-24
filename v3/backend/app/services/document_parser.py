@@ -29,15 +29,16 @@ class DocumentParser:
     @staticmethod
     def _parse_pdf(file_bytes: bytes, filename: str) -> CanonicalDocument:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
-        blocks = []
+        pages = []
         full_text = ""
         current_index = 0
         
         for page_num in range(len(doc)):
             page = doc[page_num]
-            # get_text("blocks") returns list of tuples: (x0, y0, x1, y1, text, block_no, block_type)
             page_blocks = page.get_text("blocks", sort=True)
+            page_width, page_height = page.rect.width, page.rect.height
             
+            blocks = []
             page_has_text = False
             for b in page_blocks:
                 if b[6] == 0 and b[4].strip():
@@ -45,17 +46,24 @@ class DocumentParser:
                     break
                     
             if not page_has_text:
-                # Scanned page (no embedded text) - Run OCR on rendered page image
                 pix = page.get_pixmap(dpi=150)
                 img_bytes = pix.tobytes("png")
                 
                 from app.services.ocr import OCRProcessor
-                ocr_text, ocr_blocks = OCRProcessor.extract_blocks(img_bytes, page_num=page_num + 1)
+                ocr_text, ocr_blocks, w, h = OCRProcessor.extract_blocks(img_bytes, page_num=page_num + 1)
                 
-                # Offset indices and blocks
+                # Scale boxes if OCR width/height differ from PDF points width/height
+                scale_x = page_width / w if w else 1.0
+                scale_y = page_height / h if h else 1.0
+                
                 for block in ocr_blocks:
                     block.start_index += current_index
                     block.end_index += current_index
+                    if block.bbox:
+                        block.bbox.x0 *= scale_x
+                        block.bbox.x1 *= scale_x
+                        block.bbox.y0 *= scale_y
+                        block.bbox.y1 *= scale_y
                     blocks.append(block)
                 
                 if full_text and ocr_text:
@@ -79,13 +87,20 @@ class DocumentParser:
                         
                         bbox = BoundingBox(x0=b[0], y0=b[1], x1=b[2], y1=b[3])
                         blocks.append(CanonicalBlock(
-                            page_num=page_num + 1,
                             text=text,
                             bbox=bbox,
                             block_type="text",
                             start_index=start_idx,
                             end_index=end_idx
                         ))
+            
+            from app.schemas.document import CanonicalPage
+            pages.append(CanonicalPage(
+                page_num=page_num + 1,
+                width=page_width,
+                height=page_height,
+                blocks=blocks
+            ))
         
         metadata = {
             "filename": filename,
@@ -95,7 +110,7 @@ class DocumentParser:
         
         return CanonicalDocument(
             metadata=metadata,
-            blocks=blocks,
+            pages=pages,
             full_text=full_text,
             page_count=len(doc)
         )
@@ -104,14 +119,20 @@ class DocumentParser:
     def _parse_text(file_bytes: bytes, filename: str) -> CanonicalDocument:
         text = file_bytes.decode('utf-8', errors='ignore')
         block = CanonicalBlock(
-            page_num=1,
             text=text,
             start_index=0,
             end_index=len(text)
         )
+        from app.schemas.document import CanonicalPage
+        page = CanonicalPage(
+            page_num=1,
+            width=800.0,
+            height=1000.0,
+            blocks=[block]
+        )
         return CanonicalDocument(
             metadata={"filename": filename, "type": "text"},
-            blocks=[block],
+            pages=[page],
             full_text=text,
             page_count=1
         )
@@ -119,12 +140,20 @@ class DocumentParser:
     @staticmethod
     def _parse_image(file_bytes: bytes, filename: str) -> CanonicalDocument:
         from app.services.ocr import OCRProcessor
+        from app.schemas.document import CanonicalPage
         
-        full_text, blocks = OCRProcessor.extract_blocks(file_bytes)
+        full_text, blocks, w, h = OCRProcessor.extract_blocks(file_bytes)
+        
+        page = CanonicalPage(
+            page_num=1,
+            width=w,
+            height=h,
+            blocks=blocks
+        )
         
         return CanonicalDocument(
             metadata={"filename": filename, "type": "image"},
-            blocks=blocks,
+            pages=[page],
             full_text=full_text,
             page_count=1
         )
