@@ -56,5 +56,6 @@ class RedactionJob(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     error_message = Column(String, nullable=True)
+    result_storage_key = Column(String, nullable=True)
 
     document = relationship("Document")
