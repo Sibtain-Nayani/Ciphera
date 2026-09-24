@@ -2,6 +2,9 @@ import json
 import os
 import sys
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # Add parent directory to path so we can import feature files
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -58,7 +61,7 @@ def evaluate_document(doc, en_pipeline, hi_pipeline):
 def main():
     print("Initializing pipelines (this might take a few seconds)...")
     en_pipeline = DetectionPipeline(use_transformer=True)
-    hi_pipeline = HindiPipeline(use_transformer=True)
+    hi_pipeline = HindiPipeline()
     
     dataset_path = os.path.join(os.path.dirname(__file__), "dataset.json")
     dataset = load_dataset(dataset_path)
