@@ -146,3 +146,46 @@ def update_detected_entities(
     db.commit()
     
     return {"message": "Entities updated successfully", "entity_count": len(updated_entities)}
+from app.models.document import RedactionJob, JobStatus
+from app.tasks.redaction_tasks import process_redaction
+
+@router.post("/{document_id}/redact/async")
+def redact_document_async(
+    document_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Create job record
+    job = RedactionJob(
+        id=str(uuid.uuid4()),
+        document_id=doc.id,
+        status=JobStatus.QUEUED
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    
+    # Enqueue celery task
+    process_redaction.delay(job.id)
+    
+    return {"message": "Redaction job queued", "job_id": job.id}
+
+@router.get("/redact/jobs/{job_id}")
+def get_redaction_job_status(
+    job_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    job = db.query(RedactionJob).filter(RedactionJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "error_message": job.error_message
+    }

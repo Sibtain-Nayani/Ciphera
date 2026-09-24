@@ -1,15 +1,36 @@
-# ── Ciphera V3.4 — docker-compose.yml ────────────────────────────────────────
-# Place at: v3/docker-compose.yml
-#
-# Setup:
-#   1. Create v3/.env with your keys (copy from env_template.txt)
-#   2. docker compose up --build
-#
-# Frontend → http://localhost:3000
-# Backend  → http://localhost:8000
-# API docs → http://localhost:8000/docs
-
 services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ciphera_postgres
+    environment:
+      POSTGRES_USER: ciphera
+      POSTGRES_PASSWORD: ciphera_password
+      POSTGRES_DB: ciphera_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ciphera -d ciphera_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ciphera_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -18,11 +39,20 @@ services:
     container_name: ciphera_backend
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://ciphera:ciphera_password@postgres:5432/ciphera_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     env_file:
       - .env
     volumes:
-      - ciphera_data:/app/data       # SQLite DBs persist across restarts
+      - ciphera_data:/app/data       # for uploads and legacy data
       - spacy_models:/root/.cache    # spaCy models cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v3/health')\" || exit 1"]
@@ -31,13 +61,35 @@ services:
       retries: 5
       start_period: 90s
 
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ciphera_celery_worker
+    command: ["celery", "-A", "app.core.celery_app.celery", "worker", "--loglevel=info"]
+    environment:
+      - DATABASE_URL=postgresql://ciphera:ciphera_password@postgres:5432/ciphera_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ciphera_data:/app/data       # needs access to the same uploads folder
+      - spacy_models:/root/.cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Bakes the API URL into the Next.js build at image build time.
-        # For local dev this is localhost. For production, set in .env.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: ciphera_frontend
     ports:
@@ -50,5 +102,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  ciphera_data:     # persistent SQLite (users, sessions, audit logs)
-  spacy_models:     # cached spaCy models
+  postgres_data:
+  redis_data:
+  ciphera_data:
+  spacy_models:
