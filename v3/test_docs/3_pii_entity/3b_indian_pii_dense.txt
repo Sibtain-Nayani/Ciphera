@@ -1,0 +1,43 @@
+VENDOR ONBOARDING FORM — PROCUREMENT PORTAL
+
+SECTION A: IDENTITY VERIFICATION
+
+Vendor Name: Lakshmi Enterprises Pvt. Ltd.
+Proprietor: Veer Wagle
+Contact Person: Ansh Varty
+Mobile: +91 98090 49689
+Email: saipalla@example.org
+
+Aadhaar (spaced):   4371 1575 2072
+Aadhaar (compact):  441434102951
+PAN Number:         LAGPN4321L
+GSTIN:              29VRMJE3220D1Z5
+Voter ID:           CJW0403286
+Driving Licence:    RJ-23-1004-9343745
+Passport No:        Z7033531
+
+SECTION B: BANKING DETAILS
+
+Bank Name:        State Bank of India
+Account Number:   04170206106367
+IFSC Code:        SBIN0054059
+UPI ID:           vasana95@axl
+Account Type:     Current
+
+SECTION C: GST FILING HISTORY
+
+Q1 2026 GSTIN: 27KSDTO3619G1Z5 — Filed on 15/04/2026
+Q2 2026 GSTIN: 33XDIPM4568C1Z5 — Pending
+
+SECTION D: SECONDARY CONTACT
+
+Alternate Contact: Kavya Varkey
+Alternate Aadhaar: 9941 5725 4222
+Alternate PAN:     CPJTP8017I
+Alternate Mobile:  +91 78515 81361
+Alternate Email:   wmangat@example.org
+
+CERTIFICATION
+I certify that all above information is accurate.
+Signature: _______________
+Date: 20/06/2026

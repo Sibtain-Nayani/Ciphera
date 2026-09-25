@@ -1,0 +1,92 @@
+EMPLOYEE CONTACT DIRECTORY — INTERNAL USE ONLY
+============================================================
+
+Name:   Vritti Morar
+Email:  qadimshukla@example.net
+Phone:  +91 94532 79194
+DOB:    04/07/1988
+Joined: 15/07/2024
+
+Name:   Gayathri Sethi
+Email:  gaurangi36@example.net
+Phone:  +91 75846 17434
+DOB:    06/06/1977
+Joined: 04/09/2017
+
+Name:   Kalpit Lal
+Email:  ddutta@example.org
+Phone:  +91 97190 06083
+DOB:    24/04/1986
+Joined: 16/11/2022
+
+Name:   Chaman Ganesh
+Email:  chavvibiswas@example.net
+Phone:  +91 77857 73956
+DOB:    18/01/1977
+Joined: 08/08/2023
+
+Name:   Jagvi Dutt
+Email:  chavvi83@example.com
+Phone:  +91 97189 30302
+DOB:    08/12/2000
+Joined: 17/08/2019
+
+Name:   Neha Oak
+Email:  gkadakia@example.com
+Phone:  +91 91245 44420
+DOB:    18/08/1981
+Joined: 07/08/2018
+
+Name:   Anmol Rout
+Email:  omaharaj@example.net
+Phone:  +91 71421 05771
+DOB:    22/09/1986
+Joined: 17/01/2020
+
+Name:   Hemang Dixit
+Email:  karanhardik@example.org
+Phone:  +91 98500 39591
+DOB:    04/09/1980
+Joined: 03/11/2019
+
+Name:   Bimala Srivastava
+Email:  jmorar@example.com
+Phone:  +91 76255 08837
+DOB:    04/08/1994
+Joined: 27/05/2024
+
+Name:   Ronith Goyal
+Email:  balendrasinha@example.org
+Phone:  +91 77536 12272
+DOB:    09/09/1987
+Joined: 02/10/2017
+
+Name:   Ayushman Vaidya
+Email:  shankerekaraj@example.org
+Phone:  +91 91487 71814
+DOB:    06/01/1982
+Joined: 21/11/2022
+
+Name:   Nirja Aurora
+Email:  bhavna00@example.org
+Phone:  +91 65708 81346
+DOB:    18/01/1989
+Joined: 15/12/2017
+
+Name:   Vedhika Warrior
+Email:  sagardipta@example.com
+Phone:  +91 67814 72344
+DOB:    10/06/1975
+Joined: 11/09/2024
+
+Name:   Divya Mander
+Email:  yashicabail@example.com
+Phone:  +91 83692 52103
+DOB:    05/05/1981
+Joined: 17/11/2021
+
+Name:   Vaishnavi Deshmukh
+Email:  gnatarajan@example.net
+Phone:  +91 95834 66348
+DOB:    21/04/2000
+Joined: 06/07/2020

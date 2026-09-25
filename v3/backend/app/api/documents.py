@@ -21,6 +21,8 @@ async def upload_document(
     file_bytes = await file.read()
     
     # Save file to local storage
+    import os
+    os.makedirs("data/uploads", exist_ok=True)
     storage_key = f"data/uploads/{uuid.uuid4()}_{file.filename}"
     with open(storage_key, "wb") as f:
         f.write(file_bytes)
@@ -187,14 +189,14 @@ def get_redaction_job_status(
     return {
         "job_id": job.id,
         "status": job.status,
-        "error_message": job.error_message,
-        "result_storage_key": job.result_storage_key
+        "error_message": job.error_message
     }
+
 from fastapi.responses import FileResponse
 import os
 
 @router.get("/redact/jobs/{job_id}/download")
-def download_redacted_result(
+def download_redacted_job(
     job_id: str,
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -204,12 +206,12 @@ def download_redacted_result(
         raise HTTPException(status_code=404, detail="Job not found")
         
     if job.status != JobStatus.COMPLETED:
-        raise HTTPException(status_code=400, detail="Job is not completed")
+        raise HTTPException(status_code=400, detail="Job not completed")
         
-    if not job.result_storage_key or not os.path.exists(job.result_storage_key):
-        raise HTTPException(status_code=404, detail="Result file not found")
+    if not job.error_message or not os.path.exists(job.error_message):
+        raise HTTPException(status_code=404, detail="File not found")
         
     return FileResponse(
-        path=job.result_storage_key,
-        filename=f"redacted_{job.document.filename}"
+        path=job.error_message,
+        filename=f"redacted_{job.document.filename}" if job.document else "redacted.pdf"
     )

@@ -122,6 +122,7 @@ export default function WorkspacePage() {
 
     const [threshold,       setThreshold]      = useState(0.50);
     const [tokens,          setTokens]         = useState<Token[]>([]);
+    const [backendEntities, setBackendEntities] = useState<any[]>([]);
     const [isDragging,      setIsDragging]      = useState(false);
     const [isDrawerOpen,    setIsDrawerOpen]    = useState(false);
     const [loaderStage,     setLoaderStage]     = useState<LoaderStage>('idle');
@@ -193,33 +194,38 @@ export default function WorkspacePage() {
 
     useEffect(() => { sessionMapper.clear(); setHasReviewed(false); setApprovedIds(null); }, [rawText, fileType]);
 
-    // Debounced tokenization — re-runs when threshold changes
+    // Filter backend entities locally by threshold to update UI immediately
     useEffect(() => {
-        const t = setTimeout(async () => {
-            const result = await redactionEngine.tokenize(
-                rawText, rules, customRules, threshold, false, mlScoringRef.current, fileName,
-                (languageMode === 'hindi' || languageMode === 'mixed')
-                ? languageMode
-                : 'english',
-            );
-            if (result.failed) { setRedactionFailed(true); setTokens([]); }
-            else {
-                setRedactionFailed(false);
-                setTokens(result.tokens);
-                if (result.language && result.language !== languageMode && (languageMode === 'english' || !languageMode)) {
-                    setLanguageMode(result.language);
-                    if (result.language === 'mixed') {
-                        setLanguageBanner('LANGUAGE DETECTED: BILINGUAL (HINDI + ENGLISH) · Using bilingual pipeline');
-                        setTimeout(() => setLanguageBanner(null), 8000);
-                    } else if (result.language === 'hindi') {
-                        setLanguageBanner('LANGUAGE DETECTED: HINDI · Using Hindi pipeline');
-                        setTimeout(() => setLanguageBanner(null), 8000);
-                    }
-                }
+        if (!backendEntities.length) {
+            if (rawText) setTokens([{ id: 'text_all', type: 'text', value: rawText }]);
+            else setTokens([]);
+            return;
+        }
+        
+        const filteredEntities = backendEntities.filter(e => e.score >= threshold);
+        
+        import('@/lib/v3ApiClient').then(({ V3ApiClient }) => {
+            const newTokens = V3ApiClient.convertEntitiesToTokens(rawText, filteredEntities);
+            setTokens(newTokens);
+            
+            // Also update Canvas Shapes
+            if (fileType === 'pdf' || fileType === 'image') {
+                const scale = fileType === 'pdf' ? 3.0 : 1.0;
+                const shapes = filteredEntities.filter(e => e.bbox && e.page_num === currentPage).map((e) => {
+                    return {
+                        id: e.id,
+                        ruleType: e.entity_type.toLowerCase() as RuleType,
+                        type: 'blackout' as const,
+                        x: e.bbox!.x0 * scale,
+                        y: e.bbox!.y0 * scale,
+                        width: (e.bbox!.x1 - e.bbox!.x0) * scale,
+                        height: (e.bbox!.y1 - e.bbox!.y0) * scale,
+                    };
+                });
+                useCanvasStore.getState().setShapes(shapes);
             }
-        }, 500);
-        return () => clearTimeout(t);
-    }, [rawText, rules, customRules, threshold, fileName, languageMode]);
+        });
+    }, [backendEntities, threshold, rawText, currentPage, fileType]);
 
     const activeRulesCount = Object.values(rules).filter(r => r.isActive).length;
     const totalMatches     = tokens.filter(t => t.type !== 'text').length;
@@ -298,56 +304,55 @@ export default function WorkspacePage() {
         }
     }, [rules, fileType, ocrResult, customRules, toggleRule, threshold, languageMode]);
 
-    const processImageForOcr = async (dataUrl: string) => {
-        try {
-            setLoaderStage('ocr');
-            const ocrData = await extractOcrData(dataUrl);
-            useDocumentStore.getState().setRawText(ocrData.rawText);
-            useCanvasStore.getState().setOcrResult(ocrData);
-            setLoaderStage('mapping');
-            const autoShapes = await mapOcrToShapes(ocrData, rules, customRules, threshold, languageMode);
-            useCanvasStore.getState().setShapes(prev => [
-                ...prev.filter(s => !s.ruleType),
-                ...autoShapes,
-            ]);
-        } catch (e) {
-            console.error("OCR failed:", e);
-            useUiStore.getState().addToast("OCR pipeline failed.", "error");
-        } finally {
-            setLoaderStage('idle');
-        }
-    };
-
-    // Live re-mapping of canvas shapes when sensitivity threshold or languageMode changes
-    useEffect(() => {
-        if ((fileType !== 'image' && fileType !== 'pdf') || !ocrResult) return;
-        const timer = setTimeout(async () => {
-            try {
-                const autoShapes = await mapOcrToShapes(ocrResult, rules, customRules, threshold, languageMode);
-                useCanvasStore.getState().setShapes(prev => [
-                    ...prev.filter(s => !s.ruleType),
-                    ...autoShapes,
-                ]);
-            } catch (err) {
-                console.error("Failed to re-map shapes on threshold/mode change:", err);
-            }
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [threshold, languageMode, fileType, ocrResult, rules, customRules]);
-
     const goToPage = async (page: number) => {
         if (page < 1 || page > pdfPages.length) return;
         setCurrentPage(page);
         const pd = pdfPages[page - 1];
         useCanvasStore.getState().setImageSrc(pd.dataUri);
         useCanvasStore.getState().setShapes([]);
-        useCanvasStore.getState().setOcrResult(null);
-        await processImageForOcr(pd.dataUri);
+        // The useEffect will automatically update shapes because currentPage changed
+    };
+
+    const processBackendEntities = async (docId: string, pageNum: number, currentText: string = '') => {
+        const { V3ApiClient } = await import('@/lib/v3ApiClient');
+        try {
+            setLoaderStage('analyzing');
+            const entities = await V3ApiClient.getEntities(docId);
+            setBackendEntities(entities);
+            setLoaderStage('idle');
+        } catch (e) {
+            console.error("Failed to fetch entities", e);
+            useUiStore.getState().addToast("Failed to fetch document entities.", "error");
+            setLoaderStage('idle');
+        }
     };
 
     const handleFileUpload = async (file: File) => {
         if (!file) return;
         setClassifierBanner(null);
+        
+        // 1. Upload to backend
+        let docId = '';
+        let fullText = '';
+        try {
+            setLoaderStage('analyzing');
+            const { V3ApiClient } = await import('@/lib/v3ApiClient');
+            const uploadRes = await V3ApiClient.uploadDocument(file);
+            docId = uploadRes.document_id;
+            useDocumentStore.getState().setDocumentId(docId);
+
+            // Fetch canonical JSON to get raw text
+            const canonical = await V3ApiClient.getCanonical(docId);
+            fullText = canonical.full_text || '';
+            setRawText(fullText);
+            
+        } catch (err) {
+            console.error("Upload failed", err);
+            useUiStore.getState().addToast("Backend upload failed.", "error");
+            setLoaderStage('idle');
+            return;
+        }
+
         const ext = file.name.split('.').pop()?.toLowerCase() || '';
         if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
             useDocumentStore.getState().setFileMetadata(file.name, 'image', file);
@@ -356,7 +361,7 @@ export default function WorkspacePage() {
             reader.onload = async (e) => {
                 if (e.target?.result) {
                     useCanvasStore.getState().setImageSrc(e.target.result as string);
-                    await processImageForOcr(e.target.result as string);
+                    await processBackendEntities(docId, 1, fullText);
                 }
             };
             reader.readAsDataURL(file); return;
@@ -365,24 +370,23 @@ export default function WorkspacePage() {
             useDocumentStore.getState().setFileMetadata(file.name, 'pdf', file);
             setLoaderStage('rendering');
             try {
-                const pages = await convertPdfToImages(file, 2.0);
+                const pages = await convertPdfToImages(file, 3.0);
                 setPdfPages(pages); setCurrentPage(1);
                 if (pages.length > 0) {
                     useCanvasStore.getState().setImageSrc(pages[0].dataUri);
-                    await processImageForOcr(pages[0].dataUri);
+                    await processBackendEntities(docId, 1, fullText);
                 }
             } catch { useUiStore.getState().addToast("Failed to render PDF.", "error"); setLoaderStage('idle'); }
             return;
         }
         try {
-            const { text, type, name } = await extractTextFromFile(file);
-            setRawText(text);
-            useDocumentStore.getState().setFileMetadata(name, type, file);
-            // Run classifier after text is loaded
-            await runClassifier(text, file.name);
-            await detectLanguage(text);
-
-        } catch { useUiStore.getState().addToast("File format not supported.", "error"); }
+            useDocumentStore.getState().setFileMetadata(file.name, (ext as any) || 'txt', file);
+            await runClassifier(fullText, file.name);
+            await detectLanguage(fullText);
+            await processBackendEntities(docId, 1, fullText);
+        } catch { 
+            useUiStore.getState().addToast("File format not supported.", "error"); 
+        }
     };
 
     const onDrop = (e: React.DragEvent) => {
@@ -450,84 +454,85 @@ export default function WorkspacePage() {
 
     const exportSecureFile = async (formatOverride?: DocumentState['fileType'] | string) => {
         if (isGuest) { useUiStore.getState().addToast("Create a free account to export redacted files.", "info"); return; }
-        if (redactionFailed) { useUiStore.getState().addToast('Engine offline. Export blocked.', 'error'); return; }
-        const { fileType, fileName } = useDocumentStore.getState();
-        const fmt = formatOverride || fileType;
+        const { fileType, fileName, documentId } = useDocumentStore.getState();
+        
+        if (!documentId) {
+            useUiStore.getState().addToast("No active document. Please upload again.", "error");
+            return;
+        }
 
-        if (fileType === 'pdf') {
-            const origFile = useDocumentStore.getState().originalFile;
-            if (!origFile) { useUiStore.getState().addToast("No PDF file found.", "error"); return; }
-            setIsExporting(true);
-            try {
-                useUiStore.getState().addToast("Redacting PDF on server...", "info");
-                const fd = new FormData();
-                fd.append('file', origFile);
-                const resp = await fetch(api('/api/v3/redact-pdf'), { method: 'POST', body: fd });
-                if (!resp.ok) throw new Error('PDF redaction failed');
-                const blob = await resp.blob();
-                const baseName = fileName.includes('.') ? fileName.slice(0, fileName.lastIndexOf('.')) : fileName;
-                const finalName = `${baseName}_Secure.pdf`;
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = finalName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                useUiStore.getState().addToast('PDF redacted and downloaded.', 'success');
-            } catch (err) {
-                useUiStore.getState().addToast("Export failed. Try again.", "error");
-            } finally {
-                setIsExporting(false);
+        setIsExporting(true);
+        try {
+            const { V3ApiClient } = await import('@/lib/v3ApiClient');
+            
+            // 1. Sync human-reviewed shapes/entities to backend before redacting
+            // For Canvas (PDF/Image), we map shapes back to RedactionEntity
+            if (fileType === 'pdf' || fileType === 'image') {
+                const shapes = useCanvasStore.getState().shapes;
+                
+                // Map current page shapes to backend format
+                const scale = fileType === 'pdf' ? 3.0 : 1.0;
+                const currentPageEntities = shapes.map(s => ({
+                    id: s.id,
+                    entity_type: s.ruleType ? s.ruleType.toUpperCase() : 'CUSTOM',
+                    text: "",
+                    score: 1.0,
+                    page_num: currentPage,
+                    bbox: { x0: s.x / scale, y0: s.y / scale, x1: (s.x + s.width) / scale, y1: (s.y + s.height) / scale },
+                    status: "accepted"
+                }));
+
+                // Retain entities from other pages
+                const otherPagesEntities = backendEntities.filter(e => e.page_num !== currentPage);
+                const finalEntities = [...otherPagesEntities, ...currentPageEntities];
+
+                await V3ApiClient.updateEntities(documentId, finalEntities);
+            } else {
+                // For Text, we sync the tokens (with offsets if we tracked them, 
+                // but since we converted them from backend entities, we can assume
+                // we're just triggering redaction using what's already there)
+                // Note: full sync of text tokens requires char offset tracking. 
+                // For now, trigger redaction on the backend.
             }
-            return;
-        }
 
-        if (fileType === 'image') {
-            const getStage = async () => {
-                for (let i = 0; i < 5; i++) {
-                    const stage = useCanvasStore.getState().stageRef;
-                    if (stage) return stage;
-                    await new Promise(r => setTimeout(r, 100));
+            // 2. Trigger async redaction
+            useUiStore.getState().addToast("Redacting document on server...", "info");
+            const { job_id } = await V3ApiClient.redactAsync(documentId);
+            
+            // 3. Poll for completion
+            let isComplete = false;
+            let status = 'QUEUED';
+            setExportProgress({ current: 0, total: 100, status: 'Queued...' });
+            
+            while (!isComplete) {
+                await new Promise(r => setTimeout(r, 2000));
+                const jobStatus = await V3ApiClient.getJobStatus(job_id);
+                status = jobStatus.status;
+                if (status.toUpperCase() === 'COMPLETED') {
+                    isComplete = true;
+                    setExportProgress({ current: 100, total: 100, status: 'Completed!' });
+                } else if (status === 'FAILED') {
+                    throw new Error(jobStatus.error_message || "Redaction job failed");
+                } else {
+                    setExportProgress({ current: 50, total: 100, status: `Processing: ${status}...` });
                 }
-                return null;
-            };
-            const stage = await getStage();
-            if (!stage) { useUiStore.getState().addToast("Canvas not ready — please try again.", "warning"); return; }
-            const cs = useCanvasStore.getState();
-            cs.setSelectedShapeId(null);
-            await new Promise(r => setTimeout(r, 80));
-            try {
-                const formatMap: Record<string, string> = { pdf: 'pdf', image: 'png', png: 'png', jpg: 'jpg', jpeg: 'jpg' };
-                const finalExt  = formatMap[fmt as string] || 'png';
-                const imgDims   = cs.imageDimensions;
-                const origScale = stage.scaleX();
-                stage.scale({ x: 1, y: 1 }); stage.position({ x: 0, y: 0 });
-                const dataUrl = stage.toDataURL({ x: 0, y: 0, width: imgDims?.width ?? stage.width(), height: imgDims?.height ?? stage.height(), pixelRatio: 1.0 });
-                stage.scale({ x: origScale, y: origScale });
-                const origFile  = useDocumentStore.getState().originalFile;
-                const shapes    = useCanvasStore.getState().shapes;
-                const finalDims = imgDims || { width: stage.width(), height: stage.height() };
-                await exportVisualCanvas(dataUrl, fileName, finalExt, origFile, shapes, finalDims);
-                const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: origFile ? (origFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: shapes.length, rulesApplied: ['Visual Extractor'] };
-                addAuditLog({ ...logEntry, status: 'Completed' as const });
-                persistAuditLog({ ...logEntry, entities_discovered: shapes.length, rules_applied: ['Visual Extractor'] }, isGuest);
-                incrementMetrics(1, shapes.length);
-                useUiStore.getState().addToast(`Exported ${shapes.length} redacted entities`, 'success');
-            } catch { useUiStore.getState().addToast("Export failed. Try again.", "error"); }
-            return;
-        }
+            }
 
-        const redactedText = buildRedactedText(effectiveTokens);
-        await exportRedactedText(redactedText, fileName, fmt as any);
-        const entityCount  = effectiveTokens.filter(t => t.type !== 'text').length;
-        const rulesApplied = Array.from(new Set(effectiveTokens.filter(t => t.type !== 'text').map(t => t.type)));
-        const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: (new Blob([rawText]).size / 1024).toFixed(1) + ' KB', date: new Date().toLocaleString(), status: 'Completed' as const, entitiesDiscovered: entityCount, rulesApplied };
-        addAuditLog(logEntry);
-        persistAuditLog({ ...logEntry, entities_discovered: entityCount, rules_applied: rulesApplied }, isGuest);
-        incrementMetrics(1, entityCount);
-        useUiStore.getState().addToast(`Protected ${entityCount} entities`, 'success');
+            // 4. Download
+            await V3ApiClient.downloadRedacted(job_id, fileName);
+            useUiStore.getState().addToast('Secure file downloaded successfully.', 'success');
+            
+            // Log audit
+            const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: 0, rulesApplied: [] };
+            addAuditLog({ ...logEntry, status: 'Completed' as const });
+            
+        } catch (err: any) {
+            console.error("Export failed:", err);
+            useUiStore.getState().addToast(err.message || "Export failed. Try again.", "error");
+        } finally {
+            setIsExporting(false);
+            setExportProgress(null);
+        }
     };
 
     const handleExportClick = () => {
@@ -552,29 +557,10 @@ export default function WorkspacePage() {
         setExportProgress({ current: 0, total: 1, status: 'Starting…' });
         try {
             if (fileType === 'pdf' && pdfPages.length > 0) {
-                let selectedPageNums: number[];
-                if (selection.mode === 'all')          selectedPageNums = pdfPages.map((_, i) => i + 1);
-                else if (selection.mode === 'current') selectedPageNums = [selection.page];
-                else                                   selectedPageNums = selection.pages;
-                if (selectedPageNums.length === 1) {
-                    if (currentPage !== selectedPageNums[0]) { await goToPage(selectedPageNums[0]); await new Promise(r => setTimeout(r, 600)); }
-                    setShowExportModal(false); setIsExporting(false); setExportProgress(null);
-                    await exportSecureFile(format); return;
-                }
-                const savedPage = currentPage;
-                await exportMultiplePages({
-                    pages: pdfPages,
-                    selectedPages: selectedPageNums,
-                    rules,
-                    customRules,
-                    fileName,
-                    format: format as 'pdf' | 'png',
-                    threshold,
-                    languageMode,
-                    onProgress: (current, total, status) => setExportProgress({ current, total, status }),
-                });
-                useUiStore.getState().addToast(`Exported ${selectedPageNums.length} pages`, 'success');
-                if (savedPage !== currentPage) await goToPage(savedPage);
+                // The new v3 backend redacts the entire document at once. 
+                // We sync all human-approved shapes via exportSecureFile and trigger the async job.
+                setShowExportModal(false); setIsExporting(false); setExportProgress(null);
+                await exportSecureFile(format); return;
             } else {
                 setShowExportModal(false); setIsExporting(false); setExportProgress(null);
                 await exportSecureFile(format); return;
@@ -1155,7 +1141,7 @@ For queries: vikram.singh@company.in | +91 8800991234`,
                         <div className="w-10 h-10 border-4 border-[#FFA500]/20 border-t-[#FFA500] rounded-full animate-spin" />
                         <div className="text-center">
                             <p className="text-sm font-semibold text-white">{exportProgress.status}</p>
-                            <p className="text-[11px] text-gray-500 mt-1 font-mono">{exportProgress.current} / {exportProgress.total} pages</p>
+                            {exportProgress.total === 100 ? <p className="text-[11px] text-gray-500 mt-1 font-mono">{exportProgress.current}%</p> : <p className="text-[11px] text-gray-500 mt-1 font-mono">{exportProgress.current} / {exportProgress.total} pages</p>}
                         </div>
                         <div className="w-full h-1.5 bg-[#2A2A2A] rounded-full overflow-hidden">
                             <div className="h-full bg-[#FFA500] rounded-full transition-all duration-300" style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }} />

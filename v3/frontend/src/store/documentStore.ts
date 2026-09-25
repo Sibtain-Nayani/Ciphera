@@ -41,10 +41,12 @@ export interface DocumentState {
     customRules: CustomRule[];
     fileName:    string;
     fileType:    'txt' | 'csv' | 'json' | 'md' | 'docx' | 'pdf' | 'image';
+    documentId:  string | null;
     originalFile: File | null;
 
     setRawText:      (text: string) => void;
     setFileMetadata: (name: string, type: DocumentState['fileType'], file?: File) => void;
+    setDocumentId:   (id: string | null) => void;
     setPreviewMode:  (mode: 'original' | 'redacted') => void;
     toggleRule:      (rule: RuleType) => void;
     setRuleAction:   (rule: RuleType, action: RedactionAction) => void;
@@ -93,6 +95,7 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     rawText:      '',
     fileName:     'Workspace.txt',
     fileType:     'txt',
+    documentId:   null,
     originalFile: null,
     previewMode:  'original',
 
@@ -126,11 +129,13 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     setRawText:      (text) => set({ rawText: text }),
     setFileMetadata: (name, type, file) =>
         set({ fileName: name, fileType: type, originalFile: file || null }),
+    setDocumentId:   (id) => set({ documentId: id }),
     setPreviewMode:  (mode) => set({ previewMode: mode }),
 
     clearWorkspace: () => set({
         rawText: '', fileName: 'Workspace.txt',
         fileType: 'txt', originalFile: null, previewMode: 'original',
+        documentId: null,
     }),
 
     toggleRule: (rule) => set((state) => {

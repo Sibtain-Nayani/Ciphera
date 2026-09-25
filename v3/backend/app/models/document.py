@@ -52,10 +52,10 @@ class RedactionJob(Base):
     
     # Store settings for the job (e.g. risk mode, target entities)
     policy_config = Column(JSON, nullable=True)
+    result_storage_key = Column(String, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     error_message = Column(String, nullable=True)
-    result_storage_key = Column(String, nullable=True)
 
     document = relationship("Document")

@@ -1,32 +1,9 @@
-import fitz  # PyMuPDF
-import pytesseract
-from PIL import Image
-import io
-import mimetypes
+import re
 
-from app.schemas.document import CanonicalDocument, CanonicalBlock, BoundingBox
+with open("backend/app/services/document_parser.py", "r") as f:
+    content = f.read()
 
-class DocumentParser:
-    """
-    Phase 2: Canonical Document Engine.
-    Converts any input file into a standardized CanonicalDocument (JSON representation).
-    """
-    
-    @staticmethod
-    def parse(file_bytes: bytes, filename: str) -> CanonicalDocument:
-        mime_type, _ = mimetypes.guess_type(filename)
-        
-        if mime_type == "application/pdf":
-            return DocumentParser._parse_pdf(file_bytes, filename)
-        elif mime_type and mime_type.startswith("image/"):
-            return DocumentParser._parse_image(file_bytes, filename)
-        elif mime_type == "text/plain":
-            return DocumentParser._parse_text(file_bytes, filename)
-        else:
-            # Fallback for unknown
-            return DocumentParser._parse_text(file_bytes, filename)
-            
-    @staticmethod
+new_pdf_logic = """    @staticmethod
     def _parse_pdf(file_bytes: bytes, filename: str) -> CanonicalDocument:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         blocks = []
@@ -61,7 +38,7 @@ class DocumentParser:
                     blocks.append(block)
                 
                 if full_text and ocr_text:
-                    full_text += "\n"
+                    full_text += "\\n"
                     current_index += 1
                     
                 full_text += ocr_text
@@ -75,7 +52,7 @@ class DocumentParser:
                             continue
                             
                         # Add a trailing newline for NLP context (simulates lines/paragraphs)
-                        line_text += "\n"
+                        line_text += "\\n"
                             
                         start_idx = current_index
                         end_idx = current_index + len(line_text)
@@ -105,32 +82,10 @@ class DocumentParser:
             full_text=full_text,
             page_count=len(doc)
         )
+"""
 
-    @staticmethod
-    def _parse_text(file_bytes: bytes, filename: str) -> CanonicalDocument:
-        text = file_bytes.decode('utf-8', errors='ignore')
-        block = CanonicalBlock(
-            page_num=1,
-            text=text,
-            start_index=0,
-            end_index=len(text)
-        )
-        return CanonicalDocument(
-            metadata={"filename": filename, "type": "text"},
-            blocks=[block],
-            full_text=text,
-            page_count=1
-        )
+content = re.sub(r'    @staticmethod\n    def _parse_pdf\(.*?(?=\n    @staticmethod\n    def _parse_text)', new_pdf_logic, content, flags=re.DOTALL)
 
-    @staticmethod
-    def _parse_image(file_bytes: bytes, filename: str) -> CanonicalDocument:
-        from app.services.ocr import OCRProcessor
-        
-        full_text, blocks = OCRProcessor.extract_blocks(file_bytes)
-        
-        return CanonicalDocument(
-            metadata={"filename": filename, "type": "image"},
-            blocks=blocks,
-            full_text=full_text,
-            page_count=1
-        )
+with open("backend/app/services/document_parser.py", "w") as f:
+    f.write(content)
+print("Patched document_parser.py")

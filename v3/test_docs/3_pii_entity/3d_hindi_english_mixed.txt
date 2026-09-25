@@ -1,0 +1,35 @@
+बैंक खाता विवरण फॉर्म
+BANK ACCOUNT DETAILS FORM
+
+-- हिंदी भाग / HINDI SECTION --
+
+नाम: रवि शर्मा
+पिता का नाम: राजेश शर्मा
+जन्म तिथि: 15/08/1985
+आधार संख्या: 3644 9517 9005
+पैन नंबर: UMQAJ9738U
+मोबाइल नंबर: +91 89661 85063
+पता: 42, गांधी नगर, जयपुर - 302001
+जीएसटी नंबर: 27ABKLO5711Z1Z5
+पिन कोड: 302001
+
+-- ENGLISH SECTION --
+
+Name: Ravi Sharma
+Email: bakhshiwalla@example.org
+Bank Account: 10920336074
+IFSC Code: HDFC0930929
+UPI ID: adweta34@ibl
+Voter ID: PDI8241730
+
+-- मिश्रित वाक्य / MIXED SENTENCES --
+
+रवि Sharma ने अपना Aadhaar 7155 3940 6044 submit किया।
+The account number खाता संख्या 4553724975252918 है।
+Contact करें: +91 68948 92317 या sarinsarthak@example.com
+
+मैं यह प्रमाणित करता हूं कि उपरोक्त जानकारी सत्य है।
+I hereby certify the above information is true.
+
+हस्ताक्षर / Signature: _______________
+दिनांक / Date: 20/06/2026

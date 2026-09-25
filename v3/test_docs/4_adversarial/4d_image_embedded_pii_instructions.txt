@@ -1,0 +1,37 @@
+IMAGE-EMBEDDED PII TEST — MANUAL STEPS
+========================================
+
+This test requires manual setup. Follow these steps:
+
+STEP 1 — Prepare the image:
+  a. Take a clear photo of ANY government ID card (use a fake/dummy card for testing)
+     OR use the sample text below printed and photographed.
+  b. Alternatively, screenshot the following text rendered in a browser:
+
+     ┌─────────────────────────────────────────────┐
+     │  SAMPLE KYC CARD (FAKE — FOR TESTING ONLY) │
+     │                                             │
+     │  Name:    Gayathri Bhavsar              │
+     │  DOB:     15/08/1990                        │
+     │  Aadhaar: 8716 6432 9766         │
+     │  PAN:     VAZPD3289B               │
+     │  Mobile:  +91 84679 42063          │
+     └─────────────────────────────────────────────┘
+
+STEP 2 — Upload to Ciphera:
+  a. Open localhost:3000/redact
+  b. Click Load File → select your .jpg or .png
+  c. Canvas mode should activate automatically
+  d. Wait for face detection + OCR to complete
+
+STEP 3 — Verify:
+  - Check if Aadhaar and PAN bounding boxes align with text in the image
+  - Check if boxes bleed over grid lines or cell borders
+  - Try resizing a bounding box (partial redaction test)
+  - Draw a custom box over empty white space
+  - Export and verify black boxes appear in correct positions
+
+EXPECTED RESULTS:
+  - OCR extracts text correctly → pipeline detects PII
+  - Bounding boxes drawn on canvas at correct pixel coordinates
+  - Export creates clean redacted image with black fills

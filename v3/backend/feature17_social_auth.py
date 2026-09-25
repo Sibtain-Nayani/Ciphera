@@ -33,6 +33,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from app.core.database import SessionLocal
+from app.models.identity import User, Session as DBSessionObj
+from app.api.auth import create_access_token
 import os
 import secrets
 import time
@@ -48,26 +51,13 @@ from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
 
 from feature15_auth import (
-    get_db, create_access_token, create_refresh_token,
+    get_db, create_refresh_token,
     hash_token,
 )
 
 logger = logging.getLogger("ciphera.social_auth")
 
 # ── DB migration — add google_id column if it doesn't exist ──────────────────
-def _migrate_google_id():
-    """Safe migration — adds google_id column to users table if missing."""
-    from feature15_auth import get_db, DB_PATH
-    conn = get_db()
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
-    if "google_id" not in cols:
-        conn.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_users_google ON users(google_id)")
-        conn.commit()
-        logger.info("Added google_id column to users table")
-    conn.close()
-
-_migrate_google_id()
 
 router = APIRouter(prefix="/api/v3/auth", tags=["Social Auth"])
 
@@ -128,31 +118,24 @@ def _find_or_create_google_user(
     google_id: str,
     email:     str,
     full_name: str,
-    # avatar_url deliberately NOT stored — we don't need it
-) -> dict:
-    """
-    Find existing user by email or google_id.
-    If new: create account with no password (OAuth only).
-    Returns user dict.
-    """
-    conn = get_db()
-    now  = datetime.now(timezone.utc).isoformat()
-
-    # Check if user exists by email first
-    user = conn.execute(
-        "SELECT * FROM users WHERE email = ?", (email.lower(),)
-    ).fetchone()
-
-    if user:
-        # Link google_id if not already linked
-        if not user["google_id"] if "google_id" in user.keys() else True:
-            conn.execute(
-                "UPDATE users SET google_id = ?, updated_at = ? WHERE user_id = ?",
-                (google_id, now, user["user_id"])
-            )
-            conn.commit()
-        conn.close()
-        return dict(user)
+) -> User:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email.lower()).first()
+        if user:
+            return user
+        
+        user = User(
+            email=email.lower(),
+            full_name=full_name,
+            password_hash="" # Google users don't have a password
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    finally:
+        db.close()
 
     # New user — create account
     # No password_hash — Google users authenticate via Google only
@@ -174,38 +157,29 @@ def _find_or_create_google_user(
     return dict(user)
 
 
-def _create_session_for_user(user: dict, ip: str = "oauth") -> tuple[str, str]:
-    """Create access + refresh tokens for a user. Returns (access_token, refresh_token)."""
-    conn = get_db()
-
-    # Get org membership
-    org_row = conn.execute("""
-        SELECT org_id, role FROM org_members
-        WHERE user_id = ? AND is_active = 1
-        ORDER BY joined_at DESC LIMIT 1
-    """, (user["user_id"],)).fetchone()
-
-    org_id = org_row["org_id"] if org_row else None
-    role   = org_row["role"]   if org_row else "user"
-
-    refresh_token = create_refresh_token()
-    session_id    = f"ses_{secrets.token_hex(12)}"
-    now           = datetime.now(timezone.utc)
-    from datetime import timedelta
-    expires_at    = (now + timedelta(days=30)).isoformat()
-
-    conn.execute("""
-        INSERT INTO sessions
-        (session_id, user_id, refresh_token_hash, device_hint, ip_address,
-         created_at, expires_at, last_used_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (session_id, user["user_id"], hash_token(refresh_token),
-          "Google OAuth", ip, now.isoformat(), expires_at, now.isoformat()))
-    conn.commit()
-    conn.close()
-
-    access_token = create_access_token(user["user_id"], user["email"], org_id, role)
-    return access_token, refresh_token
+def _create_session_for_user(user: User, ip: str = "oauth") -> tuple[str, str]:
+    db = SessionLocal()
+    try:
+        from datetime import datetime, timedelta
+        import secrets
+        import hashlib
+        
+        refresh_token_plain = secrets.token_hex(32)
+        refresh_token_hash = hashlib.sha256(refresh_token_plain.encode()).hexdigest()
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        
+        session_obj = DBSessionObj(
+            user_id=user.id,
+            refresh_token_hash=refresh_token_hash,
+            expires_at=expires_at
+        )
+        db.add(session_obj)
+        db.commit()
+        
+        access_token = create_access_token(user.id, user.email, user.global_role.value)
+        return access_token, refresh_token_plain
+    finally:
+        db.close()
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -321,7 +295,7 @@ async def google_callback(
         logger.error("User creation failed: %s", e)
         return RedirectResponse(url=FRONTEND_ERROR_URL + "&reason=user_creation_failed")
 
-    if not user.get("is_active"):
+    if not user.is_active:
         return RedirectResponse(url=FRONTEND_ERROR_URL + "&reason=account_deactivated")
 
     # Create session tokens
@@ -333,10 +307,10 @@ async def google_callback(
         f"{FRONTEND_SUCCESS_URL}/auth/callback"
         f"#access_token={access_token}"
         f"&refresh_token={refresh_token}"
-        f"&user_id={user['user_id']}"
+        f"&user_id={user.id}"
         f"&email={email}"
         f"&full_name={full_name}"
-        f"&plan={user.get('plan','free')}"
+        f"&plan={'free'}"
     )
     return RedirectResponse(url=success_url)
 
@@ -404,7 +378,7 @@ async def google_exchange(req: GoogleExchangeRequest):
         full_name = email.split("@")[0].title()
 
     user = _find_or_create_google_user(google_id, email, full_name)
-    if not user.get("is_active"):
+    if not user.is_active:
         raise HTTPException(403, "Account deactivated")
 
     access_token, refresh_token = _create_session_for_user(user)

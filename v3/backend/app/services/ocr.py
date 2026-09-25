@@ -32,19 +32,22 @@ class OCRProcessor:
         return binary
 
     @staticmethod
-    def extract_blocks(image_bytes: bytes, page_num: int = 1) -> Tuple[str, List[CanonicalBlock], float, float]:
+    def extract_blocks(image_bytes: bytes, page_num: int = 1) -> Tuple[str, List[CanonicalBlock]]:
         """
-        Runs Tesseract OCR on the image and returns the full text, blocks, width, and height.
+        Runs Tesseract OCR on the image and returns the full text and canonical blocks (with bounding boxes).
         """
         try:
+            # Preprocess image with OpenCV
             processed_img_np = OCRProcessor.preprocess_image(image_bytes)
             processed_img = Image.fromarray(processed_img_np)
         except Exception as e:
+            # Fallback if cv2 fails for some reason
             processed_img = Image.open(io.BytesIO(image_bytes))
 
-        width, height = processed_img.size
-
+        # We request Hindi + English. PSM 3 is default (Fully automatic page segmentation)
         custom_config = r'--oem 3 --psm 3 -l hin+eng'
+        
+        # Get TSV data which contains bounding boxes for every word
         data = pytesseract.image_to_data(processed_img, config=custom_config, output_type=pytesseract.Output.DICT)
         
         blocks = []
@@ -53,9 +56,11 @@ class OCRProcessor:
         
         n_boxes = len(data['level'])
         for i in range(n_boxes):
+            # level 5 means a word
             if data['level'][i] == 5:
                 text = data['text'][i].strip()
                 if text:
+                    # Append text to full string with a space
                     if full_text:
                         full_text += " "
                         current_index += 1
@@ -70,6 +75,7 @@ class OCRProcessor:
                     bbox = BoundingBox(x0=x, y0=y, x1=x+w, y1=y+h)
                     
                     blocks.append(CanonicalBlock(
+                        page_num=page_num,
                         text=text,
                         bbox=bbox,
                         block_type="text",
@@ -77,4 +83,4 @@ class OCRProcessor:
                         end_index=end_idx
                     ))
                     
-        return full_text, blocks, float(width), float(height)
+        return full_text, blocks

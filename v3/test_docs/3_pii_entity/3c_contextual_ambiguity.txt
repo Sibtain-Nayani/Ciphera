@@ -1,0 +1,41 @@
+CONTEXTUAL AMBIGUITY TEST DOCUMENT
+===================================
+This document is designed to test the NLP engine's ability to
+distinguish between real PII and surface-level false positives.
+
+--- TEST 1: LOCATION VS PERSON ---
+"I will visit you in Washington." [Expected: LOCATION]
+"Washington called me yesterday about the merger." [Expected: PERSON]
+"The Washington Post reported on the incident." [Expected: ORG/neither]
+"Mr. Washington Fernandes submitted his Aadhaar: 7113 5809 4024 [Expected: PERSON + AADHAAR]
+
+--- TEST 2: DATE VS PHONE ---
+"Call me on 9876543210." [Expected: PHONE]
+"The meeting is on 98/76/5432." [Expected: NOT a date — malformed]
+"Born on 15/08/1992 in Mumbai." [Expected: DATE_OF_BIRTH]
+"Reference ID: 15081992 — not a date." [Expected: probably not detected]
+
+--- TEST 3: ORGANIZATION VS PERSON ---
+"Please contact Rahul at rahul.sharma@hdfc.co.in." [Expected: EMAIL + PERSON]
+"HDFC Bank processed the NEFT." [Expected: ORG]
+"The HDFC account number is 576186619923899." [Expected: ORG + BANK_ACCOUNT]
+
+--- TEST 4: NORMAL NUMBERS VS AADHAAR ---
+"Our invoice number is 432588129901." [Expected: probably NOT Aadhaar — no context]
+"My Aadhaar is 4444 9105 9590." [Expected: AADHAAR — context keyword]
+"Order #432588129901 has been shipped." [Expected: NOT Aadhaar]
+
+--- TEST 5: EMAIL VS UPI ---
+"Pay me at: radha83@ibl [Expected: UPI_ID]
+"Email me at: ladsachi@example.net [Expected: EMAIL]
+"Both are addresses: doctorwaida@example.com and isaac82@okaxis
+
+--- TEST 6: INDIAN NAMES VS LOCATIONS ---
+"Anjali lives in Bangalore." [Expected: PERSON + LOCATION]
+"Anjali said Bangalore is beautiful." [Expected: PERSON + LOCATION]
+"The Bangalore office handles Karnataka GST: 07MJBHC9717G1Z5
+
+--- TEST 7: PAN IN CONTEXT ---
+"His PAN is KFDLM3796O as per the IT return." [Expected: PAN]
+"The pan was dirty after cooking." [Expected: NOT PAN]
+"ABCDE1234F is the PAN for this company." [Expected: PAN — format match even without keyword]

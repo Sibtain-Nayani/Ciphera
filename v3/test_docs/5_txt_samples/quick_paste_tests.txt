@@ -1,0 +1,56 @@
+QUICK PASTE TEST SAMPLES FOR CIPHERA REDACT PAGE
+==================================================
+Copy any block below and paste into the redact workspace.
+
+--- BLOCK 1: MINIMAL (single entity) ---
+My Aadhaar number is 7062 8288 0678.
+
+--- BLOCK 2: HIGH DENSITY (all 21 types) ---
+Full Name: Ria Dua
+Date of Birth: 22/03/1991
+Email: chanaatharv@example.org
+Mobile: +91 78666 50701
+Aadhaar: 8981 4526 3714
+PAN: BRHFD8697M
+GST: 09OGVTV9785L1Z5
+IFSC: AXIS0639037
+Voter ID: MDU8316511
+Bank Account: 93620421787401
+UPI: daniel13@upi
+Driving Licence: DL-22-9570-7487690
+PIN Code: 400050
+IP Address: 192.168.166.253
+URL: https://mybank.sbi.co.in/netbanking/login?user=anjali123
+Credit Card: 4532015112830366
+
+--- BLOCK 3: CONTEXTUAL AMBIGUITY ---
+Washington signed the Aadhaar form.
+The pan caught fire before the PAN LTYCC1571E was verified.
+Call me at 9 AM, not 9876543210.
+My birthday is 22/03 which is not the IFSC PUNB0735523.
+
+--- BLOCK 4: HINDI MIXED ---
+मेरा नाम Ravi Sharma है।
+मेरा आधार नंबर 3772 9031 4327 है।
+Contact: +91 89067 14181
+Email: kharemadhav@example.com
+पिन कोड: 302001
+
+--- BLOCK 5: EDGE CASE NUMBERS ---
+Invoice #432588129901 (should NOT be Aadhaar — no context)
+My Aadhaar is 3896 9947 9897 (SHOULD be Aadhaar — has context keyword)
+Order 9876543210 placed (should NOT be phone — looks like order number)
+Mobile: 9876543210 (SHOULD be phone — has context keyword)
+Amount: ₹45,000 transferred to account 7718877682372724 via NEFT
+
+--- BLOCK 6: ZERO PII (should return 0 entities) ---
+The weather today is pleasant with a temperature of 28 degrees.
+The meeting is scheduled for next Tuesday at 2 PM in Conference Room B.
+Please review the quarterly business report before the board meeting.
+The project deadline has been extended by two weeks as requested.
+
+--- BLOCK 7: ONLY URLS AND IPs ---
+Visit https://ciphera.in for more information.
+The server IP is 10.0.0.1 and the gateway is 192.168.1.1.
+API endpoint: https://api.ciphera.in/api/v3/analyze
+Blocked IP: 185.220.101.47 (Tor exit node)

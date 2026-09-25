@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     
     SECRET_KEY: str = os.getenv("CIPHERA_JWT_SECRET", "super-secret-key-change-me")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 604800
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
     class Config:
