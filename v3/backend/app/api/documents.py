@@ -119,7 +119,7 @@ def redact_document(
     
     # Phase 7: Verification Engine (Zero-Trust)
     # Ensure no sensitive data leaked into the redacted bytes
-    VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}")
+    VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}", entities)
     
     # Return as downloadable file
     return StreamingResponse(

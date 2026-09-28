@@ -40,7 +40,7 @@ def process_redaction(self, job_id: str):
         redacted_bytes = SecureRedactionEngine.redact_document(file_bytes, doc.filename, entities)
         
         # Phase 7: Verification
-        VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}")
+        VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}", entities)
         
         # Save redacted file using Cloud Storage Abstraction
         redacted_storage_key = StorageService.save_document(redacted_bytes, f"redacted_{doc.filename}", directory="redacted")
