@@ -34,17 +34,17 @@ class DecisionEngine:
             if ent.entity_type in ["AADHAAR_NUMBER", "PAN_NUMBER"] and ent.score < 0.90:
                 # Force to review unless it's extremely high confidence (like 0.95 from regex)
                 if ent.score >= review_threshold:
-                    ent.status = "REVIEW"
+                    ent.status = "pending"
                 else:
-                    ent.status = "IGNORE"
+                    ent.status = "rejected"
                 continue
 
             # Standard Threshold Logic
             if ent.score >= auto_threshold:
-                ent.status = "AUTO"
+                ent.status = "accepted"
             elif ent.score >= review_threshold:
-                ent.status = "REVIEW"
+                ent.status = "pending"
             else:
-                ent.status = "IGNORE"
+                ent.status = "rejected"
             
         return entities
