@@ -2,6 +2,7 @@ import uuid
 from typing import List
 
 from app.schemas.document import CanonicalDocument, RedactionEntity, BoundingBox
+from app.services.columnar_inference import ColumnarInferenceEngine
 import feature1_pipeline_upgrade as f1
 
 class DetectionEngine:
@@ -83,4 +84,8 @@ class DetectionEngine:
                         status="pending"
                     ))
                     
+        
+        # 3. Apply Columnar Inference to catch missed tabular records
+        redactions = ColumnarInferenceEngine.run_inference(doc, redactions)
+        
         return redactions
