@@ -4,6 +4,7 @@ from app.models.document import Document, JobStatus, RedactionJob
 from app.schemas.document import RedactionEntity
 from app.services.redaction_engine import SecureRedactionEngine
 from app.services.verification_engine import VerificationEngine
+from app.services.storage import StorageService
 import uuid
 import os
 
@@ -20,15 +21,14 @@ def process_redaction(self, job_id: str):
         
         doc = job.document
         
-        # Load file
-        if not doc.storage_key or not os.path.exists(doc.storage_key):
+        # Load file using Cloud Storage Abstraction
+        try:
+            file_bytes = StorageService.get_document(doc.storage_key)
+        except Exception as e:
             job.status = JobStatus.FAILED
-            job.error_message = "Source file not found on server"
+            job.error_message = f"Failed to retrieve file: {str(e)}"
             db.commit()
             return {"error": job.error_message}
-            
-        with open(doc.storage_key, "rb") as f:
-            file_bytes = f.read()
             
         # Reconstruct entities
         entities = []
@@ -42,10 +42,8 @@ def process_redaction(self, job_id: str):
         # Phase 7: Verification
         VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}")
         
-        # Save redacted file to disk
-        redacted_storage_key = f"data/uploads/redacted_{uuid.uuid4()}_{doc.filename}"
-        with open(redacted_storage_key, "wb") as f:
-            f.write(redacted_bytes)
+        # Save redacted file using Cloud Storage Abstraction
+        redacted_storage_key = StorageService.save_document(redacted_bytes, f"redacted_{doc.filename}", directory="redacted")
             
         job.status = JobStatus.COMPLETED
         job.error_message = redacted_storage_key

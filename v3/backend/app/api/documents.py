@@ -20,24 +20,21 @@ async def upload_document(
     # Read file
     file_bytes = await file.read()
     
-    # Save file to local storage
-    import os
-    os.makedirs("data/uploads", exist_ok=True)
-    storage_key = f"data/uploads/{uuid.uuid4()}_{file.filename}"
-    with open(storage_key, "wb") as f:
-        f.write(file_bytes)
+    # Save file using Phase 9 Cloud Storage Abstraction
+    storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
     
     # Process through Phase 2 Canonical Engine
     canonical_doc = DocumentParser.parse(file_bytes, file.filename)
     
     # Process through Phase 4 Detection Engine
     from app.services.detection_engine import DetectionEngine
+    from app.services.storage import StorageService
     raw_entities = DetectionEngine.run_detection(canonical_doc)
     
     # Process through Phase 5 Decision Engine
     from app.services.decision_engine import DecisionEngine
     # In a real app we fetch org.policy_config. Using default standard policy.
-    entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "standard"})
+    entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "balanced"})
     
     # Save to database
     db_doc = Document(
@@ -192,8 +189,9 @@ def get_redaction_job_status(
         "error_message": job.error_message
     }
 
-from fastapi.responses import FileResponse
+from fastapi.responses import Response, RedirectResponse
 import os
+import io
 
 @router.get("/redact/jobs/{job_id}/download")
 def download_redacted_job(
@@ -208,10 +206,25 @@ def download_redacted_job(
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
         
-    if not job.error_message or not os.path.exists(job.error_message):
-        raise HTTPException(status_code=404, detail="File not found")
+    storage_key = job.error_message
+    if not storage_key:
+        raise HTTPException(status_code=404, detail="Storage key not found")
         
-    return FileResponse(
-        path=job.error_message,
-        filename=f"redacted_{job.document.filename}" if job.document else "redacted.pdf"
-    )
+    from app.core.config import settings
+    if settings.STORAGE_BACKEND == "s3":
+        # Redirect to presigned S3 URL
+        presigned_url = StorageService.generate_presigned_url(storage_key)
+        return RedirectResponse(url=presigned_url)
+    else:
+        # Local fallback, stream bytes
+        try:
+            file_bytes = StorageService.get_document(storage_key)
+            return Response(
+                content=file_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="redacted_{job.document.filename}"' if job.document else 'attachment; filename="redacted.pdf"'
+                }
+            )
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

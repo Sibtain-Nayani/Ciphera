@@ -5,16 +5,24 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Ciphera 2.0"
     VERSION: str = "4.0.0-alpha"
     
-    # Use SQLite as a fallback for local development if Postgres isn't provided yet
+    # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
         "sqlite:///./data/ciphera.db"
     )
     
+    # Auth
     SECRET_KEY: str = os.getenv("CIPHERA_JWT_SECRET", "super-secret-key-change-me")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 604800
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    
+    # Storage (Phase 9)
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local") # "local" or "s3"
+    LOCAL_STORAGE_DIR: str = os.getenv("LOCAL_STORAGE_DIR", "./data/uploads")
+    S3_BUCKET: str = os.getenv("S3_BUCKET", "ciphera-documents")
+    S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
+    S3_ENDPOINT_URL: str = os.getenv("S3_ENDPOINT_URL", "") # For MinIO
     
     class Config:
         env_file = ".env"
