@@ -69,7 +69,8 @@ def register(user_in: UserCreate, db: DBSession = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token_plain,
-        user_id=user.id
+        user_id=user.id,
+        user=user
     )
 
 @router.post("/login", response_model=TokenResponse)
@@ -96,7 +97,8 @@ def login(login_req: LoginRequest, db: DBSession = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token_plain,
-        user_id=user.id
+        user_id=user.id,
+        user=user
     )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -150,5 +152,6 @@ def refresh_token(req: RefreshRequest, db: DBSession = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=new_refresh_plain,
-        user_id=user.id
+        user_id=user.id,
+        user=user
     )
