@@ -13,6 +13,17 @@ class LoginRequest(BaseModel):
     password: str
     device_hint: Optional[str] = None
 
+class UserResponse(BaseModel):
+    id: str
+    email: EmailStr
+    full_name: str
+    global_role: GlobalRole
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -24,13 +35,4 @@ class RefreshRequest(BaseModel):
     refresh_token: str
     device_hint: Optional[str] = None
 
-class UserResponse(BaseModel):
-    id: str
-    email: EmailStr
-    full_name: str
-    global_role: GlobalRole
-    is_active: bool
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
+
