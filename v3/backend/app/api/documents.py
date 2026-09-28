@@ -7,6 +7,7 @@ from app.models.identity import User
 from app.models.document import Document, JobStatus, SafetyStatus
 from app.api.auth import get_current_user
 from app.services.document_parser import DocumentParser
+from app.services.storage import StorageService
 
 router = APIRouter(prefix="/api/v3/documents", tags=["Documents"])
 
@@ -28,7 +29,6 @@ async def upload_document(
     
     # Process through Phase 4 Detection Engine
     from app.services.detection_engine import DetectionEngine
-    from app.services.storage import StorageService
     raw_entities = DetectionEngine.run_detection(canonical_doc)
     
     # Process through Phase 5 Decision Engine
