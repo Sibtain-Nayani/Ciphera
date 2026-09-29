@@ -210,7 +210,7 @@ class RegexStage:
         # Aadhaar
         (r"\b([0-9OoIiLl]{4}[\s\-]?[0-9OoIiLl]{4}[\s\-]?[0-9OoIiLl]{4})\b", "AADHAAR_NUMBER", 0.85),
         # PAN
-        (r"\b([A-Z]{5}[0-9OoIiLl]{4}[A-Z])\b",                 "PAN_NUMBER",       0.95),
+        (r"\b([A-Z0158]{5}[0-9OoIiLlSsBb]{4}[A-Z0158])\b",                 "PAN_NUMBER",       0.95),
         # GST
         (r"\b\d{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b", "GST_NUMBER",  0.93),
         # IFSC
@@ -319,10 +319,21 @@ class RegexStage:
                 if entity_type in {"PHONE_NUMBER", "AADHAAR_NUMBER"}:
                     clean_raw = re.sub(r'\D', '', raw)
                     if len(clean_raw) in {10, 12}:
-                        ctx = _get_context(text, m.start(), m.end(), self._CTX_WINDOW).lower()
+                        # Shrink context to 35 chars
+                        ctx_raw = _get_context(text, m.start(), m.end(), 35)
+                        # Sentence/Line bind: don't cross period or newline backwards/forwards
+                        parts = re.split(r'[\n\.]', ctx_raw)
+                        ctx_bounded = ""
+                        for p in parts:
+                            if raw.strip() in p:
+                                ctx_bounded = p.lower()
+                                break
+                        if not ctx_bounded:
+                            ctx_bounded = ctx_raw.lower() # Fallback
+                            
                         kw_set = self._PHONE_CTX_KW if entity_type == "PHONE_NUMBER" else self._AADHAAR_CTX_KW
                         if len(clean_raw) == len(raw.strip()):
-                            if not any(kw in ctx for kw in kw_set):
+                            if not any(kw in ctx_bounded for kw in kw_set):
                                 continue
 
 
@@ -400,7 +411,7 @@ class RegexStage:
         if dense_chars:
             dense_text = "".join(dense_chars)
             for pattern, entity_type, base_score in self._compiled:
-                if entity_type not in {"PAN_NUMBER", "AADHAAR_NUMBER", "PHONE_NUMBER", "BANK_ACCOUNT", "CREDIT_CARD", "VOTER_ID", "GST_NUMBER", "IFSC_CODE", "EMAIL_ADDRESS"}:
+                if entity_type not in {"PAN_NUMBER", "AADHAAR_NUMBER", "GST_NUMBER", "IFSC_CODE"}:
                     continue
                 
                 # Remove \b from pattern for dense search since word boundaries don't exist in defragmented text
@@ -463,15 +474,24 @@ class RegexStage:
             if len(digits) != 12: return 0
             if digits[0] in "01":  return 0
             if len(set(digits)) <= 3: return 0
-            return base_score if _verhoeff(digits) else base_score * 0.72
+            
+            has_ocr_chars = bool(re.search(r'[OoIiLl]', value))
+            if _verhoeff(digits):
+                return base_score
+            elif has_ocr_chars:
+                return base_score * 0.9
+            else:
+                return base_score * 0.72
             
         if entity_type == "PAN_NUMBER":
-            pan = value.strip().upper()
-            pan = pan.replace(' ', '')
-            mid = pan[5:9].replace('O', '0').replace('I', '1').replace('L', '1')
-            pan = pan[:5] + mid + pan[9:]
-            if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', pan): return 0
-            if pan[3] not in {'A', 'B', 'C', 'F', 'G', 'H', 'J', 'L', 'P', 'T', 'K', 'E'}:
+            pan = value.strip().upper().replace(' ', '')
+            prefix = pan[:5].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B')
+            mid = pan[5:9].replace('O', '0').replace('I', '1').replace('L', '1').replace('S', '5').replace('B', '8')
+            suffix = pan[9:].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B')
+            
+            norm_pan = prefix + mid + suffix
+            if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', norm_pan): return 0
+            if norm_pan[3] not in {'A', 'B', 'C', 'F', 'G', 'H', 'J', 'L', 'P', 'T', 'K', 'E'}:
                 return base_score * 0.4
             return base_score
             
