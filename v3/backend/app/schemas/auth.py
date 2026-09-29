@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
@@ -14,7 +15,7 @@ class LoginRequest(BaseModel):
     device_hint: Optional[str] = None
 
 class UserResponse(BaseModel):
-    id: str
+    user_id: str = Field(alias="id")
     email: EmailStr
     full_name: str
     global_role: GlobalRole

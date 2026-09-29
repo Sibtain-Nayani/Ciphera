@@ -51,7 +51,7 @@ def register(user_in: UserCreate, db: DBSession = Depends(get_db)):
     db.refresh(user)
     
     # Generate tokens
-    access_token = create_access_token(user.id, user.email, user.global_role.value)
+    access_token = create_access_token(user.id, user.email, None, user.global_role.value)
     
     refresh_token_plain = secrets.token_hex(32)
     refresh_token_hash = hashlib.sha256(refresh_token_plain.encode()).hexdigest()
@@ -79,7 +79,7 @@ def login(login_req: LoginRequest, db: DBSession = Depends(get_db)):
     if not user or not verify_password(login_req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
         
-    access_token = create_access_token(user.id, user.email, user.global_role.value)
+    access_token = create_access_token(user.id, user.email, None, user.global_role.value)
     
     refresh_token_plain = secrets.token_hex(32)
     refresh_token_hash = hashlib.sha256(refresh_token_plain.encode()).hexdigest()
@@ -139,7 +139,7 @@ def refresh_token(req: RefreshRequest, db: DBSession = Depends(get_db)):
     user = session_obj.user
     
     # Rotate tokens
-    access_token = create_access_token(user.id, user.email, user.global_role.value)
+    access_token = create_access_token(user.id, user.email, None, user.global_role.value)
     
     new_refresh_plain = secrets.token_hex(32)
     new_refresh_hash = hashlib.sha256(new_refresh_plain.encode()).hexdigest()

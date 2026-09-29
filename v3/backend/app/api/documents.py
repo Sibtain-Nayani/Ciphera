@@ -11,6 +11,19 @@ from app.services.storage import StorageService
 
 router = APIRouter(prefix="/api/v3/documents", tags=["Documents"])
 
+def _get_doc_for_user(db: DBSession, document_id: str, current_user: User) -> Document:
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if current_user.global_role != "super_admin":
+        user_org_ids = [m.org_id for m in current_user.org_memberships]
+        if doc.org_id not in user_org_ids and doc.uploaded_by != current_user.id:
+            raise HTTPException(status_code=404, detail="Document not found") # 404 to prevent enumeration
+            
+    return doc
+
+
 @router.post("/upload")
 async def upload_document(
     org_id: str,
@@ -18,6 +31,11 @@ async def upload_document(
     db: DBSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.global_role != "super_admin":
+        user_org_ids = [m.org_id for m in current_user.org_memberships]
+        if org_id not in user_org_ids:
+            raise HTTPException(status_code=403, detail="Not authorized to upload to this organization")
+            
     # Read file
     file_bytes = await file.read()
     
@@ -67,9 +85,7 @@ def get_canonical_document(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = _get_doc_for_user(db, document_id, current_user)
         
     return doc.canonical_representation
 @router.get("/{document_id}/entities")
@@ -78,9 +94,7 @@ def get_detected_entities(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = _get_doc_for_user(db, document_id, current_user)
         
     return {"entities": doc.detected_entities or []}
 from fastapi.responses import StreamingResponse
@@ -93,9 +107,7 @@ def redact_document(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = _get_doc_for_user(db, document_id, current_user)
         
     if not doc.storage_key:
         raise HTTPException(status_code=400, detail="Document file not found on server")
@@ -136,9 +148,7 @@ def update_detected_entities(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = _get_doc_for_user(db, document_id, current_user)
         
     # Replace the stored entities with the updated list from human review
     doc.detected_entities = [e.model_dump() for e in updated_entities]
@@ -154,9 +164,7 @@ def redact_document_async(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = _get_doc_for_user(db, document_id, current_user)
         
     # Create job record
     job = RedactionJob(
@@ -182,6 +190,7 @@ def get_redaction_job_status(
     job = db.query(RedactionJob).filter(RedactionJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
     return {
         "job_id": job.id,
@@ -202,6 +211,7 @@ def download_redacted_job(
     job = db.query(RedactionJob).filter(RedactionJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")

@@ -53,7 +53,8 @@ router = APIRouter(prefix="/api/v3/auth", tags=["Authentication"])
 DB_PATH       = Path(__file__).parent / "data" / "ciphera.db"
 DB_PATH.parent.mkdir(exist_ok=True)
 
-JWT_SECRET         = os.getenv("CIPHERA_JWT_SECRET", secrets.token_hex(32))
+from app.core.config import settings
+JWT_SECRET = settings.SECRET_KEY
 JWT_ALGORITHM      = "HS256"
 ACCESS_TOKEN_MINS  = 15
 REFRESH_TOKEN_DAYS = 30
