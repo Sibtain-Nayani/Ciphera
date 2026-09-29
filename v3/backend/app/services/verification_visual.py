@@ -7,8 +7,8 @@ from app.services.ocr import OCRProcessor
 
 class VisualVerifier:
     OCR_CONFUSIONS = {
-        'digit_expected': set('OoIiLlSsBbZzGgQq'),  # Letters that look like digits
-        'letter_expected': set('01582693'),         # Digits that look like letters (added 3 for B/E)
+        'digit_expected': set('OoIiLlSsBbZzGgQq'),
+        'letter_expected': set('01582693'),
     }
 
     @staticmethod
@@ -23,14 +23,9 @@ class VisualVerifier:
     @staticmethod
     def _is_suspicious_pan(text: str) -> bool:
         if len(text) != 10: return False
-        
-        # PANs are usually uppercase or mixed if OCR fails, but not entirely lowercase
-        # But to be safe, let's just check shape mismatches strictly.
         shape = VisualVerifier._get_shape(text)
         expected = "LLLLLDDDDL"
         mismatches = 0
-        
-        # Reject if it doesn't have at least SOME uppercase letters (PANs have 6 letters)
         upper_letters = sum(1 for c in text if c.isupper())
         if upper_letters < 2: return False
         
@@ -41,8 +36,6 @@ class VisualVerifier:
                     return False 
                 if expected[i] == 'L' and text[i] not in VisualVerifier.OCR_CONFUSIONS['letter_expected']:
                     return False
-        
-        # Max 1 OCR substitution allowed, otherwise it causes too many false positives on random text
         return mismatches <= 1
 
     @staticmethod
@@ -61,6 +54,7 @@ class VisualVerifier:
     @staticmethod
     def verify(redacted_bytes: bytes, entities: List[RedactionEntity]) -> List[str]:
         leaks = []
+        allowed_texts = [e.text.strip().lower() for e in entities if e.status == "rejected"]
         doc = fitz.open(stream=redacted_bytes, filetype="pdf")
         
         for page_num in range(len(doc)):
@@ -90,13 +84,16 @@ class VisualVerifier:
                     if len(raw_window) > length * 3:
                         continue
                         
+                    clean_raw = raw_window.lower()
+                    if clean_raw in allowed_texts:
+                        continue
+                        
                     if length == 10 and VisualVerifier._is_suspicious_pan(window):
                         leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential PAN '{raw_window}'")
                     
                     if length == 12 and VisualVerifier._is_suspicious_aadhaar(window):
                         has_spaces = ' ' in raw_window or '-' in raw_window
                         has_errors = any(c.isalpha() for c in window)
-                        
                         if has_spaces or has_errors:
                             leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential Aadhaar '{raw_window}'")
 
