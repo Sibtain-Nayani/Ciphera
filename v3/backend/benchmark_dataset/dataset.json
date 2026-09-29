@@ -4,12 +4,30 @@
     "type": "clean_digital",
     "content": "Patient Name: Rahul Sharma\nDOB: 15/08/1985\nAadhaar: 4532 8812 9901\nPAN: ABCDE1234F\nContact: 9876543210 or test.user@example.com\nAddress: Flat 402, Lotus Enclave, Pune 411001\nDiagnosis: Hypertension",
     "expected_entities": [
-      {"type": "PERSON", "value": "Rahul Sharma"},
-      {"type": "DATE_OF_BIRTH", "value": "15/08/1985"},
-      {"type": "AADHAAR_NUMBER", "value": "4532 8812 9901"},
-      {"type": "PAN_NUMBER", "value": "ABCDE1234F"},
-      {"type": "PHONE_NUMBER", "value": "9876543210"},
-      {"type": "EMAIL_ADDRESS", "value": "test.user@example.com"}
+      {
+        "type": "PERSON",
+        "value": "Rahul Sharma"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "15/08/1985"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 8812 9901"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCDE1234F"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "test.user@example.com"
+      }
     ]
   },
   {
@@ -17,9 +35,18 @@
     "type": "ocr_noise",
     "content": "Aadhaar Number: 4532 88I2 990I\nPAN: ABCD E1234F\nContact: +91-987654321O",
     "expected_entities": [
-      {"type": "AADHAAR_NUMBER", "value": "4532 88I2 990I"},
-      {"type": "PAN_NUMBER", "value": "ABCD E1234F"},
-      {"type": "PHONE_NUMBER", "value": "+91-987654321O"}
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 88I2 990I"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCD E1234F"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "+91-987654321O"
+      }
     ]
   },
   {
@@ -27,7 +54,10 @@
     "type": "context_gating",
     "content": "My order tracking number is 1234567890. Please do not call my actual phone number 9988776655. My Amazon package ID is 453288129901.",
     "expected_entities": [
-      {"type": "PHONE_NUMBER", "value": "9988776655"}
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9988776655"
+      }
     ]
   },
   {
@@ -35,8 +65,14 @@
     "type": "spatial_fragmentation",
     "content": "P A N : B V C P Q 9 9 9 9 Z\nA a d h a a r : 1 1 2 2   3 3 4 4   5 5 6 6",
     "expected_entities": [
-      {"type": "PAN_NUMBER", "value": "B V C P Q 9 9 9 9 Z"},
-      {"type": "AADHAAR_NUMBER", "value": "1 1 2 2   3 3 4 4   5 5 6 6"}
+      {
+        "type": "PAN_NUMBER",
+        "value": "B V C P Q 9 9 9 9 Z"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "1 1 2 2   3 3 4 4   5 5 6 6"
+      }
     ]
   },
   {
@@ -44,11 +80,26 @@
     "type": "hindi_digital",
     "content": "नाम: राहुल शर्मा\nजन्म तिथि: 12.05.1990\nआधार: 9876 5432 1098\nफोन: 9876543210\nपैन कार्ड: ABCDE1234F",
     "expected_entities": [
-      {"type": "PERSON", "value": "राहुल शर्मा"},
-      {"type": "DATE_OF_BIRTH", "value": "12.05.1990"},
-      {"type": "AADHAAR_NUMBER", "value": "9876 5432 1098"},
-      {"type": "PHONE_NUMBER", "value": "9876543210"},
-      {"type": "PAN_NUMBER", "value": "ABCDE1234F"}
+      {
+        "type": "PERSON",
+        "value": "राहुल शर्मा"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "12.05.1990"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "9876 5432 1098"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCDE1234F"
+      }
     ]
   },
   {
@@ -56,10 +107,22 @@
     "type": "mixed_code_switching",
     "content": "The transaction was completed by Suresh Kumar on 24-11-2023. उसका अकाउंट नंबर 987654321012 है और PAN CGFDE9876T है।",
     "expected_entities": [
-      {"type": "PERSON", "value": "Suresh Kumar"},
-      {"type": "DATE_OF_BIRTH", "value": "24-11-2023"},
-      {"type": "BANK_ACCOUNT", "value": "987654321012"},
-      {"type": "PAN_NUMBER", "value": "CGFDE9876T"}
+      {
+        "type": "PERSON",
+        "value": "Suresh Kumar"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "24-11-2023"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "987654321012"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "CGFDE9876T"
+      }
     ]
   },
   {
@@ -67,9 +130,18 @@
     "type": "multi_line_spans",
     "content": "Please contact our support engineer Anjali\nDeshmukh at anjali.deshmukh\n@enterprise.com or call 912\n3456789.",
     "expected_entities": [
-      {"type": "PERSON", "value": "Anjali\nDeshmukh"},
-      {"type": "EMAIL_ADDRESS", "value": "anjali.deshmukh\n@enterprise.com"},
-      {"type": "PHONE_NUMBER", "value": "912\n3456789"}
+      {
+        "type": "PERSON",
+        "value": "Anjali\nDeshmukh"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "anjali.deshmukh\n@enterprise.com"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "912\n3456789"
+      }
     ]
   },
   {
@@ -77,8 +149,55 @@
     "type": "edge_case_emails",
     "content": "Valid emails: test.name+tag@sub.domain.co.in and admin@localhost.localdomain.",
     "expected_entities": [
-      {"type": "EMAIL_ADDRESS", "value": "test.name+tag@sub.domain.co.in"},
-      {"type": "EMAIL_ADDRESS", "value": "admin@localhost.localdomain"}
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "test.name+tag@sub.domain.co.in"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "admin@localhost.localdomain"
+      }
+    ]
+  },
+  {
+    "id": "doc_009_defrag_stress",
+    "type": "defrag_trap",
+    "content": "A list of unrelated numbers: 9 8 7 6 5 4 3 2 1 0. And a table: Price 4 5 3 2 Qty 8 8 1 2 Total 9 9 0 1. Also: P.A.N. is A B C D E 1 2 3 4 F.",
+    "expected_entities": [
+      {
+        "type": "PAN_NUMBER",
+        "value": "A B C D E 1 2 3 4 F"
+      }
+    ]
+  },
+  {
+    "id": "doc_010_ocr_stress",
+    "type": "ocr_trap",
+    "content": "The Aadhaar is 1l22 3344 55O6. PAN: I3CDEI234O. Legitimate serial OOOO1111OOOO.",
+    "expected_entities": [
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "1l22 3344 55O6"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "I3CDEI234O"
+      }
+    ]
+  },
+  {
+    "id": "doc_011_context_stress",
+    "type": "context_trap",
+    "content": "Phone: 9876543210. Patient 9876543211. 9876543212. Tracking number: 9876543213. संपर्क: 9876543214.",
+    "expected_entities": [
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543214"
+      }
     ]
   }
 ]
