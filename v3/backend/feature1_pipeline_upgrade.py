@@ -545,6 +545,12 @@ class PresidioStage:
             supported_languages=["en"],
         )
         self._add_custom()
+        
+        # Disable Presidio's internal context mechanism to prevent double-boosting 
+        # and un-bounded context bleeds, since Ciphera uses its own apply_context_scoring
+        for rec in self.analyzer.registry.recognizers:
+            rec.context = []
+            
         logger.info("Presidio: %d recognizers", len(self.analyzer.registry.recognizers))
 
     def _add_custom(self):
@@ -679,12 +685,22 @@ def apply_context_scoring(
     entities: list[DetectedEntity], text: str
 ) -> list[DetectedEntity]:
     for entity in entities:
-        ctx = _get_context(text, entity.start, entity.end, 60).lower()
+        ctx_raw = _get_context(text, entity.start, entity.end, 60)
+        # Sentence/Line bind context to avoid cross-boundary false positives
+        parts = re.split(r'[\n\.]', ctx_raw)
+        ctx_bounded = ""
+        for p in parts:
+            if entity.text.strip() in p:
+                ctx_bounded = p.lower()
+                break
+        if not ctx_bounded:
+            ctx_bounded = ctx_raw.lower()
+            
         for etype, keywords, boost in CONTEXT_BOOSTS:
-            if entity.entity_type == etype and any(kw in ctx for kw in keywords):
+            if entity.entity_type == etype and any(kw in ctx_bounded for kw in keywords):
                 entity.score = min(1.0, entity.score + boost)
         for etype, keywords, penalty in CONTEXT_SUPPRESSION:
-            if entity.entity_type == etype and any(kw in ctx for kw in keywords):
+            if entity.entity_type == etype and any(kw in ctx_bounded for kw in keywords):
                 entity.score = max(0.0, entity.score + penalty)
     return entities
 

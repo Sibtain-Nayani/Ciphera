@@ -1,36 +1,31 @@
-# Adversarial Benchmark Report
+# Adversarial Benchmark Report (v1 Baseline)
 
 ## Global Metrics
-- **Precision:** 0.5667
-- **Recall:**    0.5484
-- **F1 Score:**  0.5574
+- **Precision:** 0.6061
+- **Recall:**    0.6452
+- **F1 Score:**  0.6250
+- *(Duplicates: 0)*
 
 ## Per-Class Metrics
-| Entity Type | Precision | Recall | F1 Score | TP | FP | FN |
-|-------------|-----------|--------|----------|----|----|----|
-| AADHAAR_NUMBER | 1.00 | 0.60 | 0.75 | 3 | 0 | 2 |
-| BANK_ACCOUNT | 0.00 | 0.00 | 0.00 | 0 | 0 | 1 |
-| DATE_OF_BIRTH | 1.00 | 0.67 | 0.80 | 2 | 0 | 1 |
-| DATE_TIME | 0.00 | 0.00 | 0.00 | 0 | 2 | 0 |
-| EMAIL_ADDRESS | 0.33 | 0.25 | 0.29 | 1 | 2 | 3 |
-| PAN_NUMBER | 1.00 | 0.43 | 0.60 | 3 | 0 | 4 |
-| PERSON | 0.50 | 0.75 | 0.60 | 3 | 3 | 1 |
-| PHONE_NUMBER | 0.50 | 0.71 | 0.59 | 5 | 5 | 2 |
-| PIN_CODE | 0.00 | 0.00 | 0.00 | 0 | 1 | 0 |
+| Entity Type | Precision | Recall | F1 Score | TP | FP | FN | Dups |
+|-------------|-----------|--------|----------|----|----|----|------|
+| AADHAAR_NUMBER | 1.00 | 0.60 | 0.75 | 3 | 0 | 2 | 0 |
+| BANK_ACCOUNT | 0.00 | 0.00 | 0.00 | 0 | 0 | 1 | 0 |
+| DATE_OF_BIRTH | 1.00 | 0.67 | 0.80 | 2 | 0 | 1 | 0 |
+| DATE_TIME | 0.00 | 0.00 | 0.00 | 0 | 3 | 0 | 0 |
+| EMAIL_ADDRESS | 1.00 | 0.75 | 0.86 | 3 | 0 | 1 | 0 |
+| PAN_NUMBER | 0.75 | 0.43 | 0.55 | 3 | 1 | 4 | 0 |
+| PERSON | 0.50 | 0.75 | 0.60 | 3 | 3 | 1 | 0 |
+| PHONE_NUMBER | 0.55 | 0.86 | 0.67 | 6 | 5 | 1 | 0 |
+| PIN_CODE | 0.00 | 0.00 | 0.00 | 0 | 1 | 0 | 0 |
 
 ## Document Breakdown
 ### doc_001
-- **True Positives:** 4
-- **False Positives:** 3
-- **False Negatives:** 2
-
-**🚨 FALSE NEGATIVES (LEAKS):**
-- `PHONE_NUMBER`: "9876543210"
-- `EMAIL_ADDRESS`: "test.user@example.com"
+- **True Positives:** 6
+- **False Positives:** 2
+- **False Negatives:** 0
 
 **⚠️ FALSE POSITIVES (OVER-REDACTION):**
-- `EMAIL_ADDRESS`: "9876543210 or test.user@example.com
-Address"
 - `PERSON`: "Lotus Enclave"
 - `PIN_CODE`: "411001"
 
@@ -100,18 +95,13 @@ Deshmukh"
 3456789"
 
 **⚠️ FALSE POSITIVES (OVER-REDACTION):**
-- `EMAIL_ADDRESS`: "Please contact our support engineer Anjali
-Deshmukh at anjali.deshmukh
-@enterprise.com or call"
+- `DATE_TIME`: "3456789"
 
 ---
 ### doc_008
-- **True Positives:** 1
+- **True Positives:** 2
 - **False Positives:** 0
-- **False Negatives:** 1
-
-**🚨 FALSE NEGATIVES (LEAKS):**
-- `EMAIL_ADDRESS`: "admin@localhost.localdomain"
+- **False Negatives:** 0
 
 ---
 ### doc_009_defrag_stress
@@ -128,7 +118,7 @@ Deshmukh at anjali.deshmukh
 ---
 ### doc_010_ocr_stress
 - **True Positives:** 0
-- **False Positives:** 1
+- **False Positives:** 2
 - **False Negatives:** 2
 
 **🚨 FALSE NEGATIVES (LEAKS):**
@@ -137,6 +127,7 @@ Deshmukh at anjali.deshmukh
 
 **⚠️ FALSE POSITIVES (OVER-REDACTION):**
 - `DATE_TIME`: "55O6"
+- `PAN_NUMBER`: "OOOO1111OO"
 
 ---
 ### doc_011_context_stress

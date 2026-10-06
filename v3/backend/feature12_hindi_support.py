@@ -377,7 +377,7 @@ def build_hindi_presidio_engine(nlp_model: str = "xx_ent_wiki_sm") -> AnalyzerEn
         ], context=["पैन","स्थायी खाता","pan"]),
         PatternRecognizer("PHONE_NUMBER", supported_language="hi", patterns=[
             Pattern("PHONE_HI_91", r"\+?91[\s\-]?[6-9]\d{4}[\s\-]?\d{5}", 0.88),
-            Pattern("PHONE_HI_10", r"\b[6-9]\d{9}\b", 0.80),
+            Pattern("PHONE_HI_10", r"\b[6-9]\d{9}\b", 0.40),
         ], context=["मोबाइल","फोन","दूरभाष","संपर्क","mobile","phone"]),
         PatternRecognizer("GST_NUMBER", supported_language="hi", patterns=[
             Pattern("GST_HI", r"\b\d{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b", 0.93),
@@ -395,6 +395,10 @@ def build_hindi_presidio_engine(nlp_model: str = "xx_ent_wiki_sm") -> AnalyzerEn
 
     for rec in hindi_recognisers:
         engine.registry.add_recognizer(rec)
+
+    # Disable Presidio's unbounded context gating (we use our own line-bounded logic)
+    for rec in engine.registry.recognizers:
+        rec.context = []
 
     logger.info("Hindi Presidio engine: %d recognisers", len(engine.registry.recognizers))
     return engine
@@ -513,8 +517,19 @@ class SpacyHindiNERStage:
 def apply_hindi_context_scoring(
     entities: list[HindiEntity], text: str
 ) -> list[HindiEntity]:
+    import re
     for entity in entities:
-        ctx      = get_context(text, entity.start, entity.end, 80).lower()
+        ctx_raw  = get_context(text, entity.start, entity.end, 80)
+        parts = re.split(r'[\n\.]', ctx_raw)
+        ctx_bounded = ""
+        for p in parts:
+            if entity.text.strip() in p:
+                ctx_bounded = p.lower()
+                break
+        if not ctx_bounded:
+            ctx_bounded = ctx_raw.lower()
+            
+        ctx = ctx_bounded
         keywords = HINDI_LABELS.get(entity.entity_type, [])
         if any(kw.lower() in ctx for kw in keywords):
             entity.score = min(1.0, entity.score + 0.10)
