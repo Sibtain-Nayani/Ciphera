@@ -403,10 +403,17 @@ class RegexStage:
         # --- De-Fragmentation Sweep ---
         dense_chars = []
         original_indices = []
+        last_non_space = -1
         for i, c in enumerate(text):
             if not c.isspace():
+                if last_non_space != -1:
+                    gap = text[last_non_space+1:i]
+                    if '\n' in gap or len(gap) > 3:
+                        dense_chars.append(' ')
+                        original_indices.append(i)
                 dense_chars.append(c)
                 original_indices.append(i)
+                last_non_space = i
         
         if dense_chars:
             dense_text = "".join(dense_chars)
@@ -455,6 +462,27 @@ class RegexStage:
                             continue
 
                     score = self._validate(raw_orig, entity_type, base_score)
+                    
+                    # Distinguish intentional PII fragmentation from arbitrary separated numbers
+                    tokens = raw_orig.split()
+                    if len(tokens) >= (len(raw_dense) / 2):
+                        # Highly fragmented (e.g. mostly single characters)
+                        ctx = _get_context(text, orig_start, orig_end, self._CTX_WINDOW).lower()
+                        ctx_clean = re.sub(r'[^a-z0-9]', '', ctx)
+                        
+                        kw_set = []
+                        if entity_type == "PAN_NUMBER": kw_set = ["pan", "permanentaccount", "incometax"]
+                        elif entity_type == "AADHAAR_NUMBER": kw_set = ["aadhaar", "aadhar", "uid", "uidai", "vid"]
+                        elif entity_type == "GST_NUMBER": kw_set = ["gst", "gstin", "invoice"]
+                        elif entity_type == "IFSC_CODE": kw_set = ["ifsc", "bank", "neft", "rtgs"]
+                        
+                        has_ctx = any(kw in ctx_clean for kw in kw_set)
+                        
+                        if has_ctx:
+                            score = base_score # Restore score due to strong context evidence
+                        else:
+                            continue # Ignore arbitrary lists without context
+                    
                     if score > 0:
                         results.append(DetectedEntity(
                             start=orig_start, end=orig_end,
