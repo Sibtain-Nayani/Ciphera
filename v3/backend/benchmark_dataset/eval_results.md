@@ -1,23 +1,22 @@
-# Adversarial Benchmark Report (v1 Baseline)
+# Adversarial Benchmark Report
 
 ## Global Metrics
-- **Precision:** 0.6061
-- **Recall:**    0.6452
-- **F1 Score:**  0.6250
-- *(Duplicates: 0)*
+- **Precision:** 0.7500
+- **Recall:**    0.6774
+- **F1 Score:**  0.7119
 
 ## Per-Class Metrics
-| Entity Type | Precision | Recall | F1 Score | TP | FP | FN | Dups |
-|-------------|-----------|--------|----------|----|----|----|------|
-| AADHAAR_NUMBER | 1.00 | 0.60 | 0.75 | 3 | 0 | 2 | 0 |
-| BANK_ACCOUNT | 0.00 | 0.00 | 0.00 | 0 | 0 | 1 | 0 |
-| DATE_OF_BIRTH | 1.00 | 0.67 | 0.80 | 2 | 0 | 1 | 0 |
-| DATE_TIME | 0.00 | 0.00 | 0.00 | 0 | 3 | 0 | 0 |
-| EMAIL_ADDRESS | 1.00 | 0.75 | 0.86 | 3 | 0 | 1 | 0 |
-| PAN_NUMBER | 0.75 | 0.43 | 0.55 | 3 | 1 | 4 | 0 |
-| PERSON | 0.50 | 0.75 | 0.60 | 3 | 3 | 1 | 0 |
-| PHONE_NUMBER | 0.55 | 0.86 | 0.67 | 6 | 5 | 1 | 0 |
-| PIN_CODE | 0.00 | 0.00 | 0.00 | 0 | 1 | 0 | 0 |
+| Entity Type | Precision | Recall | F1 Score | TP | FP | FN |
+|-------------|-----------|--------|----------|----|----|----|
+| AADHAAR_NUMBER | 1.00 | 0.60 | 0.75 | 3 | 0 | 2 |
+| BANK_ACCOUNT | 0.00 | 0.00 | 0.00 | 0 | 0 | 1 |
+| DATE_OF_BIRTH | 1.00 | 0.67 | 0.80 | 2 | 0 | 1 |
+| DATE_TIME | 0.00 | 0.00 | 0.00 | 0 | 3 | 0 |
+| EMAIL_ADDRESS | 1.00 | 0.75 | 0.86 | 3 | 0 | 1 |
+| PAN_NUMBER | 1.00 | 0.57 | 0.73 | 4 | 0 | 3 |
+| PERSON | 0.50 | 0.75 | 0.60 | 3 | 3 | 1 |
+| PHONE_NUMBER | 1.00 | 0.86 | 0.92 | 6 | 0 | 1 |
+| PIN_CODE | 0.00 | 0.00 | 0.00 | 0 | 1 | 0 |
 
 ## Document Breakdown
 ### doc_001
@@ -38,11 +37,8 @@
 ---
 ### doc_003
 - **True Positives:** 1
-- **False Positives:** 1
+- **False Positives:** 0
 - **False Negatives:** 0
-
-**⚠️ FALSE POSITIVES (OVER-REDACTION):**
-- `PHONE_NUMBER`: "1234567890"
 
 ---
 ### doc_004
@@ -105,20 +101,14 @@ Deshmukh"
 
 ---
 ### doc_009_defrag_stress
-- **True Positives:** 0
-- **False Positives:** 1
-- **False Negatives:** 1
-
-**🚨 FALSE NEGATIVES (LEAKS):**
-- `PAN_NUMBER`: "A B C D E 1 2 3 4 F"
-
-**⚠️ FALSE POSITIVES (OVER-REDACTION):**
-- `PHONE_NUMBER`: "9 8 7 6 5 4 3 2 1 0"
+- **True Positives:** 1
+- **False Positives:** 0
+- **False Negatives:** 0
 
 ---
 ### doc_010_ocr_stress
 - **True Positives:** 0
-- **False Positives:** 2
+- **False Positives:** 1
 - **False Negatives:** 2
 
 **🚨 FALSE NEGATIVES (LEAKS):**
@@ -127,17 +117,11 @@ Deshmukh"
 
 **⚠️ FALSE POSITIVES (OVER-REDACTION):**
 - `DATE_TIME`: "55O6"
-- `PAN_NUMBER`: "OOOO1111OO"
 
 ---
 ### doc_011_context_stress
 - **True Positives:** 2
-- **False Positives:** 3
+- **False Positives:** 0
 - **False Negatives:** 0
-
-**⚠️ FALSE POSITIVES (OVER-REDACTION):**
-- `PHONE_NUMBER`: "9876543211"
-- `PHONE_NUMBER`: "9876543212"
-- `PHONE_NUMBER`: "9876543213"
 
 ---
