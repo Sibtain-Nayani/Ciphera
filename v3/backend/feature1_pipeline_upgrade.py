@@ -332,8 +332,9 @@ class RegexStage:
                             ctx_bounded = ctx_raw.lower() # Fallback
                             
                         kw_set = self._PHONE_CTX_KW if entity_type == "PHONE_NUMBER" else self._AADHAAR_CTX_KW
+                        ctx_bounded_clean = re.sub(r'[^a-z0-9]', '', ctx_bounded)
                         if len(clean_raw) == len(raw.strip()):
-                            if not any(kw in ctx_bounded for kw in kw_set):
+                            if not any(kw in ctx_bounded for kw in kw_set) and not any(kw in ctx_bounded_clean for kw in kw_set):
                                 continue
 
 
@@ -458,7 +459,8 @@ class RegexStage:
                     if entity_type in {"PHONE_NUMBER", "AADHAAR_NUMBER"} and len(raw_dense) >= 10:
                         ctx = _get_context(text, orig_start, orig_end, self._CTX_WINDOW).lower()
                         kw_set = self._PHONE_CTX_KW if entity_type == "PHONE_NUMBER" else self._AADHAAR_CTX_KW
-                        if not any(kw in ctx for kw in kw_set):
+                        ctx_clean_early = re.sub(r'[^a-z0-9]', '', ctx)
+                        if not any(kw in ctx for kw in kw_set) and not any(kw in ctx_clean_early for kw in kw_set):
                             continue
 
                     score = self._validate(raw_orig, entity_type, base_score)
