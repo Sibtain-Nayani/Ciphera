@@ -552,6 +552,8 @@ SOURCE_WEIGHTS_HI = {
 CONFIDENCE_THRESHOLD_HI = 0.48
 
 
+GENERIC_NLP_TYPES = {"PERSON", "ORGANIZATION", "LOCATION", "DATE_TIME", "O", "NRP"}
+
 def merge_hindi_entities(
     candidates: list[HindiEntity],
     threshold: float = CONFIDENCE_THRESHOLD_HI,
@@ -580,21 +582,33 @@ def merge_hindi_entities(
         if locked:
             elected_type = max(locked, key=lambda e: e.score).entity_type
         else:
-            tw: dict[str, float] = {}
-            for e in group:
-                w = SOURCE_WEIGHTS_HI.get(e.source, 1.0)
-                tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
-            elected_type = max(tw, key=tw.__getitem__)
+            structured = [e for e in group if e.entity_type not in GENERIC_NLP_TYPES]
+            if structured:
+                tw: dict[str, float] = {}
+                for e in structured:
+                    w = SOURCE_WEIGHTS_HI.get(e.source, 1.0)
+                    tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
+                elected_type = max(tw, key=tw.__getitem__)
+            else:
+                tw: dict[str, float] = {}
+                for e in group:
+                    w = SOURCE_WEIGHTS_HI.get(e.source, 1.0)
+                    tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
+                elected_type = max(tw, key=tw.__getitem__)
 
-        total_w = sum(SOURCE_WEIGHTS_HI.get(e.source, 1.0) for e in group)
-        wscore  = sum(
-            e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0) for e in group
-        ) / total_w
+        if elected_type not in GENERIC_NLP_TYPES:
+            wscore = max(e.score for e in group)
+        else:
+            total_w = sum(SOURCE_WEIGHTS_HI.get(e.source, 1.0) for e in group)
+            wscore  = sum(
+                e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0) for e in group
+            ) / total_w
 
         if wscore < threshold:
             continue
 
-        best    = max(group, key=lambda e: e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0))
+        matching = [e for e in group if e.entity_type == elected_type]
+        best    = max(matching or group, key=lambda e: e.score * SOURCE_WEIGHTS_HI.get(e.source, 1.0))
         sources = list({e.source for e in group})
         merged.append(HindiEntity(
             start=best.start, end=best.end,
