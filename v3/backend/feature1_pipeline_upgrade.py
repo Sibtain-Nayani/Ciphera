@@ -210,7 +210,7 @@ class RegexStage:
         # Aadhaar
         (r"\b([0-9OoIiLl]{4}[\s\-]?[0-9OoIiLl]{4}[\s\-]?[0-9OoIiLl]{4})\b", "AADHAAR_NUMBER", 0.85),
         # PAN
-        (r"\b([A-Z0158]{5}[0-9OoIiLlSsBb]{4}[A-Z0158])\b",                 "PAN_NUMBER",       0.95),
+        (r"\b([A-Z01583]{5}[0-9OoIiLlSsBb]{4}[A-Z01583])\b",                 "PAN_NUMBER",       0.95),
         # GST
         (r"\b\d{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b", "GST_NUMBER",  0.93),
         # IFSC
@@ -515,9 +515,9 @@ class RegexStage:
             
         if entity_type == "PAN_NUMBER":
             pan = value.strip().upper().replace(' ', '')
-            prefix = pan[:5].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B')
+            prefix = pan[:5].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B').replace('3', 'B')
             mid = pan[5:9].replace('O', '0').replace('I', '1').replace('L', '1').replace('S', '5').replace('B', '8')
-            suffix = pan[9:].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B')
+            suffix = pan[9:].replace('0', 'O').replace('1', 'I').replace('5', 'S').replace('8', 'B').replace('3', 'B')
             
             norm_pan = prefix + mid + suffix
             if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', norm_pan): return 0
