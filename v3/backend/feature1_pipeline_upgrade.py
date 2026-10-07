@@ -734,6 +734,8 @@ def apply_context_scoring(
 
 
 # ── Voting + merge ────────────────────────────────────────────────────────────
+GENERIC_NLP_TYPES = {"PERSON", "ORGANIZATION", "LOCATION", "DATE_TIME", "O", "NRP"}
+
 def merge_and_vote(
     candidates: list[DetectedEntity],
     threshold: float = CONFIDENCE_THRESHOLD,
@@ -765,16 +767,36 @@ def merge_and_vote(
         if locked:
             elected_type = max(locked, key=lambda e: e.score).entity_type
         else:
-            tw: dict[str, float] = {}
-            for e in group:
-                w = SOURCE_WEIGHTS.get(e.source.value, 1.0)
-                tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
-            elected_type = max(tw, key=tw.__getitem__)
+            # ── Phase 3: CANDIDATE CONFLICT RESOLUTION ──
+            # If a structured deterministic entity exists, it suppresses generic NLP labels.
+            structured = [e for e in group if e.entity_type not in GENERIC_NLP_TYPES]
+            
+            if structured:
+                # Vote ONLY among structured candidates
+                tw: dict[str, float] = {}
+                for e in structured:
+                    w = SOURCE_WEIGHTS.get(e.source.value, 1.0)
+                    tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
+                elected_type = max(tw, key=tw.__getitem__)
+            else:
+                # Vote among NLP candidates
+                tw: dict[str, float] = {}
+                for e in group:
+                    w = SOURCE_WEIGHTS.get(e.source.value, 1.0)
+                    tw[e.entity_type] = tw.get(e.entity_type, 0.0) + e.score * w
+                elected_type = max(tw, key=tw.__getitem__)
 
-        total_w = sum(SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group)
-        wscore  = sum(
-            e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group
-        ) / total_w
+        # ── SCORING WITH OVERLAPPING EVIDENCE ──
+        if elected_type not in GENERIC_NLP_TYPES:
+            # If we elected a structured type, treat generic NLP candidates as supporting evidence.
+            # Take the max score in the group so strong NLP confidence boosts the structured candidate.
+            wscore = max(e.score for e in group)
+        else:
+            # Traditional weighted average for generic NLP to prevent weak candidates from surviving
+            total_w = sum(SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group)
+            wscore  = sum(
+                e.score * SOURCE_WEIGHTS.get(e.source.value, 1.0) for e in group
+            ) / total_w
 
         # Check against requested threshold
         if wscore < threshold:
