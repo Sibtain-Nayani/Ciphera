@@ -253,7 +253,7 @@ class HindiRegexStage:
         re.UNICODE | re.IGNORECASE
     )
     _BANK_HINDI = re.compile(
-        r'(?:(?:खाता\s*(?:संख्या|नं\.?|नंबर)?|बैंक\s*खाता)\s*[:\-–—]?\s*)([०-९0-9]{9,18})',
+        r'(?:(?:खाता\s*(?:संख्या|नं\.?|नंबर)?|बैंक\s*खाता|अकाउंट\s*(?:नं\.?|नंबर)?)\s*[:\-–—]?\s*)([०-९0-9]{9,18})',
         re.UNICODE
     )
     _UPI_HINDI = re.compile(
