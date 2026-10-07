@@ -539,6 +539,9 @@ def apply_hindi_context_scoring(
         if entity.entity_type == "PIN_CODE":
             if any(kw in ctx for kw in ["version","otp","code","ref"]):
                 entity.score = max(0.0, entity.score - 0.30)
+        if entity.entity_type == "DATE_TIME":
+            if any(kw in ctx for kw in ["phone","mobile","contact","tel","aadhaar","pan","gst","ifsc","uid","account","a/c","à¤«à¥‹à¤¨","à¤®à¥‹à¤¬à¤¾à¤‡à¤²","à¤¸à¤‚à¤ªà¤°à¥ à¤•","à¤†à¤§à¤¾à¤°","à¤ªà¥ˆà¤¨","à¤–à¤¾à¤¤à¤¾"]):
+                entity.score = max(0.0, entity.score - 0.60)
     return entities
 
 
@@ -692,6 +695,8 @@ class MixedDocumentHandler:
         rightmost_end = -1
         rightmost_idx = -1   # index into deduped of the entity that set rightmost_end
 
+        GENERIC_NLP_TYPES = {"PERSON", "ORGANIZATION", "LOCATION", "DATE_TIME", "O", "NRP"}
+
         for entity in combined:
             if entity["start"] >= rightmost_end:
                 # No overlap — always keep
@@ -701,12 +706,21 @@ class MixedDocumentHandler:
                     rightmost_idx = len(deduped) - 1
             else:
                 # Overlap with a previous entity
-                # Check if this entity is strictly higher confidence
                 overlapping = deduped[rightmost_idx]
-                if entity["score"] > overlapping["score"] + 0.05:
-                    # Replace the lower-confidence entity
+                
+                is_new_structured = entity["entity_type"] not in GENERIC_NLP_TYPES
+                is_old_structured = overlapping["entity_type"] not in GENERIC_NLP_TYPES
+                
+                if is_new_structured and not is_old_structured:
+                    # Replace the generic entity with the structured one regardless of score
                     deduped[rightmost_idx] = entity
-                    # Update rightmost_end if needed
+                    rightmost_end = max(rightmost_end, entity["end"])
+                elif is_old_structured and not is_new_structured:
+                    # Discard the new generic entity regardless of score
+                    pass
+                elif entity["score"] > overlapping["score"] + 0.05:
+                    # Both structured or both generic, or tied structure. Replace the lower-confidence entity.
+                    deduped[rightmost_idx] = entity
                     rightmost_end = max(rightmost_end, entity["end"])
                 # Otherwise discard the new entity — existing one wins
 

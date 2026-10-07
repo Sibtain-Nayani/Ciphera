@@ -700,7 +700,7 @@ CONTEXT_BOOSTS = [
 CONTEXT_SUPPRESSION = [
     ("PERSON",          ["order","invoice","ref","id","number","product","item","section"],-0.15),
     ("AADHAAR_NUMBER",  ["order","invoice","ref","tracking","ticket","version"],          -0.20),
-    ("DATE_TIME",       ["phone","mobile","contact","tel"],                               -0.60),
+    ("DATE_TIME",       ["phone","mobile","contact","tel","aadhaar","pan","gst","ifsc","uid","account","a/c"], -0.60),
     ("ORGANIZATION",    ["aadhaar","pan","gst","ifsc","uid"],                             -0.40),
     ("LOCATION",        ["pan","ifsc","gst"],                                             -0.35),
     ("DATE_OF_BIRTH",   ["version","v.","release","patch"],                               -0.90),
