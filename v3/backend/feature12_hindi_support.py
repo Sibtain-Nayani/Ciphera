@@ -218,7 +218,7 @@ class HindiRegexStage:
         r'(\d{4}[\s\-]?\d{4}[\s\-]?\d{4})', re.UNICODE
     )
     _PAN_WITH_LABEL = re.compile(
-        r'(?:(?:स्थायी\s*खाता\s*संख्या|पैन(?:\s*नं\.?|\s*नंबर)?)\s*[:\-]?\s*)'
+        r'(?:(?:स्थायी\s*खाता\s*संख्या|पैन(?:\s*कार्ड)?(?:\s*नं\.?|\s*नंबर)?|pan)\s*[:\-]?\s*)'
         r'([A-Z]{5}[0-9]{4}[A-Z])', re.UNICODE | re.IGNORECASE
     )
     _DOB_HINDI = re.compile(
