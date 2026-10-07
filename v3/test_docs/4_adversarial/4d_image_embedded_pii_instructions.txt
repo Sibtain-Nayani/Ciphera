@@ -11,11 +11,11 @@ STEP 1 — Prepare the image:
      ┌─────────────────────────────────────────────┐
      │  SAMPLE KYC CARD (FAKE — FOR TESTING ONLY) │
      │                                             │
-     │  Name:    Gayathri Bhavsar              │
+     │  Name:    Teerth Pathak              │
      │  DOB:     15/08/1990                        │
-     │  Aadhaar: 8716 6432 9766         │
-     │  PAN:     VAZPD3289B               │
-     │  Mobile:  +91 84679 42063          │
+     │  Aadhaar: 7889 7386 4966         │
+     │  PAN:     CKMLJ6733P               │
+     │  Mobile:  +91 97117 34977          │
      └─────────────────────────────────────────────┘
 
 STEP 2 — Upload to Ciphera:

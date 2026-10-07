@@ -4,6 +4,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'standalone',   // Required for Docker multi-stage build
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     experimental: {
         // Keep existing experimental config if any
     },

@@ -220,10 +220,10 @@ class RegexStage:
         # Passport
         (r"\b([A-PR-WY][1-9]\d{7})\b",                   "IN_PASSPORT",      0.75),
         # Phone
-        (r"(\+91[\s\-]?|0|[OoIiLl])?[6-9][0-9OoIiLl]{4}[\s\-]?[0-9OoIiLl]{5}\b", "PHONE_NUMBER", 0.85),
+        (r"(?:(?:\+91|0|[OoIiLl])[\s\n\-]*)?([6-9][0-9OoIiLl]{1,4}[\s\n\-]+[0-9OoIiLl]{1,4}[\s\n\-]+[0-9OoIiLl]{1,4}|[6-9][0-9OoIiLl]{1,4}[\s\n\-]+[0-9OoIiLl]{5,8}|[6-9][0-9OoIiLl]{9})\b", "PHONE_NUMBER", 0.85),
         (r"\b([6-9][0-9OoIiLl]{9})\b",                             "PHONE_NUMBER",     0.80),
         # Email (before UPI so it takes priority)
-        (r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b", "EMAIL_ADDRESS", 0.98),
+        (r"\b[a-zA-Z0-9._%+\-]+[\s\n]*@[\s\n]*[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b", "EMAIL_ADDRESS", 0.98),
         # Bank account — 9-18 digits, context-gated (see analyze())
         (r"\b\d{9,18}\b",                                 "BANK_ACCOUNT",     0.60),
         # Indian Driving Licence — StateCode YY NNNNNNNN (13 or 15 chars)
@@ -615,8 +615,6 @@ class PresidioStage:
             span = text[r.start:r.end]
             if is_suppressed(span):
                 continue
-            if "\n" in span:
-                continue
             if r.entity_type == "DATE_TIME":
                 if any(w in span.lower() for w in ["सिविल", "लाइंस", "फ्लैट", "मकान", "road", "street", "lane", "flat", "floor", "near"]):
                     continue
@@ -650,8 +648,6 @@ class SpacyNERStage:
                 continue
             clean = ent.text.strip()
             if is_suppressed(clean):
-                continue
-            if "\n" in ent.text:
                 continue
             if mapped == "DATE_TIME" and re.match(r"^\d{10}$", clean):
                 continue

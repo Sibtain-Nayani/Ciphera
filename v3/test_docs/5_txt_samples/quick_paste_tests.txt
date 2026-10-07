@@ -3,45 +3,45 @@ QUICK PASTE TEST SAMPLES FOR CIPHERA REDACT PAGE
 Copy any block below and paste into the redact workspace.
 
 --- BLOCK 1: MINIMAL (single entity) ---
-My Aadhaar number is 7062 8288 0678.
+My Aadhaar number is 2683 7311 4047.
 
 --- BLOCK 2: HIGH DENSITY (all 21 types) ---
-Full Name: Ria Dua
+Full Name: Chaitanya Chandra
 Date of Birth: 22/03/1991
-Email: chanaatharv@example.org
-Mobile: +91 78666 50701
-Aadhaar: 8981 4526 3714
-PAN: BRHFD8697M
-GST: 09OGVTV9785L1Z5
-IFSC: AXIS0639037
-Voter ID: MDU8316511
-Bank Account: 93620421787401
-UPI: daniel13@upi
-Driving Licence: DL-22-9570-7487690
+Email: upadhritiprashad@example.org
+Mobile: +91 74251 52159
+Aadhaar: 6324 6119 0631
+PAN: ZSPJS5958L
+GST: 29NNJPX1876J1Z5
+IFSC: UBIN0179748
+Voter ID: NEW4492367
+Bank Account: 6818726343046
+UPI: xiti21@axl
+Driving Licence: DL-13-2250-4393695
 PIN Code: 400050
-IP Address: 192.168.166.253
+IP Address: 192.168.178.194
 URL: https://mybank.sbi.co.in/netbanking/login?user=anjali123
 Credit Card: 4532015112830366
 
 --- BLOCK 3: CONTEXTUAL AMBIGUITY ---
 Washington signed the Aadhaar form.
-The pan caught fire before the PAN LTYCC1571E was verified.
+The pan caught fire before the PAN TXVHB6932T was verified.
 Call me at 9 AM, not 9876543210.
-My birthday is 22/03 which is not the IFSC PUNB0735523.
+My birthday is 22/03 which is not the IFSC CNRB0797849.
 
 --- BLOCK 4: HINDI MIXED ---
 मेरा नाम Ravi Sharma है।
-मेरा आधार नंबर 3772 9031 4327 है।
-Contact: +91 89067 14181
-Email: kharemadhav@example.com
+मेरा आधार नंबर 5230 6357 3232 है।
+Contact: +91 98616 97991
+Email: nandaridhi@example.com
 पिन कोड: 302001
 
 --- BLOCK 5: EDGE CASE NUMBERS ---
 Invoice #432588129901 (should NOT be Aadhaar — no context)
-My Aadhaar is 3896 9947 9897 (SHOULD be Aadhaar — has context keyword)
+My Aadhaar is 8601 6284 3639 (SHOULD be Aadhaar — has context keyword)
 Order 9876543210 placed (should NOT be phone — looks like order number)
 Mobile: 9876543210 (SHOULD be phone — has context keyword)
-Amount: ₹45,000 transferred to account 7718877682372724 via NEFT
+Amount: ₹45,000 transferred to account 0772331818716346 via NEFT
 
 --- BLOCK 6: ZERO PII (should return 0 entities) ---
 The weather today is pleasant with a temperature of 28 degrees.

@@ -3,39 +3,39 @@ VENDOR ONBOARDING FORM — PROCUREMENT PORTAL
 SECTION A: IDENTITY VERIFICATION
 
 Vendor Name: Lakshmi Enterprises Pvt. Ltd.
-Proprietor: Veer Wagle
-Contact Person: Ansh Varty
-Mobile: +91 98090 49689
-Email: saipalla@example.org
+Proprietor: Frederick Bobal
+Contact Person: Lajita Sabharwal
+Mobile: +91 68773 63732
+Email: osha08@example.net
 
-Aadhaar (spaced):   4371 1575 2072
-Aadhaar (compact):  441434102951
-PAN Number:         LAGPN4321L
-GSTIN:              29VRMJE3220D1Z5
-Voter ID:           CJW0403286
-Driving Licence:    RJ-23-1004-9343745
-Passport No:        Z7033531
+Aadhaar (spaced):   4234 1357 2063
+Aadhaar (compact):  230517495703
+PAN Number:         YUOHN2372H
+GSTIN:              07RFPAV4593W1Z5
+Voter ID:           SPS5581369
+Driving Licence:    KA-17-4527-0472043
+Passport No:        Z5271035
 
 SECTION B: BANKING DETAILS
 
 Bank Name:        State Bank of India
-Account Number:   04170206106367
-IFSC Code:        SBIN0054059
-UPI ID:           vasana95@axl
+Account Number:   089997919524
+IFSC Code:        UBIN0070623
+UPI ID:           ikbal19@ybl
 Account Type:     Current
 
 SECTION C: GST FILING HISTORY
 
-Q1 2026 GSTIN: 27KSDTO3619G1Z5 — Filed on 15/04/2026
-Q2 2026 GSTIN: 33XDIPM4568C1Z5 — Pending
+Q1 2026 GSTIN: 24TUNJX3253B1Z5 — Filed on 15/04/2026
+Q2 2026 GSTIN: 09XNMHQ5980S1Z5 — Pending
 
 SECTION D: SECONDARY CONTACT
 
-Alternate Contact: Kavya Varkey
-Alternate Aadhaar: 9941 5725 4222
-Alternate PAN:     CPJTP8017I
-Alternate Mobile:  +91 78515 81361
-Alternate Email:   wmangat@example.org
+Alternate Contact: Advik Choudhury
+Alternate Aadhaar: 6738 8240 0454
+Alternate PAN:     FUXTX7419D
+Alternate Mobile:  +91 66429 92615
+Alternate Email:   zaidkoshy@example.org
 
 CERTIFICATION
 I certify that all above information is accurate.

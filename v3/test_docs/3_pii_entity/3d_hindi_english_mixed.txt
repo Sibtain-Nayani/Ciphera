@@ -6,27 +6,27 @@ BANK ACCOUNT DETAILS FORM
 नाम: रवि शर्मा
 पिता का नाम: राजेश शर्मा
 जन्म तिथि: 15/08/1985
-आधार संख्या: 3644 9517 9005
-पैन नंबर: UMQAJ9738U
-मोबाइल नंबर: +91 89661 85063
+आधार संख्या: 7285 4668 5550
+पैन नंबर: MXOTF5696C
+मोबाइल नंबर: +91 91018 65054
 पता: 42, गांधी नगर, जयपुर - 302001
-जीएसटी नंबर: 27ABKLO5711Z1Z5
+जीएसटी नंबर: 07PAVFE8501G1Z5
 पिन कोड: 302001
 
 -- ENGLISH SECTION --
 
 Name: Ravi Sharma
-Email: bakhshiwalla@example.org
-Bank Account: 10920336074
-IFSC Code: HDFC0930929
-UPI ID: adweta34@ibl
-Voter ID: PDI8241730
+Email: nirja77@example.net
+Bank Account: 1781996633428
+IFSC Code: UBIN0907360
+UPI ID: chatresh96@oksbi
+Voter ID: NOU5204925
 
 -- मिश्रित वाक्य / MIXED SENTENCES --
 
-रवि Sharma ने अपना Aadhaar 7155 3940 6044 submit किया।
-The account number खाता संख्या 4553724975252918 है।
-Contact करें: +91 68948 92317 या sarinsarthak@example.com
+रवि Sharma ने अपना Aadhaar 9753 4811 9342 submit किया।
+The account number खाता संख्या 1226998816249 है।
+Contact करें: +91 84461 54931 या lipikakorpal@example.com
 
 मैं यह प्रमाणित करता हूं कि उपरोक्त जानकारी सत्य है।
 I hereby certify the above information is true.
