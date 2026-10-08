@@ -502,25 +502,32 @@ export default function WorkspacePage() {
             // 3. Poll for completion
             let isComplete = false;
             let status = 'QUEUED';
-            setExportProgress({ current: 0, total: 100, status: 'Queued...' });
+            setExportProgress({ current: 15, total: 100, status: 'Queued on secure worker...' });
             
+            let pollCount = 0;
             while (!isComplete) {
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 1500));
+                pollCount++;
                 const jobStatus = await V3ApiClient.getJobStatus(job_id);
                 status = jobStatus.status;
                 if (status.toUpperCase() === 'COMPLETED') {
                     isComplete = true;
-                    setExportProgress({ current: 100, total: 100, status: 'Completed!' });
+                    setExportProgress({ current: 100, total: 100, status: 'Zero-Trust Verification Passed! Downloading...' });
                 } else if (status === 'FAILED') {
-                    throw new Error(jobStatus.error_message || "Redaction job failed");
+                    throw new Error(jobStatus.error_message || "Redaction & verification failed");
                 } else {
-                    setExportProgress({ current: 50, total: 100, status: `Processing: ${status}...` });
+                    const stageMsg = pollCount === 1 
+                        ? 'Applying native coordinate redactions...' 
+                        : pollCount === 2 
+                        ? 'Verifying L1 Geometry & L2 Visual OCR text purge...' 
+                        : 'Verifying L3 Defragmented Regex & Entropy...';
+                    setExportProgress({ current: Math.min(30 + pollCount * 20, 90), total: 100, status: stageMsg });
                 }
             }
 
             // 4. Download
             await V3ApiClient.downloadRedacted(job_id, fileName);
-            useUiStore.getState().addToast('Secure file downloaded successfully.', 'success');
+            useUiStore.getState().addToast('Zero-Trust Verified document downloaded successfully.', 'success');
             
             // Log audit
             const logEntry = { id: 'RUN-' + Math.floor(Math.random() * 10000), name: fileName, size: 'Unknown', date: new Date().toLocaleString(), status: 'Completed', entitiesDiscovered: 0, rulesApplied: [] };

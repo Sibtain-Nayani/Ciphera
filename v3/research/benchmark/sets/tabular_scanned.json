@@ -1,0 +1,47 @@
+[
+  {
+    "id": "scanned_inv_001",
+    "name": "Scanned Enterprise Invoice with Table",
+    "category": "tabular_scanned",
+    "page_count": 1,
+    "full_text": "TAX INVOICE\nVendor: Global Logistics Ltd\nInvoice No: INV-2026-9812\n\nItem Description | Qty | Rate | Bank Account | IFSC Code\nConsulting Svc | 1 | 50000 | 409912345678 | HDFC0000123\nCloud Hosting | 2 | 25000 | 409912345678 | HDFC0000123\nSecurity Audit | 1 | 75000 | 409912345678 | HDFC0000123\n\nVendor Contact: billing@globallogistics.in | +91 9876543210\n",
+    "expected_entities": [
+      {"type": "EMAIL_ADDRESS", "value": "billing@globallogistics.in"},
+      {"type": "PHONE_NUMBER", "value": "9876543210"},
+      {"type": "BANK_ACCOUNT", "value": "409912345678"},
+      {"type": "IFSC_CODE", "value": "HDFC0000123"}
+    ]
+  },
+  {
+    "id": "scanned_stmt_002",
+    "name": "Scanned Bank Statement Multi-Column",
+    "category": "tabular_scanned",
+    "page_count": 1,
+    "full_text": "STATEMENT OF ACCOUNT\nAccount Holder: Priya Sharma\nPAN: ABCPS1234E\n\nTxn Date | Description | Ref / Account | Debit | Credit\n10/01/2026 | Salary Trf | 100293847561 | 0.00 | 85000.00\n15/01/2026 | Vendor Pmt | 998877665544 | 12000.00 | 0.00\n20/01/2026 | EMI Debit | 554433221100 | 25000.00 | 0.00\n",
+    "expected_entities": [
+      {"type": "PERSON", "value": "Priya Sharma"},
+      {"type": "PAN_NUMBER", "value": "ABCPS1234E"},
+      {"type": "BANK_ACCOUNT", "value": "100293847561"},
+      {"type": "BANK_ACCOUNT", "value": "998877665544"},
+      {"type": "BANK_ACCOUNT", "value": "554433221100"}
+    ]
+  },
+  {
+    "id": "scanned_payroll_003",
+    "name": "Scanned Payroll Register with Columnar Aadhaar & PAN",
+    "category": "tabular_scanned",
+    "page_count": 1,
+    "full_text": "MONTHLY PAYROLL AUDIT\nEmp ID | Name | Aadhaar Number | PAN Number | Net Salary\nEMP01 | Amit Verma | 9876 5432 1098 | ABCPV1234A | 95000\nEMP02 | Sneha Patel | 8765 4321 0987 | ABCSP5678B | 110000\nEMP03 | Rahul Sen | 7654 3210 9876 | ABCRS9012C | 88000\n",
+    "expected_entities": [
+      {"type": "PERSON", "value": "Amit Verma"},
+      {"type": "AADHAAR_NUMBER", "value": "9876 5432 1098"},
+      {"type": "PAN_NUMBER", "value": "ABCPV1234A"},
+      {"type": "PERSON", "value": "Sneha Patel"},
+      {"type": "AADHAAR_NUMBER", "value": "8765 4321 0987"},
+      {"type": "PAN_NUMBER", "value": "ABCSP5678B"},
+      {"type": "PERSON", "value": "Rahul Sen"},
+      {"type": "AADHAAR_NUMBER", "value": "7654 3210 9876"},
+      {"type": "PAN_NUMBER", "value": "ABCRS9012C"}
+    ]
+  }
+]

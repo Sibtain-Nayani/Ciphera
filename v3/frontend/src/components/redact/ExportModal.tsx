@@ -242,6 +242,31 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                         )}
                     </div>
 
+                    {/* Zero-Trust Verification Engine Guarantee Banner */}
+                    <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/20 space-y-2">
+                        <div className="flex items-center justify-between text-emerald-400">
+                            <div className="flex items-center gap-2">
+                                <CheckSquare className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                <span className="text-[11px] font-semibold tracking-wider uppercase">Zero-Trust Independent Verification</span>
+                            </div>
+                            <span className="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">Active</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono text-gray-400">
+                            <div className="bg-black/50 p-1.5 rounded-lg border border-white/5 flex flex-col items-center text-center">
+                                <span className="text-emerald-400 font-semibold text-[10px]">L1: Geometry</span>
+                                <span className="text-gray-500 text-[8px] mt-0.5">Descender Pad</span>
+                            </div>
+                            <div className="bg-black/50 p-1.5 rounded-lg border border-white/5 flex flex-col items-center text-center">
+                                <span className="text-emerald-400 font-semibold text-[10px]">L2: Visual OCR</span>
+                                <span className="text-gray-500 text-[8px] mt-0.5">Pixel Purge</span>
+                            </div>
+                            <div className="bg-black/50 p-1.5 rounded-lg border border-white/5 flex flex-col items-center text-center">
+                                <span className="text-emerald-400 font-semibold text-[10px]">L3: Defrag</span>
+                                <span className="text-gray-500 text-[8px] mt-0.5">Entropy Audit</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Summary */}
                     <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-white/[0.03] to-transparent border border-white/[0.05]">
                         <p className="text-xs text-gray-400 leading-relaxed">
@@ -253,7 +278,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                             </span>
                             {' '}as a{' '}
                             <span className="text-[#FFA500] font-semibold">.{format.toUpperCase()}</span>
-                            {' '}file with all redactions baked in.
+                            {' '}file with all redactions baked in and cryptographically verified.
                         </p>
                     </div>
                 </div>

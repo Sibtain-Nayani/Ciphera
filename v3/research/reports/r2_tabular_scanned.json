@@ -1,0 +1,38 @@
+{
+  "benchmark": "Phase R2 Scanned & Tabular Layout Benchmark",
+  "precision": 0.42857142857142855,
+  "recall": 0.5,
+  "f1": 0.4615384615384615,
+  "tp": 9,
+  "fp": 12,
+  "fn": 9,
+  "documents": [
+    {
+      "id": "scanned_inv_001",
+      "name": "Scanned Enterprise Invoice with Table",
+      "expected_count": 4,
+      "predicted_count": 8,
+      "tp": 3,
+      "fp": 5,
+      "fn": 1
+    },
+    {
+      "id": "scanned_stmt_002",
+      "name": "Scanned Bank Statement Multi-Column",
+      "expected_count": 5,
+      "predicted_count": 6,
+      "tp": 3,
+      "fp": 3,
+      "fn": 2
+    },
+    {
+      "id": "scanned_payroll_003",
+      "name": "Scanned Payroll Register with Columnar Aadhaar & PAN",
+      "expected_count": 9,
+      "predicted_count": 7,
+      "tp": 3,
+      "fp": 4,
+      "fn": 6
+    }
+  ]
+}

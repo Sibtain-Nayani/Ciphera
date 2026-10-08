@@ -1,0 +1,69 @@
+name: Ciphera CI & Verification Gate
+
+on:
+  push:
+    branches: [ main, backend-hardening ]
+  pull_request:
+    branches: [ main, backend-hardening ]
+
+jobs:
+  backend-tests:
+    name: Backend Security & Verification Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev mupdf-tools
+
+      - name: Install Python Dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio anyio httpx psycopg2-binary
+          python -m spacy download en_core_web_lg
+          python -m spacy download xx_ent_wiki_sm
+
+      - name: Run Backend Security & Destruction Audit Tests (E3-E8)
+        working-directory: ./backend
+        run: |
+          pytest test_e3_e4_security_audit.py test_e5_e6_destruction.py test_e7_security_reliability.py test_e8_pdf_content_attacks.py -v
+
+      - name: Run Phase R1 Empirical Research Ablation Suite
+        working-directory: ./backend
+        run: |
+          python research/ablations/run_all_ablations.py
+
+  frontend-build:
+    name: Frontend Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Typecheck Frontend
+        working-directory: ./frontend
+        run: npx tsc --noEmit
