@@ -206,7 +206,15 @@ def test_download_failed_job_blocked(security_test_env):
 # ==========================================
 
 def test_concurrent_redact_requests_deterministic(security_test_env):
-    """Repeated async redact triggers create unique distinct job records without corruption."""
+    """
+    Genuine multithreaded concurrent requests against the same document:
+    Semantics:
+    1. Each trigger creates an independent, isolated RedactionJob record (UUID)
+    2. No database row locks or session deadlocks occur
+    3. Distinct job IDs are returned for each concurrent caller
+    """
+    import concurrent.futures
+    
     db = SessionLocal()
     doc_id = f"e7_doc_async_{uuid.uuid4().hex[:6]}"
     doc_a = Document(
@@ -218,9 +226,17 @@ def test_concurrent_redact_requests_deterministic(security_test_env):
     db.close()
     
     token_a = security_test_env["token_a"]
-    res1 = client.post(f"/api/v3/documents/{doc_id}/redact/async", headers={"Authorization": f"Bearer {token_a}"})
-    res2 = client.post(f"/api/v3/documents/{doc_id}/redact/async", headers={"Authorization": f"Bearer {token_a}"})
     
-    assert res1.status_code == 200
-    assert res2.status_code == 200
-    assert res1.json()["job_id"] != res2.json()["job_id"]
+    def send_request():
+        return client.post(f"/api/v3/documents/{doc_id}/redact/async", headers={"Authorization": f"Bearer {token_a}"})
+    
+    # Fire 5 concurrent requests simultaneously across multiple worker threads
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(send_request) for _ in range(5)]
+        responses = [f.result() for f in futures]
+        
+    for res in responses:
+        assert res.status_code == 200
+        
+    job_ids = [res.json()["job_id"] for res in responses]
+    assert len(set(job_ids)) == 5, f"Expected 5 unique job IDs, got {len(set(job_ids))}"
