@@ -6,6 +6,8 @@ import mimetypes
 
 from app.schemas.document import CanonicalDocument, CanonicalBlock, BoundingBox
 
+from fastapi import HTTPException
+
 class DocumentParser:
     """
     Phase 2: Canonical Document Engine.
@@ -14,9 +16,12 @@ class DocumentParser:
     
     @staticmethod
     def parse(file_bytes: bytes, filename: str) -> CanonicalDocument:
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file uploaded")
+            
         mime_type, _ = mimetypes.guess_type(filename)
         
-        if mime_type == "application/pdf":
+        if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
             return DocumentParser._parse_pdf(file_bytes, filename)
         elif mime_type and mime_type.startswith("image/"):
             return DocumentParser._parse_image(file_bytes, filename)
@@ -28,7 +33,20 @@ class DocumentParser:
             
     @staticmethod
     def _parse_pdf(file_bytes: bytes, filename: str) -> CanonicalDocument:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file uploaded")
+        try:
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid or corrupted PDF file: {str(e)}")
+            
+        if doc.is_encrypted:
+            doc.close()
+            raise HTTPException(status_code=400, detail="Password-protected or encrypted PDFs are not supported")
+            
+        if len(doc) == 0:
+            doc.close()
+            raise HTTPException(status_code=400, detail="PDF contains 0 pages")
         blocks = []
         full_text = ""
         current_index = 0
