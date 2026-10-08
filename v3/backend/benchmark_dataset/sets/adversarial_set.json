@@ -1,0 +1,121 @@
+[
+  {
+    "id": "adv_001_heavy_ocr_pan_aadhaar",
+    "type": "adversarial_ocr",
+    "content": "GOVERNMENT OF INDIA IDENTITY RECORD\nAadhaar Card No: 4532 88I2 99OI\nIncome Tax PAN: BVC PQ 9999Z\nHolder Name: Rajesh Kumar\nContact Mobile: +91-987654321O",
+    "expected_entities": [
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 88I2 99OI"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "BVC PQ 9999Z"
+      },
+      {
+        "type": "PERSON",
+        "value": "Rajesh Kumar"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "+91-987654321O"
+      }
+    ]
+  },
+  {
+    "id": "adv_002_extreme_whitespace_pan",
+    "type": "adversarial_spatial",
+    "content": "TAX ASSESSMENT MEMO\nAssessee: Vikram Malhotra\nP  A  N  :  A  B  C  P  E  1  2  3  4  F\nDOB of assessee: 12/04/1982\nRegistered Email: vikram . malhotra @ enterprise . in",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Vikram Malhotra"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "A  B  C  P  E  1  2  3  4  F"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "12/04/1982"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "vikram . malhotra @ enterprise . in"
+      }
+    ]
+  },
+  {
+    "id": "adv_003_multiline_split_phone_email",
+    "type": "adversarial_multiline",
+    "content": "CANDIDATE DOSSIER\nApplicant Name:\nPooja\nVerma\nPrimary Mobile Contact:\n98765\n43210\nOfficial Email:\npooja.verma\n@company.org",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Pooja\nVerma"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "98765\n43210"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "pooja.verma\n@company.org"
+      }
+    ]
+  },
+  {
+    "id": "adv_004_bilingual_hindi_account_aadhaar",
+    "type": "adversarial_bilingual",
+    "content": "ग्राहक सत्यापन फॉर्म (Customer KYC Document)\nनाम: अमित सिंह\nखाता संख्या: 987654321012\nIFSC Code: SBIN0001234\nAadhaar: 4532 8812 9901\nमोबाइल: 9123456789",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "अमित सिंह"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "987654321012"
+      },
+      {
+        "type": "IFSC_CODE",
+        "value": "SBIN0001234"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 8812 9901"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9123456789"
+      }
+    ]
+  },
+  {
+    "id": "adv_005_misdirection_with_real_pii",
+    "type": "adversarial_context_misdirection",
+    "content": "Corporate Audit Note: Software release 24.11.2023 was approved. Meanwhile, patient Sunil Joshi (DOB: 15/08/1979) transferred funds to Bank Account 112233445566 with IFSC HDFC0000123 under PAN ABCPJ5678K.",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Sunil Joshi"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "15/08/1979"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "112233445566"
+      },
+      {
+        "type": "IFSC_CODE",
+        "value": "HDFC0000123"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCPJ5678K"
+      }
+    ]
+  }
+]

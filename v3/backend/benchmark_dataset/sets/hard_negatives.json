@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hn_001_courier_tracking",
+    "type": "hard_negative_logistics",
+    "content": "Logistics Dispatch Report: BlueDart AWB tracking number 987654321012 is currently in transit. Secondary courier waybill ref 112233445566 has been handed over to delivery hub. Internal dispatch docket # 9123456789 created by logistics desk.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_002_ecommerce_orders",
+    "type": "hard_negative_ecommerce",
+    "content": "E-Commerce Purchase Receipt: Order ID #9876543210 processed successfully. Catalog Item Code ABCDE1234F-01 has been packed from Warehouse 4. Inventory SKU reference SKU-8877665544 dispatched via standard shipping.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_003_software_versions",
+    "type": "hard_negative_software",
+    "content": "Application Changelog: System updated to release v15.08.1985 with hotfix patch build 24.11.2023. Core engine version 4.11.001 deployed on cluster 7. Container image tag v.9876543210.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_004_hardware_serials",
+    "type": "hard_negative_hardware",
+    "content": "Factory Hardware Inspection: Server chassis Serial Number OOOO1111OOOO passed thermal testing. Motherboard machine ID 4532-8812-9901-SN passed power cycle. Peripheral device SN 1l2233445506 registered in inventory database.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_005_financial_transaction_refs",
+    "type": "hard_negative_audit",
+    "content": "Enterprise Audit Log: Internal ledger audit reference REF987654321012 verified by compliance desk. Nightly automated batch job #112233445566 completed with 0 errors. Settlement transaction hash TXN-411001-9988 recorded.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_006_system_errors_ports",
+    "type": "hard_negative_syslog",
+    "content": "Server Syslog: Error 411001: Connection timeout encountered on remote port 8080. Database query retry count 15081985 exhausted. Process worker pid 987654 terminated gracefully.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_007_otp_and_security_tokens",
+    "type": "hard_negative_otp",
+    "content": "Authentication Notification: Your one-time verification OTP is 987654. Do not share this code. Gate entry pin code 411001 is valid for 15 minutes at visitor terminal.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_008_building_complexes_non_person",
+    "type": "hard_negative_entities",
+    "content": "Real Estate Listing: Lotus Enclave Commercial Arcade features premium retail shops. The building is managed by Grand Heritage Residency Maintenance Board.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_009_degraded_serial_traps",
+    "type": "hard_negative_ocr_traps",
+    "content": "Equipment Catalog: Component model I3CDEI234O-REF in stock. Replacement module part SN S55O6-1122 approved for maintenance replacement.",
+    "expected_entities": []
+  },
+  {
+    "id": "hn_010_hindi_non_pii_references",
+    "type": "hard_negative_hindi",
+    "content": "आदेश एवं प्रेषण विवरण: पार्सल ट्रैकिंग संदर्भ संख्या 987654321012 प्रेषित किया गया है। सॉफ्टवेयर संस्करण 24.11.2023 सफलतापूर्वक स्थापित हुआ। प्रवेश सत्यापन कोड: 411001।",
+    "expected_entities": []
+  }
+]
