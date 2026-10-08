@@ -1,0 +1,185 @@
+[
+  {
+    "id": "real_001_hospital_discharge_summary",
+    "type": "domain_healthcare",
+    "content": "APOLLO HOSPITALS ENTERPRISE - DISCHARGE SUMMARY\nPatient Name: Rameshwar Kulkarni\nAge/Gender: 45 Yrs / Male\nDate of Birth: 18/06/1979\nAadhaar UID: 4532 8812 9901\nEmergency Contact: 9876543210\nEmail ID: rameshwar.kulkarni@healthmail.com\nPrimary Consultant: Dr. Anita Deshmukh\nResidential Address: Flat 102, Shanti Heights, Kothrud, Pune 411038\nAdmission Diagnosis: Acute Coronary Syndrome. Patient stabilized following angioplasty.\nDischarge Medications: Tab Atorvastatin 40mg once daily, Tab Clopidogrel 75mg once daily.\nFollow-up scheduled after 2 weeks.",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Rameshwar Kulkarni"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "18/06/1979"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 8812 9901"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "rameshwar.kulkarni@healthmail.com"
+      },
+      {
+        "type": "PERSON",
+        "value": "Anita Deshmukh"
+      },
+      {
+        "type": "PIN_CODE",
+        "value": "411038"
+      }
+    ]
+  },
+  {
+    "id": "real_002_employee_onboarding_kyc",
+    "type": "domain_human_resources",
+    "content": "INFOTECH SOLUTIONS HR ONBOARDING & PAYROLL DECLARATION\nEmployee Full Name: Sneha Chandrasekhar\nDate of Birth: 22/11/1992\nPermanent Account Number (PAN): ABCPS1234F\nAadhaar Number: 4532 8812 9901\nSalary Disbursement Bank Account: 987654321012\nBank IFSC Code: HDFC0001234\nCorporate Email: sneha.c@infotech.com\nPersonal Phone: 9123456789\nPermanent Address: 14/B, Sea Breeze Apartments, Bandra West, Mumbai 400050",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Sneha Chandrasekhar"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "22/11/1992"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCPS1234F"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 8812 9901"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "987654321012"
+      },
+      {
+        "type": "IFSC_CODE",
+        "value": "HDFC0001234"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "sneha.c@infotech.com"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9123456789"
+      },
+      {
+        "type": "PIN_CODE",
+        "value": "400050"
+      }
+    ]
+  },
+  {
+    "id": "real_003_gst_commercial_invoice",
+    "type": "domain_finance_invoice",
+    "content": "TAX INVOICE (RULE 46 OF CGST RULES, 2017)\nSeller: Precision Engineering Corp\nSupplier GSTIN: 27AABCP1234F1Z5\nBuyer / Consignee: Rajesh Mehta\nPAN: ABCPM9876Q\nBank Details for NEFT / RTGS Transfer:\nAccount: 112233445566\nIFSC: SBIN0000456\nBilling Contact: accounts@precisioneng.in | +91-9876543210\nDelivery Location: Plot 45, MIDC Industrial Area, Pune 411018",
+    "expected_entities": [
+      {
+        "type": "GST_NUMBER",
+        "value": "27AABCP1234F1Z5"
+      },
+      {
+        "type": "PERSON",
+        "value": "Rajesh Mehta"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCPM9876Q"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "112233445566"
+      },
+      {
+        "type": "IFSC_CODE",
+        "value": "SBIN0000456"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "accounts@precisioneng.in"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "+91-9876543210"
+      },
+      {
+        "type": "PIN_CODE",
+        "value": "411018"
+      }
+    ]
+  },
+  {
+    "id": "real_004_insurance_motor_claim",
+    "type": "domain_insurance",
+    "content": "MOTOR VEHICLE ACCIDENT CLAIM INTIMATION\nPolicyholder Name: Sandeep Joshi\nDriving Licence No: MH1220110065432\nPAN Number: ABCPJ4321R\nContact Mobile: 9876543210\nEmail: sandeep.joshi@mailhub.com\nAccident Report: Incident occurred near Sinhagad Road on 24-11-2023. Vehicle inspected by claims assessor.",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "Sandeep Joshi"
+      },
+      {
+        "type": "DRIVING_LICENCE",
+        "value": "MH1220110065432"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCPJ4321R"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "value": "sandeep.joshi@mailhub.com"
+      }
+    ]
+  },
+  {
+    "id": "real_005_hindi_bank_kyc_form",
+    "type": "domain_hindi_banking",
+    "content": "स्टेट बैंक ऑफ इंडिया - ग्राहक पहचान एवं सत्यापन प्रपत्र (KYC FORM)\nखाताधारक का नाम: मनोज तिवारी\nजन्म तिथि: 15/08/1984\nपैन कार्ड नंबर: ABCPT7890L\nआधार कार्ड संख्या: 4532 8812 9901\nबैंक खाता संख्या: 987654321012\nशाखा IFSC कोड: SBIN0001234\nपंजीकृत मोबाइल नंबर: 9876543210\nस्थायी निवास पता: मकान नं 45, सिविल लाइन्स, प्रयागराज 211001",
+    "expected_entities": [
+      {
+        "type": "PERSON",
+        "value": "मनोज तिवारी"
+      },
+      {
+        "type": "DATE_OF_BIRTH",
+        "value": "15/08/1984"
+      },
+      {
+        "type": "PAN_NUMBER",
+        "value": "ABCPT7890L"
+      },
+      {
+        "type": "AADHAAR_NUMBER",
+        "value": "4532 8812 9901"
+      },
+      {
+        "type": "BANK_ACCOUNT",
+        "value": "987654321012"
+      },
+      {
+        "type": "IFSC_CODE",
+        "value": "SBIN0001234"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "value": "9876543210"
+      },
+      {
+        "type": "PIN_CODE",
+        "value": "211001"
+      }
+    ]
+  }
+]

@@ -1,0 +1,49 @@
+{
+  "experiments": {
+    "class_1_missed_entity": {
+      "injected": 3,
+      "caught": 3,
+      "by_layer": {
+        "geometry": 0,
+        "visual": 0,
+        "regex": 3
+      }
+    },
+    "class_2_undercovered_bbox": {
+      "injected": 3,
+      "caught": 3,
+      "by_layer": {
+        "geometry": 3,
+        "visual": 0,
+        "regex": 0
+      }
+    },
+    "class_3_spatial_fragmentation": {
+      "injected": 3,
+      "caught": 3,
+      "by_layer": {
+        "geometry": 0,
+        "visual": 0,
+        "regex": 3
+      }
+    },
+    "class_4_hidden_ocr_layer": {
+      "injected": 3,
+      "caught": 3,
+      "by_layer": {
+        "geometry": 0,
+        "visual": 0,
+        "regex": 3
+      }
+    },
+    "class_5_clean_redaction_control": {
+      "injected": 3,
+      "false_alarms": 0
+    }
+  },
+  "total_injected_defects": 12,
+  "total_caught_defects": 12,
+  "defect_catch_rate_pct": 100.0,
+  "control_clean_cases": 3,
+  "false_alarm_rate_pct": 0.0
+}

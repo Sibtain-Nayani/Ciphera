@@ -1,0 +1,587 @@
+{
+  "gating_on": {
+    "global": {
+      "precision": 0.7567567567567568,
+      "recall": 0.9333333333333333,
+      "f1": 0.835820895522388,
+      "tp": 84,
+      "fp": 27,
+      "fn": 6
+    },
+    "suites": {
+      "Regression Suite": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 32,
+        "fp": 0,
+        "fn": 0,
+        "per_class": {
+          "PERSON": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 5,
+            "fp": 0,
+            "fn": 0
+          },
+          "PAN_NUMBER": {
+            "tp": 7,
+            "fp": 0,
+            "fn": 0
+          },
+          "PHONE_NUMBER": {
+            "tp": 7,
+            "fp": 0,
+            "fn": 0
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          }
+        }
+      },
+      "Adversarial Suite": {
+        "precision": 0.8571428571428571,
+        "recall": 0.8571428571428571,
+        "f1": 0.8571428571428571,
+        "tp": 18,
+        "fp": 3,
+        "fn": 3,
+        "per_class": {
+          "AADHAAR_NUMBER": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 0
+          },
+          "PAN_NUMBER": {
+            "tp": 3,
+            "fp": 2,
+            "fn": 0
+          },
+          "PERSON": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 1
+          },
+          "PHONE_NUMBER": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 2,
+            "fp": 1,
+            "fn": 0
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 1
+          },
+          "BANK_ACCOUNT": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 0
+          },
+          "IFSC_CODE": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 1
+          }
+        }
+      },
+      "Hard-Negative Suite": {
+        "precision": 0.0,
+        "recall": 1.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 13,
+        "fn": 0,
+        "per_class": {
+          "PERSON": {
+            "tp": 0,
+            "fp": 4,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 0
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          }
+        }
+      },
+      "Realistic Synthetic Suite": {
+        "precision": 0.7555555555555555,
+        "recall": 0.918918918918919,
+        "f1": 0.8292682926829269,
+        "tp": 34,
+        "fp": 11,
+        "fn": 3,
+        "per_class": {
+          "PERSON": {
+            "tp": 6,
+            "fp": 4,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 3,
+            "fp": 1,
+            "fn": 0
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 3,
+            "fp": 1,
+            "fn": 0
+          },
+          "PHONE_NUMBER": {
+            "tp": 4,
+            "fp": 1,
+            "fn": 1
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 1
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 4,
+            "fn": 0
+          },
+          "PAN_NUMBER": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 1
+          },
+          "IFSC_CODE": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0
+          },
+          "GST_NUMBER": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          },
+          "DRIVING_LICENCE": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          }
+        }
+      }
+    },
+    "per_class": {
+      "PERSON": {
+        "tp": 14,
+        "fp": 8,
+        "fn": 1
+      },
+      "DATE_OF_BIRTH": {
+        "tp": 8,
+        "fp": 4,
+        "fn": 0
+      },
+      "AADHAAR_NUMBER": {
+        "tp": 10,
+        "fp": 3,
+        "fn": 0
+      },
+      "PAN_NUMBER": {
+        "tp": 14,
+        "fp": 2,
+        "fn": 0
+      },
+      "PHONE_NUMBER": {
+        "tp": 14,
+        "fp": 1,
+        "fn": 1
+      },
+      "EMAIL_ADDRESS": {
+        "tp": 9,
+        "fp": 0,
+        "fn": 1
+      },
+      "PIN_CODE": {
+        "tp": 4,
+        "fp": 1,
+        "fn": 1
+      },
+      "BANK_ACCOUNT": {
+        "tp": 5,
+        "fp": 2,
+        "fn": 1
+      },
+      "IFSC_CODE": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 1
+      },
+      "DATE_TIME": {
+        "tp": 0,
+        "fp": 6,
+        "fn": 0
+      },
+      "GST_NUMBER": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      },
+      "DRIVING_LICENCE": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    }
+  },
+  "gating_off": {
+    "global": {
+      "precision": 0.6218487394957983,
+      "recall": 0.8222222222222222,
+      "f1": 0.708133971291866,
+      "tp": 74,
+      "fp": 45,
+      "fn": 16
+    },
+    "suites": {
+      "Regression Suite": {
+        "precision": 0.7878787878787878,
+        "recall": 0.8125,
+        "f1": 0.8,
+        "tp": 26,
+        "fp": 7,
+        "fn": 6,
+        "per_class": {
+          "PERSON": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 2
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 4,
+            "fp": 1,
+            "fn": 1
+          },
+          "PAN_NUMBER": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 3
+          },
+          "PHONE_NUMBER": {
+            "tp": 7,
+            "fp": 3,
+            "fn": 0
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 1,
+            "fp": 1,
+            "fn": 0
+          }
+        }
+      },
+      "Adversarial Suite": {
+        "precision": 0.8333333333333334,
+        "recall": 0.7142857142857143,
+        "f1": 0.7692307692307692,
+        "tp": 15,
+        "fp": 3,
+        "fn": 6,
+        "per_class": {
+          "AADHAAR_NUMBER": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 0
+          },
+          "PAN_NUMBER": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 2
+          },
+          "PERSON": {
+            "tp": 4,
+            "fp": 1,
+            "fn": 1
+          },
+          "PHONE_NUMBER": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 2
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 1
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 2,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 0
+          },
+          "IFSC_CODE": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 0
+          }
+        }
+      },
+      "Hard-Negative Suite": {
+        "precision": 0.0,
+        "recall": 1.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 22,
+        "fn": 0,
+        "per_class": {
+          "PERSON": {
+            "tp": 0,
+            "fp": 4,
+            "fn": 0
+          },
+          "PHONE_NUMBER": {
+            "tp": 0,
+            "fp": 6,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 0
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 4,
+            "fn": 0
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 0,
+            "fp": 4,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 0,
+            "fp": 3,
+            "fn": 0
+          }
+        }
+      },
+      "Realistic Synthetic Suite": {
+        "precision": 0.717391304347826,
+        "recall": 0.8918918918918919,
+        "f1": 0.7951807228915664,
+        "tp": 33,
+        "fp": 13,
+        "fn": 4,
+        "per_class": {
+          "PERSON": {
+            "tp": 6,
+            "fp": 4,
+            "fn": 0
+          },
+          "DATE_OF_BIRTH": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 2
+          },
+          "AADHAAR_NUMBER": {
+            "tp": 3,
+            "fp": 1,
+            "fn": 0
+          },
+          "PHONE_NUMBER": {
+            "tp": 4,
+            "fp": 1,
+            "fn": 1
+          },
+          "EMAIL_ADDRESS": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "PIN_CODE": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "DATE_TIME": {
+            "tp": 0,
+            "fp": 7,
+            "fn": 0
+          },
+          "PAN_NUMBER": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0
+          },
+          "BANK_ACCOUNT": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 1
+          },
+          "IFSC_CODE": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 0
+          },
+          "GST_NUMBER": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          },
+          "DRIVING_LICENCE": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0
+          }
+        }
+      }
+    },
+    "per_class": {
+      "PERSON": {
+        "tp": 14,
+        "fp": 9,
+        "fn": 1
+      },
+      "DATE_OF_BIRTH": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 6
+      },
+      "AADHAAR_NUMBER": {
+        "tp": 9,
+        "fp": 6,
+        "fn": 1
+      },
+      "PAN_NUMBER": {
+        "tp": 9,
+        "fp": 0,
+        "fn": 5
+      },
+      "PHONE_NUMBER": {
+        "tp": 14,
+        "fp": 10,
+        "fn": 1
+      },
+      "EMAIL_ADDRESS": {
+        "tp": 9,
+        "fp": 0,
+        "fn": 1
+      },
+      "PIN_CODE": {
+        "tp": 5,
+        "fp": 3,
+        "fn": 0
+      },
+      "DATE_TIME": {
+        "tp": 0,
+        "fp": 15,
+        "fn": 0
+      },
+      "BANK_ACCOUNT": {
+        "tp": 5,
+        "fp": 2,
+        "fn": 1
+      },
+      "IFSC_CODE": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 0
+      },
+      "GST_NUMBER": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      },
+      "DRIVING_LICENCE": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    }
+  },
+  "delta": {
+    "precision_diff": 0.13490801726095847,
+    "recall_diff": 0.11111111111111116,
+    "f1_diff": 0.12768692423052208,
+    "fp_reduction": 18,
+    "fn_diff": -10
+  }
+}

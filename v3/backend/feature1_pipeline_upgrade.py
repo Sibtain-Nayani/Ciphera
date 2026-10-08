@@ -552,6 +552,7 @@ class RegexStage:
 
         if entity_type == "PIN_CODE":
             # Reject obviously invalid pin codes
+            if not value[:2].isdigit(): return 0
             first_two = int(value[:2])
             if first_two < 11 or first_two > 99: return 0
 
