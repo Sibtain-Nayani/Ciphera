@@ -50,19 +50,17 @@ def test_baseline_clean_redaction():
     assert "ABCDE1234F" not in res["residual_text"]
     assert res["verification_passed"] is True
 
-def test_ocr_fuzzy_blind_spot():
+def test_ocr_fuzzy_detection():
     res = run_full_pipeline_audit("My PAN is I3CDEI234O.")
-    assert res["detected_count"] == 0
-    assert "I3CDEI234O" in res["residual_text"]
-    assert res["verification_passed"] is False
-    assert "Visual Leak" in res["verification_error"] or "Defrag Leak" in res["verification_error"] or "PAN" in res["verification_error"]
+    assert res["detected_count"] >= 1
+    assert "I3CDEI234O" not in res["residual_text"]
+    assert res["verification_passed"] is True
 
-def test_spatial_fragmentation_blind_spot():
+def test_spatial_fragmentation_detection():
     res = run_full_pipeline_audit("P A N : A B C D E 1 2 3 4 F")
-    assert res["detected_count"] == 0
-    assert "A B C D E 1 2 3 4 F" in res["residual_text"]
-    assert res["verification_passed"] is False
-    assert "Visual Leak" in res["verification_error"] or "Defrag Leak" in res["verification_error"]
+    assert res["detected_count"] >= 1
+    assert "A B C D E 1 2 3 4 F" not in res["residual_text"]
+    assert res["verification_passed"] is True
 
 def test_context_gating_blind_spot():
     res = run_full_pipeline_audit("The ID is 9988776655.")

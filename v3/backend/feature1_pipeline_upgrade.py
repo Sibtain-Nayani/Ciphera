@@ -502,7 +502,7 @@ class RegexStage:
             digits = re.sub(r"[^\dOoIiLl]", "", value).upper()
             digits = digits.replace('O', '0').replace('I', '1').replace('L', '1')
             if len(digits) != 12: return 0
-            if digits[0] in "01":  return 0
+            if digits[0] == "0":  return 0
             if len(set(digits)) <= 3: return 0
             
             has_ocr_chars = bool(re.search(r'[OoIiLl]', value))
