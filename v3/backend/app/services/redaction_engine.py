@@ -49,8 +49,17 @@ class SecureRedactionEngine:
         for page in doc:
             page.apply_redactions()
             
+        # Security Sanitization: Scrub document metadata & embedded attachment streams
+        doc.set_metadata({})
+        try:
+            if hasattr(doc, "embfile_count") and doc.embfile_count() > 0:
+                for name in list(doc.embfile_names()):
+                    doc.embfile_del(name)
+        except Exception:
+            pass
+            
         out_stream = io.BytesIO()
-        doc.save(out_stream)
+        doc.save(out_stream, garbage=4, deflate=True, clean=True)
         doc.close()
         
         return out_stream.getvalue()
