@@ -27,7 +27,7 @@ class GeometryVerifier:
             if residual_text:
                 clean_residual = re.sub(r'[^a-zA-Z0-9]', '', residual_text)
                 if len(clean_residual) > 1:
-                    leaks.append(f"Geometry Leak (Page {page_num}): Expected wiped region contains '{residual_text}'")
+                    leaks.append(f"Geometry Leak (Page {page_num}): Expected wiped region contains unredacted text")
                     
         doc.close()
         return leaks

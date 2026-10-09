@@ -14,6 +14,26 @@ class VerificationEngine:
     """
 
     @staticmethod
+    def sanitize_error_string(message: str) -> str:
+        """
+        Scrubs any accidental sensitive tokens (PAN, Aadhaar, phone, email, credit card)
+        from error strings before storing in DB or returning in API responses.
+        """
+        if not message:
+            return ""
+        # Scrub emails
+        message = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', '[REDACTED_EMAIL]', message)
+        # Scrub credit cards (13-19 digits, before Aadhaar to prevent prefix matching)
+        message = re.sub(r'\b(?:\d[ -]*?){13,19}\b', '[REDACTED_CARD]', message)
+        # Scrub PAN
+        message = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', '[REDACTED_PAN]', message, flags=re.IGNORECASE)
+        # Scrub Aadhaar (including spaced/hyphenated)
+        message = re.sub(r'\b\d{4}[ -]?\d{4}[ -]?\d{4}\b', '[REDACTED_AADHAAR]', message)
+        # Scrub 10-digit phones
+        message = re.sub(r'\b(?:\+?91[-. ]?)?[6789]\d{9}\b', '[REDACTED_PHONE]', message)
+        return message
+
+    @staticmethod
     def verify_redacted_file(file_bytes: bytes, filename: str, original_entities: List[RedactionEntity] = None) -> bool:
         if original_entities is None:
             original_entities = []
@@ -46,7 +66,7 @@ class VerificationEngine:
             for match in pattern.findall(text_to_audit):
                 clean_match = str(match).strip()
                 if clean_match.lower() not in allowed_texts:
-                    leaks.append(f"Regex Leak: {entity_type} ({clean_match})")
+                    leaks.append(f"Regex Leak: {entity_type} pattern detected")
                     
         # Layer 3.5: Defragmented Regex (Spatial Fragmentation)
         dense_chars = []
@@ -68,10 +88,11 @@ class VerificationEngine:
                 # If it's highly spaced, it's a fragmentation leak
                 if len(raw_window) > len(dense_match) + 2:
                     if raw_window.lower().replace(" ", "") not in [t.replace(" ", "") for t in allowed_texts]:
-                        leaks.append(f"Regex Defrag Leak: {entity_type} ({raw_window})")
+                        leaks.append(f"Regex Defrag Leak: {entity_type} pattern detected")
         
         if leaks:
-            detail_msg = f"Verification failed: {len(leaks)} leaks found post-redaction. First few: {', '.join(leaks[:3])}"
+            detail_msg = f"Verification failed: {len(leaks)} leak(s) detected post-redaction. [{'; '.join(leaks[:3])}]"
+            detail_msg = VerificationEngine.sanitize_error_string(detail_msg)
             raise HTTPException(status_code=500, detail=detail_msg)
             
         return True

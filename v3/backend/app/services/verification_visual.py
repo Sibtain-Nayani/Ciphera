@@ -89,13 +89,13 @@ class VisualVerifier:
                         continue
                         
                     if length == 10 and VisualVerifier._is_suspicious_pan(window):
-                        leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential PAN '{raw_window}'")
+                        leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential PAN structure")
                     
                     if length == 12 and VisualVerifier._is_suspicious_aadhaar(window):
                         has_spaces = ' ' in raw_window or '-' in raw_window
                         has_errors = any(c.isalpha() for c in window)
                         if has_spaces or has_errors:
-                            leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential Aadhaar '{raw_window}'")
+                            leaks.append(f"Visual Leak (Page {page_num+1}): OCR found potential Aadhaar structure")
 
         doc.close()
         return leaks
