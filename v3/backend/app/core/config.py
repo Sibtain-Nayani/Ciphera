@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     S3_BUCKET: str = os.getenv("S3_BUCKET", "ciphera-documents")
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     S3_ENDPOINT_URL: str = os.getenv("S3_ENDPOINT_URL", "") # For MinIO
+
+    # Resource & Processing Limits (Phase E7 / Remediation P1)
+    MAX_UPLOAD_SIZE_BYTES: int = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(25 * 1024 * 1024))) # 25MB
+    MAX_PDF_PAGE_COUNT: int = int(os.getenv("MAX_PDF_PAGE_COUNT", "100")) # 100 pages
     
     class Config:
         env_file = ".env"

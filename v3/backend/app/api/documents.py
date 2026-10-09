@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.models.identity import User
 from app.models.document import Document, JobStatus, SafetyStatus
 from app.api.auth import get_current_user
+from app.core.config import settings
 from app.services.document_parser import DocumentParser
 from app.services.storage import StorageService
 
@@ -36,8 +37,22 @@ async def upload_document(
         if org_id not in user_org_ids:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this organization")
             
-    # Read file
-    file_bytes = await file.read()
+    # Read file with stream chunk size limiting (25MB default)
+    chunks = []
+    total_bytes = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > settings.MAX_UPLOAD_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds maximum upload limit of {settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)}MB"
+            )
+        chunks.append(chunk)
+    file_bytes = b"".join(chunks)
     
     # Save file using Phase 9 Cloud Storage Abstraction
     storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")

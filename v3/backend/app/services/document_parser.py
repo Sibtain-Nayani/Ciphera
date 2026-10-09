@@ -5,6 +5,7 @@ import io
 import mimetypes
 
 from app.schemas.document import CanonicalDocument, CanonicalBlock, BoundingBox
+from app.core.config import settings
 
 from fastapi import HTTPException
 
@@ -44,9 +45,17 @@ class DocumentParser:
             doc.close()
             raise HTTPException(status_code=400, detail="Password-protected or encrypted PDFs are not supported")
             
-        if len(doc) == 0:
+        page_count = len(doc)
+        if page_count == 0:
             doc.close()
             raise HTTPException(status_code=400, detail="PDF contains 0 pages")
+            
+        if page_count > settings.MAX_PDF_PAGE_COUNT:
+            doc.close()
+            raise HTTPException(
+                status_code=400,
+                detail=f"PDF page count ({page_count}) exceeds maximum allowed limit of {settings.MAX_PDF_PAGE_COUNT} pages"
+            )
         blocks = []
         full_text = ""
         current_index = 0
