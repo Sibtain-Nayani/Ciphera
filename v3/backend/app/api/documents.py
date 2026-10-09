@@ -195,7 +195,8 @@ def get_redaction_job_status(
     return {
         "job_id": job.id,
         "status": job.status,
-        "error_message": job.error_message
+        "error_message": job.error_message,
+        "result_storage_key": job.result_storage_key
     }
 
 from fastapi.responses import Response, RedirectResponse
@@ -216,7 +217,7 @@ def download_redacted_job(
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
         
-    storage_key = job.error_message
+    storage_key = job.result_storage_key or job.error_message
     if not storage_key:
         raise HTTPException(status_code=404, detail="Storage key not found")
         

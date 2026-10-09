@@ -46,7 +46,8 @@ def process_redaction(self, job_id: str):
         redacted_storage_key = StorageService.save_document(redacted_bytes, f"redacted_{doc.filename}", directory="redacted")
             
         job.status = JobStatus.COMPLETED
-        job.error_message = redacted_storage_key
+        job.result_storage_key = redacted_storage_key
+        job.error_message = None
         db.commit()
         
         return {"status": "success", "result_path": redacted_storage_key}
