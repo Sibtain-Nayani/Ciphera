@@ -95,7 +95,8 @@ def test_successful_job_sets_result_storage_key_and_clears_error_message(p1_stor
     assert api_res.status_code == 200
     job_data = api_res.json()
     assert job_data["status"] == "completed"
-    assert job_data["result_storage_key"] == res_dict["result_path"]
+    assert "result_storage_key" not in job_data
+    assert job_data["has_artifact"] is True
     assert job_data["error_message"] is None
     
     # Verify download succeeds using result_storage_key
@@ -142,7 +143,8 @@ def test_failed_job_leaves_result_storage_key_none(p1_storage_env):
     assert api_res.status_code == 200
     job_data = api_res.json()
     assert job_data["status"] == "failed"
-    assert job_data["result_storage_key"] is None
+    assert "result_storage_key" not in job_data
+    assert job_data["has_artifact"] is False
     assert job_data["error_message"] is not None
 
 def test_legacy_job_fallback_in_download_endpoint(p1_storage_env):

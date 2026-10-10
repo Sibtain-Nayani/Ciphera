@@ -54,10 +54,7 @@ async def upload_document(
         chunks.append(chunk)
     file_bytes = b"".join(chunks)
     
-    # Save file using Phase 9 Cloud Storage Abstraction
-    storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
-    
-    # Process through Phase 2 Canonical Engine
+    # Process through Phase 2 Canonical Engine (VALIDATE BEFORE PERSISTENCE)
     canonical_doc = DocumentParser.parse(file_bytes, file.filename)
     
     # Process through Phase 4 Detection Engine
@@ -69,23 +66,30 @@ async def upload_document(
     # In a real app we fetch org.policy_config. Using default standard policy.
     entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "balanced"})
     
-    # Save to database
-    db_doc = Document(
-        id=str(uuid.uuid4()),
-        org_id=org_id,
-        uploaded_by=current_user.id,
-        filename=file.filename,
-        file_type=file.content_type,
-        storage_key=storage_key,
-        status=JobStatus.COMPLETED,
-        safety_status=SafetyStatus.UNVERIFIED,
-        canonical_representation=canonical_doc.model_dump(),
-        detected_entities=[e.model_dump() for e in entities]
-    )
+    # Save file using Phase 9 Cloud Storage Abstraction (only after successful validation)
+    storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
     
-    db.add(db_doc)
-    db.commit()
-    db.refresh(db_doc)
+    try:
+        # Save to database
+        db_doc = Document(
+            id=str(uuid.uuid4()),
+            org_id=org_id,
+            uploaded_by=current_user.id,
+            filename=file.filename,
+            file_type=file.content_type,
+            storage_key=storage_key,
+            status=JobStatus.COMPLETED,
+            safety_status=SafetyStatus.UNVERIFIED,
+            canonical_representation=canonical_doc.model_dump(),
+            detected_entities=[e.model_dump() for e in entities]
+        )
+        
+        db.add(db_doc)
+        db.commit()
+        db.refresh(db_doc)
+    except Exception:
+        StorageService.delete_document(storage_key)
+        raise
     
     return {
         "message": "Document parsed successfully",
@@ -207,11 +211,12 @@ def get_redaction_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
+    has_artifact = bool(job.status == JobStatus.COMPLETED and (job.result_storage_key or job.error_message))
     return {
         "job_id": job.id,
         "status": job.status,
         "error_message": job.error_message,
-        "result_storage_key": job.result_storage_key
+        "has_artifact": has_artifact
     }
 
 from fastapi.responses import Response, RedirectResponse

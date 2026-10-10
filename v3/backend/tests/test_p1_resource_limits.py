@@ -88,8 +88,22 @@ def test_upload_under_size_limit_proceeds(p1_resource_env):
     assert "document_id" in data
     assert data["page_count"] == 1
 
+def test_pdf_exact_100_pages_accepted_by_parser():
+    """PDF containing exactly 100 pages (the configured upper limit) must be accepted."""
+    doc = fitz.open()
+    for i in range(100):
+        p = doc.new_page(width=300, height=300)
+        p.insert_text(fitz.Point(30, 30), f"Page {i+1}")
+    out = io.BytesIO()
+    doc.save(out)
+    doc.close()
+    pdf_bytes = out.getvalue()
+    
+    canonical = DocumentParser.parse(pdf_bytes, "boundary_100_pages.pdf")
+    assert canonical.page_count == 100
+
 def test_pdf_exceeding_page_limit_rejected_by_parser():
-    """PDF containing more than MAX_PDF_PAGE_COUNT pages must be rejected with HTTP 400."""
+    """PDF containing more than MAX_PDF_PAGE_COUNT pages (101 pages) must be rejected with HTTP 400."""
     # Create 101 page PDF
     doc = fitz.open()
     for i in range(101):
@@ -106,17 +120,109 @@ def test_pdf_exceeding_page_limit_rejected_by_parser():
     assert exc_info.value.status_code == 400
     assert "exceeds maximum allowed limit of 100 pages" in exc_info.value.detail
 
-def test_pdf_within_page_limit_accepted_by_parser():
-    """PDF containing 10 pages must parse cleanly."""
-    doc = fitz.open()
-    for i in range(10):
-        p = doc.new_page(width=300, height=300)
-        p.insert_text(fitz.Point(30, 30), f"Page {i+1}")
-    out = io.BytesIO()
-    doc.save(out)
-    doc.close()
-    pdf_bytes = out.getvalue()
+def test_upload_exact_25mib_accepted_and_25mib_plus_one_byte_rejected(p1_resource_env):
+    """
+    Boundary test for upload size:
+    Exactly 25 MiB (26,214,400 bytes) valid PDF must be accepted (HTTP 200).
+    25 MiB + 1 byte (26,214,401 bytes) must be rejected with HTTP 413.
+    """
+    token = p1_resource_env["token"]
+    org_id = p1_resource_env["org_id"]
     
-    canonical = DocumentParser.parse(pdf_bytes, "valid_10_pages.pdf")
-    assert canonical.page_count == 10
-    assert len(canonical.blocks) >= 10
+    # Generate base valid PDF
+    doc = fitz.open()
+    page = doc.new_page(width=400, height=400)
+    page.insert_text(fitz.Point(50, 50), "25MB Boundary Test Valid PDF")
+    base_bytes = doc.tobytes()
+    doc.close()
+    
+    exact_limit = settings.MAX_UPLOAD_SIZE_BYTES  # 26,214,400 bytes
+    pad_len = exact_limit - len(base_bytes)
+    assert pad_len > 0, "Base PDF must be smaller than 25MB"
+    
+    # Trailing comment padding preserves PDF structural validity under PyMuPDF
+    valid_25mib = base_bytes + b"\n%" + (b"0" * (pad_len - 2))
+    assert len(valid_25mib) == exact_limit
+    
+    # 1. Exactly 25 MiB: should be accepted
+    files_exact = {"file": ("exact_25mib.pdf", valid_25mib, "application/pdf")}
+    res_exact = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files=files_exact,
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_exact.status_code == 200, f"Expected 200 for exact 25MB but got {res_exact.status_code}: {res_exact.text}"
+    
+    # 2. 25 MiB + 1 byte: should be rejected with 413
+    oversized_25mib_plus_one = valid_25mib + b"X"
+    assert len(oversized_25mib_plus_one) == exact_limit + 1
+    
+    files_oversized = {"file": ("oversized_25mib.pdf", oversized_25mib_plus_one, "application/pdf")}
+    res_oversized = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files=files_oversized,
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_oversized.status_code == 413
+    assert "exceeds maximum upload limit" in res_oversized.json()["detail"].lower()
+
+def test_rejected_uploads_leave_no_orphaned_storage_files(p1_resource_env):
+    """
+    Verify that rejected uploads (corrupt, encrypted, over page limit, empty)
+    never create or leave behind orphan files in storage directory.
+    """
+    import os
+    token = p1_resource_env["token"]
+    org_id = p1_resource_env["org_id"]
+    upload_dir = os.path.join(settings.LOCAL_STORAGE_DIR, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Snapshot files before tests
+    initial_files = set(os.listdir(upload_dir))
+    
+    # Case A: 101-page PDF
+    doc = fitz.open()
+    for _ in range(101):
+        doc.new_page()
+    pdf_101 = doc.tobytes()
+    doc.close()
+    res_a = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files={"file": ("page_limit_fail.pdf", pdf_101, "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_a.status_code == 400
+    assert set(os.listdir(upload_dir)) == initial_files, "101-page rejected PDF left an orphan storage file!"
+    
+    # Case B: Corrupted PDF header
+    res_b = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files={"file": ("corrupt.pdf", b"NOT_A_PDF_CORRUPT_BYTES", "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_b.status_code == 400
+    assert set(os.listdir(upload_dir)) == initial_files, "Corrupted rejected PDF left an orphan storage file!"
+    
+    # Case C: Password-protected encrypted PDF
+    doc_enc = fitz.open()
+    doc_enc.new_page().insert_text(fitz.Point(50, 50), "Classified")
+    out = io.BytesIO()
+    doc_enc.save(out, encryption=fitz.PDF_ENCRYPT_AES_256, user_pw="pwd123")
+    doc_enc.close()
+    res_c = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files={"file": ("encrypted.pdf", out.getvalue(), "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_c.status_code == 400
+    assert set(os.listdir(upload_dir)) == initial_files, "Encrypted rejected PDF left an orphan storage file!"
+    
+    # Case D: Empty file (0 bytes)
+    res_d = client.post(
+        f"/api/v3/documents/upload?org_id={org_id}",
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_d.status_code == 400
+    assert set(os.listdir(upload_dir)) == initial_files, "Empty rejected file left an orphan storage file!"
+
