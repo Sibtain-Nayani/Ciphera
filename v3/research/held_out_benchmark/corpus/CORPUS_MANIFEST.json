@@ -1,0 +1,459 @@
+{
+  "corpus_version": "1.0.0-held-out-sealed",
+  "total_documents": 50,
+  "tier_a_count": 32,
+  "tier_b_count": 18,
+  "total_ground_truth_entities": 213,
+  "documents": [
+    {
+      "id": "tier_a_digital_01",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_01_property_registration.pdf",
+      "sha256": "4b4b770ebdddf0a9788aa8dce1c694ff0e90a2345c2b5ec1dd4256c2bd602436",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_02",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_02_university_transcript.pdf",
+      "sha256": "159f2b2a070d9a7e0dbae6eab4df478605b0dc52f05b3610b098100ec7234e05",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_03",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_03_telecom_postpaid_bill.pdf",
+      "sha256": "2c437aa564cfd9bc5aa3b0ce2a846124170f49acc9740418ef503bc3ba4e5608",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_04",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_04_fixed_deposit_advice.pdf",
+      "sha256": "3246709dbaa4ac1a89fd59ca13c76986fee2ad16b08dd7ca33308e74dd484a1f",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_05",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_05_health_insurance_policy.pdf",
+      "sha256": "df16f69c42f9d36d6bcf9e1a4ef5facd2635dc6950197c1d82c36f4c41c43ab9",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_06",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_06_brokerage_demat_statement.pdf",
+      "sha256": "e6846157ddfb140f14696e181585f2ac3461ca8564305a5620d932757a803163",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_07",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_07_vendor_purchase_order.pdf",
+      "sha256": "69c7291270a77c78fddb5b2097111337adf5bc5fd556dc482f571220335e66cb",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_digital_08",
+      "tier": "Tier A",
+      "category": "native_digital_pdf",
+      "file_name": "tier_a_digital_08_consulting_agreement.pdf",
+      "sha256": "08a7127bb7a43f6941593c143e384415338cf27ef91cc171f2ef08cfb51e1e9a",
+      "entity_count": 7,
+      "pages": 2
+    },
+    {
+      "id": "tier_a_scanned_01",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_01_photocopy_id_proof.pdf",
+      "sha256": "69a022dbb92a476f841a5be824b47ffa25f468ea53b3781bba05c24c3955dbe9",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_02",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_02_hospital_lab_requisition.pdf",
+      "sha256": "42803b9defe0e133795ebc3a6d35063928746b401aaeb6d5425f2a11e6472300",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_03",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_03_courier_consignment_pod.pdf",
+      "sha256": "c2122f553379ca6cf4271678aae43a9c342f4485794b75e7099ec23fa9bee719",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_04",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_04_vehicle_challan_receipt.pdf",
+      "sha256": "af650c446823b14e44871cdf05e540524fa703bd5704ed7aaf328fd2b4f95d99",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_05",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_05_electricity_board_bill.pdf",
+      "sha256": "8381b72db5be9a3cf442c2584b434c61f9964e70afb8cdaad41c23a2d669cbbe",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_06",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_06_bank_cheque_deposit_slip.pdf",
+      "sha256": "64d339117e2d83df38cfef5a29dd5d45de7a468269e2e88595f8903fad2cd6d5",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_07",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_07_rent_agreement_stamp_sheet.pdf",
+      "sha256": "915a06831ebbb72c05ca095edc3e003cd4b7d14b1d7e360eef7cb3e1bcbaf204",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_scanned_08",
+      "tier": "Tier A",
+      "category": "scanned_degraded",
+      "file_name": "tier_a_scanned_08_gas_connection_subscription_voucher.pdf",
+      "sha256": "0b10e10ece9762ec1b04d83738766e02757e685070ecf8834f93d519613694da",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_01",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_01_hindi_kisan_credit_application.pdf",
+      "sha256": "2c927514a3fc382cfd4dff88ed1a119c128b381a81db2d3a79302d5aa411f8f3",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_02",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_02_tamil_scholarship_declaration.pdf",
+      "sha256": "9ddd2abbb79a11bdbd0d00c98fb1b6919518f1d616186dfd8986d5293d50c019",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_03",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_03_bengali_panchayat_grant_voucher.pdf",
+      "sha256": "d9bdad3d9eb9e34d8993e3c46547f79f15b6878a20391cec2f63f4997cc38e8f",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_04",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_04_marathi_zilla_parishad_pension.pdf",
+      "sha256": "c40816a861848dea2a10b71036fbf3fc8526f5f477242ca3c459971febd5f30a",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_05",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_05_gujarati_cooperative_milk_bill.pdf",
+      "sha256": "a44ef7db03ef6d488c74b50833f8c95319905aab0e31627d219d867f5b34857b",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_06",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_06_telangana_rythu_bandhu_sanction.pdf",
+      "sha256": "81508d6603785eb22080f32bb3a6db8a5c89654184760dc045d32277500c40f6",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_07",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_07_kannada_revenue_khata_extract.pdf",
+      "sha256": "fd67c9d50a25e48304c90e33476031e3c64c07070cf638b4979a051ca5355b01",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_bilingual_08",
+      "tier": "Tier A",
+      "category": "bilingual_indic",
+      "file_name": "tier_a_bilingual_08_malayalam_welfare_fund_receipt.pdf",
+      "sha256": "b07d6b57ef6812d4b9989ca4b4619e24833259f173a9d6866927fc5a05b0bb9e",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_01",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_01_corporate_payroll_master.pdf",
+      "sha256": "020cbb90c02755de439c161374a765b53668b4dd2fb4c3be9cf0ba92919a6ba2",
+      "entity_count": 12,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_02",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_02_vendor_statutory_tds_annexure.pdf",
+      "sha256": "042eec6f62df790683fc0513746ab3a8d5bb5a2c59c8f1b5d19af8acdce7b727",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_03",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_03_mutual_fund_sip_mandate_register.pdf",
+      "sha256": "55cb9c439c5cd2b1ae74485f7bd89e9cef6ac99cd3d7bc0743e15395bbc63f73",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_04",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_04_cooperative_society_shareholder_dividend.pdf",
+      "sha256": "ce3a8486983bcab9e9d7d81a3392795ee9c00dd88a35102f9fc399e57f531e8e",
+      "entity_count": 8,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_05",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_05_contractor_epf_ecr_annexure.pdf",
+      "sha256": "2253249caf0a526f0971122a3533ba35b3a0d95a3745bec36be86d2a42d205c3",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_06",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_06_commercial_fleet_driver_manifest.pdf",
+      "sha256": "3f079ee0fb162fe52371acca3f33861402324e317eb5744e968020a47d690b99",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_07",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_07_medical_insurance_hospital_claims_batch.pdf",
+      "sha256": "3669728d179c8cd6382f5f0666f60d2ed88b4b77fbbeeef66c74fb3e127158cb",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_a_table_08",
+      "tier": "Tier A",
+      "category": "dense_table",
+      "file_name": "tier_a_table_08_equity_ipo_allotment_schedule.pdf",
+      "sha256": "af7b268bad06562ba707c15f1eef90ef8f7247d693c8ab9a0c76346a44f3d95c",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_public_01",
+      "tier": "Tier B",
+      "category": "public_template",
+      "file_name": "tier_b_public_01_passport_application_form.pdf",
+      "sha256": "fefd3452533dd5aca15e20cd77c54e7019b23d4140db1353181f64939e0a20cd",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_public_02",
+      "tier": "Tier B",
+      "category": "public_template",
+      "file_name": "tier_b_public_02_income_tax_itr1_sahaj.pdf",
+      "sha256": "17f169c138c20a2c4d61ffaaa1d9f2b6689c9008bb8b263a3ddc1def1d4d966b",
+      "entity_count": 7,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_public_03",
+      "tier": "Tier B",
+      "category": "public_template",
+      "file_name": "tier_b_public_03_form16_tds_certificate.pdf",
+      "sha256": "c754926cf6dc167d5c5c0d5f178673ef7d0839a2b3ca49b237393e7fc2f940f0",
+      "entity_count": 4,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_public_04",
+      "tier": "Tier B",
+      "category": "public_template",
+      "file_name": "tier_b_public_04_gst_registration_reg06.pdf",
+      "sha256": "5c46e3f2188bc541443d30987470965e7777c9b53068815e17c8de2a19f04ad8",
+      "entity_count": 3,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_public_05",
+      "tier": "Tier B",
+      "category": "public_template",
+      "file_name": "tier_b_public_05_rbi_sovereign_gold_bond_application.pdf",
+      "sha256": "30d6cce0b93dbb99a6b67e80fc02d895d29a5898e83f451d4f215c12f95936b4",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_mock_kyc_01",
+      "tier": "Tier B",
+      "category": "independent_mock_kyc",
+      "file_name": "tier_b_mock_kyc_01_neo_banking_wallet_onboarding.pdf",
+      "sha256": "105152c6a231e7840690ccb1023268ff77486acb7123e6ce5aab4f7f1b828b83",
+      "entity_count": 7,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_mock_kyc_02",
+      "tier": "Tier B",
+      "category": "independent_mock_kyc",
+      "file_name": "tier_b_mock_kyc_02_crypto_exchange_cdd_dossier.pdf",
+      "sha256": "a5b96d8509bef46a466ec06cbb42cda2a3adf8c13205dc8f21a5d53fe4e15f75",
+      "entity_count": 7,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_mock_kyc_03",
+      "tier": "Tier B",
+      "category": "independent_mock_kyc",
+      "file_name": "tier_b_mock_kyc_03_telecom_sim_caf_customer_profile.pdf",
+      "sha256": "303d7897aa9ac0aa33c8a4d87abe128162716f0db306a1e10c5cb7bdbfce0d0d",
+      "entity_count": 5,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_mock_kyc_04",
+      "tier": "Tier B",
+      "category": "independent_mock_kyc",
+      "file_name": "tier_b_mock_kyc_04_nri_nre_bank_account_dossier.pdf",
+      "sha256": "486fc30ae5c732be6d96b1107748c7f08ea04229830aceefd07a6b090b04e0a8",
+      "entity_count": 7,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_mock_kyc_05",
+      "tier": "Tier B",
+      "category": "independent_mock_kyc",
+      "file_name": "tier_b_mock_kyc_05_housing_loan_co_applicant_kyc.pdf",
+      "sha256": "6e282da9aa1d6bbda0baced25c55557843228fc1b1dee820bf6d92cbc2a5776a",
+      "entity_count": 6,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_01",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_01_warehouse_sku_inventory.pdf",
+      "sha256": "5e163f7ee38e3576ad0c93bfe38cae30ecfb12d4962793772c565a81a04b68dd",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_02",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_02_server_syslog_network_traffic.pdf",
+      "sha256": "fda86015953a9cfc67f6c353db2bbaab935006ecf1824c9359ff64c806f84f0a",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_03",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_03_astronomy_deep_sky_catalog.pdf",
+      "sha256": "d1d05ae4993124d400dd481681f2baf4c13db09854ab066b52cd66f448abac1e",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_04",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_04_chemical_safety_data_sheet.pdf",
+      "sha256": "a13efbfe99afa56450ce2f7c4e602b28959906a0d2f802440ec2744e8dbba23b",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_05",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_05_aircraft_flight_dispatch_plan.pdf",
+      "sha256": "e0cda3b43753a4a6eba283339eb1b690116b3009e603c98d98d03e5f1831aed1",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_06",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_06_civil_engineering_soil_test.pdf",
+      "sha256": "18a6d606e358003f5281a923e3f731bff3d9b4c0d50ad3aee5043421c332a3cc",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_07",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_07_pharmaceutical_batch_manufacturing_record.pdf",
+      "sha256": "28164f87ec9da0339d160a65c3ffdf8c3c4accd718ae166d9baf57f0ac68ef75",
+      "entity_count": 0,
+      "pages": 1
+    },
+    {
+      "id": "tier_b_hard_neg_08",
+      "tier": "Tier B",
+      "category": "hard_negative",
+      "file_name": "tier_b_hard_neg_08_mathematical_linear_algebra_syllabus.pdf",
+      "sha256": "4b0c464ab5e95d73d2a1c57914e5537025f138f5618d2299fe16773086c74b32",
+      "entity_count": 0,
+      "pages": 1
+    }
+  ]
+}

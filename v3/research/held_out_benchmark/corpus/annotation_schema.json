@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CipheraHeldOutAnnotationSchema",
+  "description": "Standardized schema for ground-truth annotations in Ciphera Held-Out Benchmark (Stage 5)",
+  "type": "object",
+  "required": [
+    "document_id",
+    "tier",
+    "category",
+    "provenance",
+    "file_name",
+    "sha256",
+    "total_pages",
+    "expected_entities",
+    "adjudication"
+  ],
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "pattern": "^(tier_a|tier_b)_[a-z0-9_]+$"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["Tier A", "Tier B"]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "native_digital_pdf",
+        "scanned_degraded",
+        "bilingual_indic",
+        "dense_table",
+        "public_template",
+        "independent_mock_kyc",
+        "hard_negative"
+      ]
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "total_pages": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source_family", "generation_procedure", "license_or_reuse_conditions", "is_synthetic"],
+      "properties": {
+        "source_family": { "type": "string" },
+        "source_url": { "type": ["string", "null"] },
+        "access_date": { "type": ["string", "null"] },
+        "license_or_reuse_conditions": { "type": "string" },
+        "generation_procedure": { "type": "string" },
+        "is_synthetic": { "type": "boolean" },
+        "limitations": { "type": "string" }
+      }
+    },
+    "expected_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "entity_type",
+          "text",
+          "page_num",
+          "bbox",
+          "character_span",
+          "is_ocr_derived",
+          "annotation_confidence"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "AADHAAR_NUMBER",
+              "PAN_NUMBER",
+              "PHONE_NUMBER",
+              "EMAIL_ADDRESS",
+              "BANK_ACCOUNT",
+              "IFSC_CODE",
+              "DATE_OF_BIRTH",
+              "PASSPORT_NUMBER",
+              "VOTER_ID"
+            ]
+          },
+          "text": { "type": "string" },
+          "page_num": { "type": "integer", "minimum": 1 },
+          "bbox": {
+            "type": "object",
+            "required": ["x0", "y0", "x1", "y1"],
+            "properties": {
+              "x0": { "type": "number" },
+              "y0": { "type": "number" },
+              "x1": { "type": "number" },
+              "y1": { "type": "number" }
+            }
+          },
+          "character_span": {
+            "type": "object",
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "integer", "minimum": 0 },
+              "end": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "is_ocr_derived": { "type": "boolean" },
+          "annotation_confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "ambiguity_notes": { "type": "string" }
+        }
+      }
+    },
+    "adjudication": {
+      "type": "object",
+      "required": ["annotator", "reviewer", "status", "notes"],
+      "properties": {
+        "annotator": { "type": "string" },
+        "reviewer": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["verified", "flagged_ambiguous", "clean_negative"]
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

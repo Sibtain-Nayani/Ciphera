@@ -18,8 +18,10 @@ import app.models
 # access to the values within the .ini file in use.
 config = context.config
 
-# Overwrite the sqlalchemy.url from our settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Overwrite the sqlalchemy.url from our settings if not explicitly configured
+current_url = config.get_main_option("sqlalchemy.url")
+if not current_url or current_url.startswith("driver://"):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -67,11 +69,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = config.attributes.get("connection", None)
+    if connectable is None:
+        section = config.get_section(config.config_ini_section, {})
+        if config.get_main_option("sqlalchemy.url"):
+            section["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
+        connectable = engine_from_config(
+            section,
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
         context.configure(

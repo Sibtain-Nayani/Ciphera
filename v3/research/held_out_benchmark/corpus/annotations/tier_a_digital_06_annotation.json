@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_06",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_06_brokerage_demat_statement.pdf",
+  "sha256": "e6846157ddfb140f14696e181585f2ac3461ca8564305a5620d932757a803163",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "FINANCIAL_DEMAT_STATEMENT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Depository Participant holding statement.",
+    "is_synthetic": true,
+    "limitations": "Standard financial layout."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "NSWPS5412Q",
+      "page_num": 1,
+      "bbox": {
+        "x0": 100.57,
+        "y0": 119.25,
+        "x1": 167.26,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 125,
+        "end": 135
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "00210400019284",
+      "page_num": 1,
+      "bbox": {
+        "x0": 167.84,
+        "y0": 139.25,
+        "x1": 245.68,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 161,
+        "end": 175
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "IFSC_CODE",
+      "text": "ICIC0000021",
+      "page_num": 1,
+      "bbox": {
+        "x0": 128.92,
+        "y0": 159.25,
+        "x1": 187.84,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 193,
+        "end": 204
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9820098200",
+      "page_num": 1,
+      "bbox": {
+        "x0": 136.14,
+        "y0": 179.25,
+        "x1": 191.74,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 224,
+        "end": 234
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "nandita.s@broker-eval.co.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 140.04,
+        "y0": 199.25,
+        "x1": 264.68,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 255,
+        "end": 282
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

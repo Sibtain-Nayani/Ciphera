@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_05",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_05_contractor_epf_ecr_annexure.pdf",
+  "sha256": "2253249caf0a526f0971122a3533ba35b3a0d95a3745bec36be86d2a42d205c3",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "LABOUR_EPFO_ELECTRONIC_CHALLAN_RECEIPT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Provident fund monthly electronic return annexure.",
+    "is_synthetic": true,
+    "limitations": "Wide table with UAN, Aadhaar, and contribution fields."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "5566 1122 3344",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 124.2,
+        "x1": 218.05,
+        "y1": 136.57
+      },
+      "character_span": {
+        "start": 180,
+        "end": 194
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "14/05/1991",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 124.2,
+        "x1": 297.04,
+        "y1": 136.57
+      },
+      "character_span": {
+        "start": 195,
+        "end": 205
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "6677 2233 4455",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 152.95,
+        "x1": 218.05,
+        "y1": 165.32
+      },
+      "character_span": {
+        "start": 232,
+        "end": 246
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "28/09/1988",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 152.95,
+        "x1": 297.04,
+        "y1": 165.32
+      },
+      "character_span": {
+        "start": 247,
+        "end": 257
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

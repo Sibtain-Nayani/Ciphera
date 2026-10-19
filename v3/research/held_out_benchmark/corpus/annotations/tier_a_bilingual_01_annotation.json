@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_01",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_01_hindi_kisan_credit_application.pdf",
+  "sha256": "2c927514a3fc382cfd4dff88ed1a119c128b381a81db2d3a79302d5aa411f8f3",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_AGRICULTURAL_CREDIT_SCHEME",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Bilingual Hindi-English rural banking application.",
+    "is_synthetic": true,
+    "limitations": "Hindi Devanagari headers with bilingual entity field labels."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "2233 4455 6677",
+      "page_num": 1,
+      "bbox": {
+        "x0": 156.73,
+        "y0": 99.25,
+        "x1": 229.01,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 131,
+        "end": 145
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "RPYPY4412B",
+      "page_num": 1,
+      "bbox": {
+        "x0": 131.15,
+        "y0": 119.25,
+        "x1": 193.96,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 167,
+        "end": 177
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 94500 11223",
+      "page_num": 1,
+      "bbox": {
+        "x0": 123.93,
+        "y0": 139.25,
+        "x1": 202.05,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 200,
+        "end": 215
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "30192847561",
+      "page_num": 1,
+      "bbox": {
+        "x0": 182.85,
+        "y0": 159.25,
+        "x1": 244.01,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 250,
+        "end": 261
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0001048",
+      "page_num": 1,
+      "bbox": {
+        "x0": 154.5,
+        "y0": 179.25,
+        "x1": 216.76,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 290,
+        "end": 301
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

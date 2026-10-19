@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_08",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_08_mathematical_linear_algebra_syllabus.pdf",
+  "sha256": "4b0c464ab5e95d73d2a1c57914e5537025f138f5618d2299fe16773086c74b32",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "ACADEMIC_CURRICULUM_MATHEMATICAL_SPECIFICATION",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "University mathematics department syllabus and course modules.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

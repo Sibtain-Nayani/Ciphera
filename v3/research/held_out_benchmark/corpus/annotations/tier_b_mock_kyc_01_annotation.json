@@ -1,0 +1,159 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_mock_kyc_01",
+  "tier": "Tier B",
+  "category": "independent_mock_kyc",
+  "file_name": "tier_b_mock_kyc_01_neo_banking_wallet_onboarding.pdf",
+  "sha256": "105152c6a231e7840690ccb1023268ff77486acb7123e6ce5aab4f7f1b828b83",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "FINTECH_DIGITAL_WALLET_FULL_KYC_RECORD",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Independently authored synthetic KYC sheet under MIT evaluation terms.",
+    "generation_procedure": "Authored by independent review persona following modern fintech video-KYC transcript summary.",
+    "is_synthetic": true,
+    "limitations": "Fintech e-KYC summary record."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "02/08/1974",
+      "page_num": 1,
+      "bbox": {
+        "x0": 111.14,
+        "y0": 119.25,
+        "x1": 161.18,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 140,
+        "end": 150
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "9912 8823 7734",
+      "page_num": 1,
+      "bbox": {
+        "x0": 168.38,
+        "y0": 139.25,
+        "x1": 240.66,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 175,
+        "end": 189
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PAN_NUMBER",
+      "text": "SRKPS1192M",
+      "page_num": 1,
+      "bbox": {
+        "x0": 181.72,
+        "y0": 159.25,
+        "x1": 246.19,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 216,
+        "end": 226
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98210 11223",
+      "page_num": 1,
+      "bbox": {
+        "x0": 145.03,
+        "y0": 179.25,
+        "x1": 223.15,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 248,
+        "end": 263
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "siddharth.kapur@neopay-demo.com",
+      "page_num": 1,
+      "bbox": {
+        "x0": 117.78,
+        "y0": 199.25,
+        "x1": 279.66,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 279,
+        "end": 310
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "902100482910",
+      "page_num": 1,
+      "bbox": {
+        "x0": 219.53,
+        "y0": 219.25,
+        "x1": 286.25,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 347,
+        "end": 359
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "IFSC_CODE",
+      "text": "YESB0000128",
+      "page_num": 1,
+      "bbox": {
+        "x0": 138.37,
+        "y0": 239.25,
+        "x1": 203.97,
+        "y1": 252.99
+      },
+      "character_span": {
+        "start": 378,
+        "end": 389
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 7 entities. Checked coordinates and character offsets."
+  }
+}

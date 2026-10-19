@@ -1,0 +1,83 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_01",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_01_photocopy_id_proof.pdf",
+  "sha256": "69a022dbb92a476f841a5be824b47ffa25f468ea53b3781bba05c24c3955dbe9",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_PHOTOCOPY_KYC_SHEET",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Simulated low-resolution multi-generation office photocopy with contrast degradation.",
+    "is_synthetic": true,
+    "limitations": "Degraded raster image layer; OCR required."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "9012 3456 7890",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 138,
+        "x1": 250,
+        "y1": 154
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "SKRPR4410K",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 168,
+        "x1": 220,
+        "y1": 184
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9412094120",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 198,
+        "x1": 160,
+        "y1": 214
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 3 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_mock_kyc_04",
+  "tier": "Tier B",
+  "category": "independent_mock_kyc",
+  "file_name": "tier_b_mock_kyc_04_nri_nre_bank_account_dossier.pdf",
+  "sha256": "486fc30ae5c732be6d96b1107748c7f08ea04229830aceefd07a6b090b04e0a8",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BANKING_NON_RESIDENT_EXTERNAL_ACCOUNT_KYC",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Independently authored synthetic record.",
+    "generation_procedure": "Cross-border NRI banking customer profile.",
+    "is_synthetic": true,
+    "limitations": "Contains foreign and Indian identity identifiers."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PASSPORT_NUMBER",
+      "text": "M8812401",
+      "page_num": 1,
+      "bbox": {
+        "x0": 163.38,
+        "y0": 99.25,
+        "x1": 210.63,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 100,
+        "end": 108
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "RBPPS9941Q",
+      "page_num": 1,
+      "bbox": {
+        "x0": 144.48,
+        "y0": 119.25,
+        "x1": 208.4,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 128,
+        "end": 138
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98451 98451",
+      "page_num": 1,
+      "bbox": {
+        "x0": 130.04,
+        "y0": 139.25,
+        "x1": 208.16,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 155,
+        "end": 170
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "rohan.bopanna@nri-banking.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 117.78,
+        "y0": 159.25,
+        "x1": 261.89,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 186,
+        "end": 215
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "4091002938475",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.93,
+        "y0": 179.25,
+        "x1": 226.21,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 237,
+        "end": 250
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0004120",
+      "page_num": 1,
+      "bbox": {
+        "x0": 139.48,
+        "y0": 199.25,
+        "x1": 201.74,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 269,
+        "end": 280
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "04/03/1980",
+      "page_num": 1,
+      "bbox": {
+        "x0": 111.14,
+        "y0": 219.25,
+        "x1": 161.18,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 296,
+        "end": 306
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 7 entities. Checked coordinates and character offsets."
+  }
+}

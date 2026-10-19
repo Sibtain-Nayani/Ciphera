@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_public_03",
+  "tier": "Tier B",
+  "category": "public_template",
+  "file_name": "tier_b_public_03_form16_tds_certificate.pdf",
+  "sha256": "c754926cf6dc167d5c5c0d5f178673ef7d0839a2b3ca49b237393e7fc2f940f0",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "STATUTORY_FORM_16_TDS_SALARY_CERTIFICATE",
+    "source_url": "https://incometaxindia.gov.in/rules/form_16.pdf",
+    "access_date": "2026-10-10",
+    "license_or_reuse_conditions": "Statutory rule template format populated with synthetic employer/employee data.",
+    "generation_procedure": "Form 16 Part A salary TDS certificate.",
+    "is_synthetic": true,
+    "limitations": "Corporate tax certificate format."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "SAGPS8812L",
+      "page_num": 1,
+      "bbox": {
+        "x0": 151.16,
+        "y0": 119.25,
+        "x1": 213.42,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 150,
+        "end": 160
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "4455 1100 9988",
+      "page_num": 1,
+      "bbox": {
+        "x0": 156.16,
+        "y0": 139.25,
+        "x1": 228.44,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 182,
+        "end": 196
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "shweta.a@corp-demo.co.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 175.04,
+        "y0": 179.25,
+        "x1": 296.9,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 248,
+        "end": 272
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 99100 22334",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.82,
+        "y0": 199.25,
+        "x1": 230.94,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 294,
+        "end": 309
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

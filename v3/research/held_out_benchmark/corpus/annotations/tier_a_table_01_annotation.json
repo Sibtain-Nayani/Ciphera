@@ -1,0 +1,254 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_01",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_01_corporate_payroll_master.pdf",
+  "sha256": "020cbb90c02755de439c161374a765b53668b4dd2fb4c3be9cf0ba92919a6ba2",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "MULTI_ROW_CORPORATE_PAYROLL_REGISTER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Dense tabular multi-employee salary disbursal ledger.",
+    "is_synthetic": true,
+    "limitations": "Multi-column grid alignment with adjacent sensitive fields."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "ABCPA1122B",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 124.62,
+        "x1": 209.53,
+        "y1": 136.99
+      },
+      "character_span": {
+        "start": 161,
+        "end": 171
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "1122 3344 5566",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 124.62,
+        "x1": 317.05,
+        "y1": 136.99
+      },
+      "character_span": {
+        "start": 172,
+        "end": 186
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "1029384756",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 124.62,
+        "x1": 401.04,
+        "y1": 136.99
+      },
+      "character_span": {
+        "start": 187,
+        "end": 197
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "HDFC0001200",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 124.62,
+        "x1": 510.02,
+        "y1": 136.99
+      },
+      "character_span": {
+        "start": 198,
+        "end": 209
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PAN_NUMBER",
+      "text": "DEFPH3344C",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 153.62,
+        "x1": 210.01,
+        "y1": 165.99
+      },
+      "character_span": {
+        "start": 222,
+        "end": 232
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "2233 4455 6677",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 153.62,
+        "x1": 317.05,
+        "y1": 165.99
+      },
+      "character_span": {
+        "start": 233,
+        "end": 247
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "2039485761",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 153.62,
+        "x1": 401.04,
+        "y1": 165.99
+      },
+      "character_span": {
+        "start": 248,
+        "end": 258
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_008",
+      "entity_type": "IFSC_CODE",
+      "text": "ICIC0000045",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 153.62,
+        "x1": 503.03,
+        "y1": 165.99
+      },
+      "character_span": {
+        "start": 259,
+        "end": 270
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_009",
+      "entity_type": "PAN_NUMBER",
+      "text": "GHIKJ5566D",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 182.62,
+        "x1": 206.02,
+        "y1": 194.99
+      },
+      "character_span": {
+        "start": 283,
+        "end": 293
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_010",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "3344 5566 7788",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 182.62,
+        "x1": 317.05,
+        "y1": 194.99
+      },
+      "character_span": {
+        "start": 294,
+        "end": 308
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_011",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "3049586712",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 182.62,
+        "x1": 401.04,
+        "y1": 194.99
+      },
+      "character_span": {
+        "start": 309,
+        "end": 319
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_012",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0004512",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 182.62,
+        "x1": 506.03,
+        "y1": 194.99
+      },
+      "character_span": {
+        "start": 320,
+        "end": 331
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 12 entities. Checked coordinates and character offsets."
+  }
+}

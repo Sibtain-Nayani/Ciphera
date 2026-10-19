@@ -1,0 +1,83 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_public_04",
+  "tier": "Tier B",
+  "category": "public_template",
+  "file_name": "tier_b_public_04_gst_registration_reg06.pdf",
+  "sha256": "5c46e3f2188bc541443d30987470965e7777c9b53068815e17c8de2a19f04ad8",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "GST_CERTIFICATE_REG06_SPECIMEN",
+    "source_url": "https://gst.gov.in/help/reg_06_specimen.pdf",
+    "access_date": "2026-10-10",
+    "license_or_reuse_conditions": "Public administrative registration certificate form populated with mock values.",
+    "generation_procedure": "Goods and Services Tax Form GST REG-06 registration certificate.",
+    "is_synthetic": true,
+    "limitations": "Official registration format."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "RMHPM9910R",
+      "page_num": 1,
+      "bbox": {
+        "x0": 226.74,
+        "y0": 159.25,
+        "x1": 293.97,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 229,
+        "end": 239
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9811098110",
+      "page_num": 1,
+      "bbox": {
+        "x0": 180.61,
+        "y0": 179.25,
+        "x1": 236.21,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 269,
+        "end": 279
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "compliance@horizon-trading.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 149.47,
+        "y0": 199.25,
+        "x1": 287.44,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 303,
+        "end": 332
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 3 entities. Checked coordinates and character offsets."
+  }
+}

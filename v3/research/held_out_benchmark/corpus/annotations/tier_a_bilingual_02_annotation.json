@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_02",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_02_tamil_scholarship_declaration.pdf",
+  "sha256": "9ddd2abbb79a11bdbd0d00c98fb1b6919518f1d616186dfd8986d5293d50c019",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_TAMIL_STATE_SCHOLARSHIP",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Bilingual Tamil Nadu state higher education scholarship grant.",
+    "is_synthetic": true,
+    "limitations": "Bilingual Tamil/English fields."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "08/04/2003",
+      "page_num": 1,
+      "bbox": {
+        "x0": 150.06,
+        "y0": 99.25,
+        "x1": 200.1,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 116,
+        "end": 126
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "3344 5566 7788",
+      "page_num": 1,
+      "bbox": {
+        "x0": 165.06,
+        "y0": 119.25,
+        "x1": 237.34,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 155,
+        "end": 169
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9444012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.84,
+        "y0": 139.25,
+        "x1": 208.44,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 197,
+        "end": 207
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "500102938475",
+      "page_num": 1,
+      "bbox": {
+        "x0": 191.16,
+        "y0": 159.25,
+        "x1": 257.88,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 239,
+        "end": 251
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "CNRB0001928",
+      "page_num": 1,
+      "bbox": {
+        "x0": 139.48,
+        "y0": 179.25,
+        "x1": 206.73,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 270,
+        "end": 281
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

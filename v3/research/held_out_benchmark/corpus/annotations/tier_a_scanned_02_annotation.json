@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_02",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_02_hospital_lab_requisition.pdf",
+  "sha256": "42803b9defe0e133795ebc3a6d35063928746b401aaeb6d5425f2a11e6472300",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_CLINICAL_PATHOLOGY_ORDER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Degraded hospital laboratory requisition requisition form.",
+    "is_synthetic": true,
+    "limitations": "OCR-derived degraded image PDF."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "19/07/1975",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 180,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "1234 9876 5432",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 240,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9876543210",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 170,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "dr.sharma@apollo-eval.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 160,
+        "x1": 300,
+        "y1": 175
+      },
+      "character_span": {
+        "start": 0,
+        "end": 25
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.models.identity import User
 from app.models.document import Document, JobStatus, SafetyStatus
 from app.api.auth import get_current_user
+from app.core.config import settings
 from app.services.document_parser import DocumentParser
 from app.services.storage import StorageService
 
@@ -36,13 +37,24 @@ async def upload_document(
         if org_id not in user_org_ids:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this organization")
             
-    # Read file
-    file_bytes = await file.read()
+    # Read file with stream chunk size limiting (25MB default)
+    chunks = []
+    total_bytes = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > settings.MAX_UPLOAD_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds maximum upload limit of {settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)}MB"
+            )
+        chunks.append(chunk)
+    file_bytes = b"".join(chunks)
     
-    # Save file using Phase 9 Cloud Storage Abstraction
-    storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
-    
-    # Process through Phase 2 Canonical Engine
+    # Process through Phase 2 Canonical Engine (VALIDATE BEFORE PERSISTENCE)
     canonical_doc = DocumentParser.parse(file_bytes, file.filename)
     
     # Process through Phase 4 Detection Engine
@@ -54,23 +66,30 @@ async def upload_document(
     # In a real app we fetch org.policy_config. Using default standard policy.
     entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "balanced"})
     
-    # Save to database
-    db_doc = Document(
-        id=str(uuid.uuid4()),
-        org_id=org_id,
-        uploaded_by=current_user.id,
-        filename=file.filename,
-        file_type=file.content_type,
-        storage_key=storage_key,
-        status=JobStatus.COMPLETED,
-        safety_status=SafetyStatus.UNVERIFIED,
-        canonical_representation=canonical_doc.model_dump(),
-        detected_entities=[e.model_dump() for e in entities]
-    )
+    # Save file using Phase 9 Cloud Storage Abstraction (only after successful validation)
+    storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
     
-    db.add(db_doc)
-    db.commit()
-    db.refresh(db_doc)
+    try:
+        # Save to database
+        db_doc = Document(
+            id=str(uuid.uuid4()),
+            org_id=org_id,
+            uploaded_by=current_user.id,
+            filename=file.filename,
+            file_type=file.content_type,
+            storage_key=storage_key,
+            status=JobStatus.COMPLETED,
+            safety_status=SafetyStatus.UNVERIFIED,
+            canonical_representation=canonical_doc.model_dump(),
+            detected_entities=[e.model_dump() for e in entities]
+        )
+        
+        db.add(db_doc)
+        db.commit()
+        db.refresh(db_doc)
+    except Exception:
+        StorageService.delete_document(storage_key)
+        raise
     
     return {
         "message": "Document parsed successfully",
@@ -192,10 +211,12 @@ def get_redaction_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
+    has_artifact = bool(job.status == JobStatus.COMPLETED and bool(job.result_storage_key))
     return {
         "job_id": job.id,
         "status": job.status,
-        "error_message": job.error_message
+        "error_message": job.error_message,
+        "has_artifact": has_artifact
     }
 
 from fastapi.responses import Response, RedirectResponse
@@ -213,12 +234,22 @@ def download_redacted_job(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
+    if job.status == JobStatus.REVIEW_REQUIRED:
+        raise HTTPException(status_code=422, detail="Document requires manual review before it can be downloaded")
+
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
         
-    storage_key = job.error_message
+    storage_key = job.result_storage_key
     if not storage_key:
-        raise HTTPException(status_code=404, detail="Storage key not found")
+        raise HTTPException(status_code=404, detail="Artifact not found for this completed job")
+
+    clean_key = os.path.normpath(storage_key).replace("\\", "/")
+    if clean_key.startswith("..") or not clean_key.startswith("redacted/"):
+        raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+    if job.document and job.document.safety_status != SafetyStatus.VERIFIED:
+        raise HTTPException(status_code=403, detail="Document safety verification not cleared for release")
         
     from app.core.config import settings
     if settings.STORAGE_BACKEND == "s3":
@@ -226,9 +257,42 @@ def download_redacted_job(
         presigned_url = StorageService.generate_presigned_url(storage_key)
         return RedirectResponse(url=presigned_url)
     else:
-        # Local fallback, stream bytes
+        # Local fallback: enforce race-resistant canonical filesystem containment
+        import stat
+        base_dir = os.path.realpath(settings.LOCAL_STORAGE_DIR)
+        redacted_dir = os.path.realpath(os.path.join(base_dir, "redacted"))
+        target_path = os.path.join(base_dir, storage_key)
+        
+        # Open file descriptor securely
+        open_flags = os.O_RDONLY
+        if hasattr(os, "O_BINARY"):
+            open_flags |= os.O_BINARY
+        if hasattr(os, "O_NOFOLLOW"):
+            open_flags |= os.O_NOFOLLOW
+            
         try:
-            file_bytes = StorageService.get_document(storage_key)
+            fd = os.open(target_path, open_flags)
+        except OSError:
+            raise HTTPException(status_code=404, detail="Redacted document artifact not found")
+
+        try:
+            st = os.fstat(fd)
+            # Ensure opened candidate is strictly a regular file
+            if not stat.S_ISREG(st.st_mode):
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            # Platform-specific symlink/reparse-point defense (Windows compatibility where O_NOFOLLOW is absent)
+            if hasattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT") and bool(getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            # Verify the canonical path of the opened file resides strictly within redacted_dir
+            opened_path = os.path.realpath(target_path)
+            if not opened_path.startswith(redacted_dir + os.sep) or opened_path == redacted_dir:
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            with os.fdopen(fd, "rb", closefd=False) as f:
+                file_bytes = f.read()
+
             return Response(
                 content=file_bytes,
                 media_type="application/pdf",
@@ -236,5 +300,8 @@ def download_redacted_job(
                     "Content-Disposition": f'attachment; filename="redacted_{job.document.filename}"' if job.document else 'attachment; filename="redacted.pdf"'
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                pass

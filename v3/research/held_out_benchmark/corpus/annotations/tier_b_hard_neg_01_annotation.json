@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_01",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_01_warehouse_sku_inventory.pdf",
+  "sha256": "5e163f7ee38e3576ad0c93bfe38cae30ecfb12d4962793772c565a81a04b68dd",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "WAREHOUSE_LOGISTICS_CATALOG",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "Warehouse SKU catalog with item barcodes, bin locations, and weights.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_06",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_06_bank_cheque_deposit_slip.pdf",
+  "sha256": "64d339117e2d83df38cfef5a29dd5d45de7a468269e2e88595f8903fad2cd6d5",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_BANKING_COUNTER_PAY_IN_SLIP",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Branch counter carbon-copy deposit slip.",
+    "is_synthetic": true,
+    "limitations": "Low contrast scanned deposit counterfoil."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "IFSC_CODE",
+      "text": "PSIB0000492",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 80,
+        "x1": 180,
+        "y1": 95
+      },
+      "character_span": {
+        "start": 0,
+        "end": 11
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "04921000293847",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 220,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PAN_NUMBER",
+      "text": "IJKPS3310M",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 180,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9313931393",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 160,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

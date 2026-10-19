@@ -32,15 +32,20 @@ class OCRProcessor:
         return binary
 
     @staticmethod
-    def extract_blocks(image_bytes: bytes, page_num: int = 1) -> Tuple[str, List[CanonicalBlock]]:
+    def extract_blocks_with_stats(
+        image_bytes: bytes, page_num: int = 1
+    ) -> Tuple[str, List[CanonicalBlock], dict]:
         """
-        Runs Tesseract OCR on the image and returns the full text and canonical blocks (with bounding boxes).
+        Runs Tesseract OCR on the image and returns:
+        - full text
+        - canonical blocks (with bounding boxes)
+        - ocr_stats: dict containing word_count, confidences, mean_confidence, alphanumeric_char_count, total_char_count, raw_text
         """
         try:
             # Preprocess image with OpenCV
             processed_img_np = OCRProcessor.preprocess_image(image_bytes)
             processed_img = Image.fromarray(processed_img_np)
-        except Exception as e:
+        except Exception:
             # Fallback if cv2 fails for some reason
             processed_img = Image.open(io.BytesIO(image_bytes))
 
@@ -53,13 +58,28 @@ class OCRProcessor:
         blocks = []
         full_text = ""
         current_index = 0
+        confidences = []
+        alnum_chars = 0
         
-        n_boxes = len(data['level'])
+        n_boxes = len(data.get('level', []))
         for i in range(n_boxes):
             # level 5 means a word
             if data['level'][i] == 5:
-                text = data['text'][i].strip()
+                text = str(data['text'][i]).strip()
                 if text:
+                    # Extract confidence if available
+                    if 'conf' in data:
+                        try:
+                            c = float(data['conf'][i])
+                            if c >= 0:
+                                confidences.append(c)
+                        except (ValueError, TypeError):
+                            pass
+                            
+                    # Count alphanumeric characters in word
+                    alnum_in_word = sum(1 for ch in text if ch.isalnum())
+                    alnum_chars += alnum_in_word
+                    
                     # Append text to full string with a space
                     if full_text:
                         full_text += " "
@@ -83,4 +103,23 @@ class OCRProcessor:
                         end_index=end_idx
                     ))
                     
+        mean_conf = float(np.mean(confidences)) if len(confidences) > 0 else None
+        
+        ocr_stats = {
+            "word_count": len(blocks),
+            "confidences": confidences,
+            "mean_confidence": mean_conf,
+            "alphanumeric_char_count": alnum_chars,
+            "total_char_count": len(full_text),
+            "raw_text": full_text,
+        }
+        
+        return full_text, blocks, ocr_stats
+
+    @staticmethod
+    def extract_blocks(image_bytes: bytes, page_num: int = 1) -> Tuple[str, List[CanonicalBlock]]:
+        """
+        Runs Tesseract OCR on the image and returns the full text and canonical blocks (with bounding boxes).
+        """
+        full_text, blocks, _ = OCRProcessor.extract_blocks_with_stats(image_bytes, page_num)
         return full_text, blocks

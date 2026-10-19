@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_08",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_08_equity_ipo_allotment_schedule.pdf",
+  "sha256": "af7b268bad06562ba707c15f1eef90ef8f7247d693c8ab9a0c76346a44f3d95c",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SECURITIES_PUBLIC_ISSUE_ALLOTMENT_LEDGER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Registrar and Transfer Agent IPO allotment basis report.",
+    "is_synthetic": true,
+    "limitations": "Dense securities allotment table."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "MNOPS1092F",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 128.45,
+        "x1": 211.52,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 175,
+        "end": 185
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0000452",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 128.45,
+        "x1": 506.03,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 206,
+        "end": 217
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PAN_NUMBER",
+      "text": "PQRPS3310G",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 159.7,
+        "x1": 211.53,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 227,
+        "end": 237
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "HDFC0000060",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 159.7,
+        "x1": 510.02,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 257,
+        "end": 268
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PAN_NUMBER",
+      "text": "STUPS5541H",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 190.95,
+        "x1": 209.52,
+        "y1": 203.32
+      },
+      "character_span": {
+        "start": 278,
+        "end": 288
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "IFSC_CODE",
+      "text": "ICIC0000102",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 190.95,
+        "x1": 503.03,
+        "y1": 203.32
+      },
+      "character_span": {
+        "start": 309,
+        "end": 320
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

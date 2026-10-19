@@ -5,6 +5,7 @@ import io
 import mimetypes
 
 from app.schemas.document import CanonicalDocument, CanonicalBlock, BoundingBox
+from app.core.config import settings
 
 from fastapi import HTTPException
 
@@ -44,12 +45,21 @@ class DocumentParser:
             doc.close()
             raise HTTPException(status_code=400, detail="Password-protected or encrypted PDFs are not supported")
             
-        if len(doc) == 0:
+        page_count = len(doc)
+        if page_count == 0:
             doc.close()
             raise HTTPException(status_code=400, detail="PDF contains 0 pages")
+            
+        if page_count > settings.MAX_PDF_PAGE_COUNT:
+            doc.close()
+            raise HTTPException(
+                status_code=400,
+                detail=f"PDF page count ({page_count}) exceeds maximum allowed limit of {settings.MAX_PDF_PAGE_COUNT} pages"
+            )
         blocks = []
         full_text = ""
         current_index = 0
+        scanned_pages = []
         
         for page_num in range(len(doc)):
             page = doc[page_num]
@@ -65,6 +75,7 @@ class DocumentParser:
             )
             
             if not page_has_text:
+                scanned_pages.append(page_num + 1)
                 # Scanned page (no embedded text) - Run OCR on rendered page image
                 pix = page.get_pixmap(dpi=150)
                 img_bytes = pix.tobytes("png")
@@ -123,14 +134,17 @@ class DocumentParser:
         metadata = {
             "filename": filename,
             "type": "pdf",
-            "page_count": len(doc)
+            "page_count": len(doc),
+            "scanned_pages": scanned_pages,
+            "has_scanned_pages": len(scanned_pages) > 0
         }
         
+        doc.close()
         return CanonicalDocument(
             metadata=metadata,
             blocks=blocks,
             full_text=full_text,
-            page_count=len(doc)
+            page_count=page_count
         )
 
     @staticmethod
@@ -156,7 +170,12 @@ class DocumentParser:
         full_text, blocks = OCRProcessor.extract_blocks(file_bytes)
         
         return CanonicalDocument(
-            metadata={"filename": filename, "type": "image"},
+            metadata={
+                "filename": filename,
+                "type": "image",
+                "scanned_pages": [1],
+                "has_scanned_pages": True
+            },
             blocks=blocks,
             full_text=full_text,
             page_count=1

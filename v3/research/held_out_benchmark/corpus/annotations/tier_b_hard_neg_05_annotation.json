@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_05",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_05_aircraft_flight_dispatch_plan.pdf",
+  "sha256": "e0cda3b43753a4a6eba283339eb1b690116b3009e603c98d98d03e5f1831aed1",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "AVIATION_AIRLINE_OPERATIONAL_FLIGHT_PLAN",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "Commercial airline navigation flight dispatch release.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

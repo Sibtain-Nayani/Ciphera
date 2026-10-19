@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_08",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_08_malayalam_welfare_fund_receipt.pdf",
+  "sha256": "b07d6b57ef6812d4b9989ca4b4619e24833259f173a9d6866927fc5a05b0bb9e",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_MALAYALAM_LABOUR_WELFARE_BOARD",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Kerala building and other construction workers welfare fund receipt.",
+    "is_synthetic": true,
+    "limitations": "Malayalam script with English identity numerals."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "9900 1122 4455",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.95,
+        "y0": 99.25,
+        "x1": 226.23,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 145,
+        "end": 159
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9447012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 136.15,
+        "y0": 119.25,
+        "x1": 191.75,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 180,
+        "end": 190
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "102938475610",
+      "page_num": 1,
+      "bbox": {
+        "x0": 182.27,
+        "y0": 139.25,
+        "x1": 248.99,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 219,
+        "end": 231
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "FDRL0001234",
+      "page_num": 1,
+      "bbox": {
+        "x0": 140.59,
+        "y0": 159.25,
+        "x1": 205.62,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 251,
+        "end": 262
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

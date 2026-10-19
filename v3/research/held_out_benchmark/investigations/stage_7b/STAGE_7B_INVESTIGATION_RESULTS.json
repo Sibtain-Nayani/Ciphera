@@ -1,0 +1,375 @@
+{
+  "workstream_a_scanned_failures": [
+    {
+      "fixture": "deg_01_low_contrast",
+      "description": "Low contrast text (light grey on white) containing PAN ABCDE1234F",
+      "ground_truth_pii": "ABCDE1234F",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 41,
+          "extracted_snippet": "Customer Permanent \u0936\u094d\u0930\u092a\u094d\u0918\u094d\u0923 \u092b\u0948\u0928 \u092b\u093f\u091f 23\u0935\u0940-"
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "PASSED_VERIFICATION",
+          "leaks_found": 0
+        },
+        "7_artifact_and_download": {
+          "job_status": "COMPLETED",
+          "artifact_accepted": true,
+          "download_eligible": true,
+          "safety_outcome": "SILENT_PII_ESCAPE (FAIL-OPEN HAZARD)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_02_heavy_blur",
+      "description": "Heavy Gaussian blur (radius=3.5) containing Aadhaar 9012 3456 7890",
+      "ground_truth_pii": "9012 3456 7890",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 4,
+          "extracted_snippet": "\u2018ile"
+        },
+        "3_entity_detection": {
+          "status": "SUCCESS",
+          "entity_count": 1,
+          "detected_types": [
+            "PERSON"
+          ]
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 1
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "REJECTED_BY_VERIFIER",
+          "error": "Verification uncertainty: 1 page(s) uninspected. [Uncertainty Failure (Page 1): Page contains visual content that could not be read or verified by OCR]"
+        },
+        "7_artifact_and_download": {
+          "job_status": "FAILED",
+          "artifact_accepted": false,
+          "download_eligible": false,
+          "safety_outcome": "SAFELY_REJECTED (FAIL-CLOSED)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_03_skew_angle",
+      "description": "Skewed scan (18 deg rotation) containing PAN BKZPR7788M",
+      "ground_truth_pii": "BKZPR7788M",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "EMPTY_EXTRACTION",
+          "extracted_length": 0,
+          "extracted_snippet": ""
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "REJECTED_BY_VERIFIER",
+          "error": "Verification uncertainty: 1 page(s) uninspected. [Uncertainty Failure (Page 1): Page contains visual content that could not be read or verified by OCR]"
+        },
+        "7_artifact_and_download": {
+          "job_status": "FAILED",
+          "artifact_accepted": false,
+          "download_eligible": false,
+          "safety_outcome": "SAFELY_REJECTED (FAIL-CLOSED)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_04_heavy_noise",
+      "description": "Heavy salt-and-pepper noise containing Phone +91 9876543210",
+      "ground_truth_pii": "+91 9876543210",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "EMPTY_EXTRACTION",
+          "extracted_length": 0,
+          "extracted_snippet": ""
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "REJECTED_BY_VERIFIER",
+          "error": "Verification uncertainty: 1 page(s) uninspected. [Uncertainty Failure (Page 1): Page contains visual content that could not be read or verified by OCR]"
+        },
+        "7_artifact_and_download": {
+          "job_status": "FAILED",
+          "artifact_accepted": false,
+          "download_eligible": false,
+          "safety_outcome": "SAFELY_REJECTED (FAIL-CLOSED)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_05_faint_small_text",
+      "description": "Faint small text containing PAN and DOB",
+      "ground_truth_pii": "ABCDE1234F",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 31,
+          "extracted_snippet": "ID \u092d\u0930 \u092b\u091f\u093e \u0909\u0909 \u092f\u093e\u0928 DOR 72/05/7955"
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "PASSED_VERIFICATION",
+          "leaks_found": 0
+        },
+        "7_artifact_and_download": {
+          "job_status": "COMPLETED",
+          "artifact_accepted": true,
+          "download_eligible": true,
+          "safety_outcome": "SILENT_PII_ESCAPE (FAIL-OPEN HAZARD)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_06_blank_ocr_page",
+      "description": "Scanned page with visual markings where OCR returns empty text stream",
+      "ground_truth_pii": "PBNKA1122D",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 30,
+          "extracted_snippet": "CONFIDENTIAL PAN. PRMHAT ]220."
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "PASSED_VERIFICATION",
+          "leaks_found": 0
+        },
+        "7_artifact_and_download": {
+          "job_status": "COMPLETED",
+          "artifact_accepted": true,
+          "download_eligible": true,
+          "safety_outcome": "SILENT_PII_ESCAPE (FAIL-OPEN HAZARD)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_07_partial_ocr_fragment",
+      "description": "Degraded scan where partial bank account digits are captured",
+      "ground_truth_pii": "998811223344",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 25,
+          "extracted_snippet": "Amani mt Mex 955 (2 25544"
+        },
+        "3_entity_detection": {
+          "status": "SUCCESS",
+          "entity_count": 5,
+          "detected_types": [
+            "PERSON",
+            "PERSON",
+            "PERSON",
+            "PERSON",
+            "INFERRED_PERSON"
+          ]
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 5
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "PASSED_VERIFICATION",
+          "leaks_found": 0
+        },
+        "7_artifact_and_download": {
+          "job_status": "COMPLETED",
+          "artifact_accepted": true,
+          "download_eligible": true,
+          "safety_outcome": "SILENT_PII_ESCAPE (FAIL-OPEN HAZARD)"
+        }
+      }
+    },
+    {
+      "fixture": "deg_08_ocr_rendered_disagreement",
+      "description": "Disagreement between OCR output and visual rendered layer",
+      "ground_truth_pii": "ZZZPP1234Q",
+      "stages": {
+        "1_input_validation": {
+          "status": "SUCCESS",
+          "pages": 1
+        },
+        "2_ocr_text_extraction": {
+          "status": "SUCCESS",
+          "extracted_length": 32,
+          "extracted_snippet": "Permanent Identifier \u0930\u0938 \u0936\u0936\u093f 2340"
+        },
+        "3_entity_detection": {
+          "status": "ZERO_ENTITIES_FOUND",
+          "entity_count": 0,
+          "detected_types": []
+        },
+        "4_redaction_decision": {
+          "status": "SUCCESS",
+          "accepted_count": 0
+        },
+        "5_redaction_execution": {
+          "status": "SUCCESS",
+          "bytes_equal_original": false
+        },
+        "6_independent_verification": {
+          "status": "PASSED_VERIFICATION",
+          "leaks_found": 0
+        },
+        "7_artifact_and_download": {
+          "job_status": "COMPLETED",
+          "artifact_accepted": true,
+          "download_eligible": true,
+          "safety_outcome": "SILENT_PII_ESCAPE (FAIL-OPEN HAZARD)"
+        }
+      }
+    }
+  ],
+  "workstream_b_clean_rejections": [
+    {
+      "fixture": "clean_01_numeric_invoice",
+      "historical_match": "tier_b_hard_neg_01",
+      "rejecting_layer": "Layer 2 (Visual Aadhaar Window) & Layer 3 (Credit Card Regex)",
+      "leak_classification": "FALSE_POSITIVE_VERIFIER_FLAG (Overly broad numeric sequence matching)",
+      "trigger_token": "987654321012345",
+      "raw_rejection_detail": "Verification failed: 5 leak(s) detected post-redaction. [Visual Leak (Page 1): OCR found potential Aadhaar structure; Visual Leak (Page 1): OCR found potential Aadhaar structure; Visual Leak (Page 1): OCR found potential Aadhaar structure]",
+      "verifier_rejected": true
+    },
+    {
+      "fixture": "clean_02_tabular_codes",
+      "historical_match": "tier_b_hard_neg_02",
+      "rejecting_layer": "Layer 2 (Visual Verifier / Suspicious PAN)",
+      "leak_classification": "FALSE_POSITIVE_VERIFIER_FLAG (Permissive shape + OCR confusion on benign SKU)",
+      "trigger_token": "ABCDE1234O",
+      "raw_rejection_detail": "Verification failed: 1 leak(s) detected post-redaction. [Visual Leak (Page 1): OCR found potential PAN structure]",
+      "verifier_rejected": true
+    },
+    {
+      "fixture": "clean_03_narrow_bbox_fp",
+      "historical_match": "tier_b_hard_neg_05",
+      "rejecting_layer": "Layer 1 (Geometry Verifier / Envelope Width Heuristic)",
+      "leak_classification": "DETECTION_FP_CONSEQUENTIAL_GEOMETRY_REJECTION",
+      "heuristic_formula": "min_expected_width = text_len * box_h * 0.35",
+      "measured_width": 40.0,
+      "min_expected_width": 42.0,
+      "raw_rejection_detail": "Verification failed: 3 leak(s) detected post-redaction. [Geometry Leak (Page 1): Redaction bbox width (40.0pt) insufficient for entity of length 10 (min expected 42.0pt); Fragment Leak: Residual trailing characters of PAN_NUMBER detected; Fragment Leak: Residual leading characters of PAN_NUMBER detected]",
+      "verifier_rejected": true
+    },
+    {
+      "fixture": "clean_04_date_time_fragment",
+      "historical_match": "tier_b_hard_neg_08",
+      "rejecting_layer": "Layer 3.6 (Accepted Entity Residual Fragment Scan)",
+      "leak_classification": "FALSE_POSITIVE_RESIDUAL_TEXT_SCAN (Non-spatial global substring match)",
+      "matched_substring": "2024 (present in unredacted header)",
+      "raw_rejection_detail": "Verification failed: 3 leak(s) detected post-redaction. [Visual Leak (Page 1): OCR found potential PAN structure; Fragment Leak: Residual trailing characters of DATE_TIME detected; Fragment Leak: Residual leading characters of DATE_TIME detected]",
+      "verifier_rejected": true
+    }
+  ],
+  "workstream_c_fail_closed": [
+    {
+      "test": "fail_closed_lifecycle_and_download_blocking",
+      "job_status_after_failure": "failed",
+      "result_storage_key": null,
+      "has_artifact": false,
+      "download_blocked": true,
+      "error_sanitized": true,
+      "line_240_vulnerability_assessment": "BLOCKED_BY_LINE_237_STATUS_CHECK"
+    }
+  ]
+}

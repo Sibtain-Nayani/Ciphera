@@ -1,4 +1,4 @@
-﻿"""
+"""
 Ciphera V3.4 — main.py
 Adds: Google OAuth (feature17)
 """
@@ -68,14 +68,21 @@ import os
  
 _raw_origins = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000,http://10.0.2.2:3000,http://10.0.2.2:8000,capacitor://localhost"
 )
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
- 
+
+# Support mobile emulators (10.0.2.2 is Android host loopback), local devices, and capacitor/hybrid mobile wrappers
+ALLOW_ORIGIN_REGEX = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"^https?://(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$|^capacitor://localhost$"
+)
+
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOW_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

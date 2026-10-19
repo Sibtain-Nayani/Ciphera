@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_04",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_04_fixed_deposit_advice.pdf",
+  "sha256": "3246709dbaa4ac1a89fd59ca13c76986fee2ad16b08dd7ca33308e74dd484a1f",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BANKING_FIXED_DEPOSIT_RECEIPT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Scheduled commercial bank Term Deposit Advice.",
+    "is_synthetic": true,
+    "limitations": "Digital banking receipt."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "5544 3322 1100",
+      "page_num": 1,
+      "bbox": {
+        "x0": 139.48,
+        "y0": 119.25,
+        "x1": 211.76,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 133,
+        "end": 147
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "AMSPS3319L",
+      "page_num": 1,
+      "bbox": {
+        "x0": 122.24,
+        "y0": 139.25,
+        "x1": 185.05,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 162,
+        "end": 172
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "991200384712",
+      "page_num": 1,
+      "bbox": {
+        "x0": 162.28,
+        "y0": 159.25,
+        "x1": 229.0,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 197,
+        "end": 209
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "HDFC0001824",
+      "page_num": 1,
+      "bbox": {
+        "x0": 139.48,
+        "y0": 179.25,
+        "x1": 206.17,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 228,
+        "end": 239
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9840123456",
+      "page_num": 1,
+      "bbox": {
+        "x0": 136.14,
+        "y0": 199.25,
+        "x1": 191.74,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 259,
+        "end": 269
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}
