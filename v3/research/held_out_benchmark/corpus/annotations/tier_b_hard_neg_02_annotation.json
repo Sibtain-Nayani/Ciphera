@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_02",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_02_server_syslog_network_traffic.pdf",
+  "sha256": "fda86015953a9cfc67f6c353db2bbaab935006ecf1824c9359ff64c806f84f0a",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "INFRASTRUCTURE_SERVER_SYSLOG",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "Linux kernel syslog dump containing IP addresses, ports, and hexadecimal hashes.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

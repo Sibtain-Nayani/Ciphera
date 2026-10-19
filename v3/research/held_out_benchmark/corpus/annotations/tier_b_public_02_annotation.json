@@ -1,0 +1,159 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_public_02",
+  "tier": "Tier B",
+  "category": "public_template",
+  "file_name": "tier_b_public_02_income_tax_itr1_sahaj.pdf",
+  "sha256": "17f169c138c20a2c4d61ffaaa1d9f2b6689c9008bb8b263a3ddc1def1d4d966b",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "INCOME_TAX_ITR1_SAHAJ_SPECIMEN",
+    "source_url": "https://incometaxindia.gov.in/forms/itr_1_specimen.pdf",
+    "access_date": "2026-10-10",
+    "license_or_reuse_conditions": "Public administrative tax return form format filled with synthetic data.",
+    "generation_procedure": "Layout adapted from Central Board of Direct Taxes ITR-1 Sahaj format.",
+    "is_synthetic": true,
+    "limitations": "Specimen tax return layout."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "PMHPS4419E",
+      "page_num": 1,
+      "bbox": {
+        "x0": 211.72,
+        "y0": 119.25,
+        "x1": 276.19,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 149,
+        "end": 159
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "8899 1100 2233",
+      "page_num": 1,
+      "bbox": {
+        "x0": 167.27,
+        "y0": 139.25,
+        "x1": 239.55,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 185,
+        "end": 199
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "25/09/1990",
+      "page_num": 1,
+      "bbox": {
+        "x0": 111.14,
+        "y0": 159.25,
+        "x1": 161.18,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 215,
+        "end": 225
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9811981198",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.79,
+        "y0": 179.25,
+        "x1": 208.39,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 249,
+        "end": 259
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "prateek.m@incometax-demo.gov.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 93.34,
+        "y0": 199.25,
+        "x1": 251.32,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 270,
+        "end": 301
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "102938475610",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.28,
+        "y0": 219.25,
+        "x1": 219.0,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 323,
+        "end": 335
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0000691",
+      "page_num": 1,
+      "bbox": {
+        "x0": 138.37,
+        "y0": 239.25,
+        "x1": 200.63,
+        "y1": 252.99
+      },
+      "character_span": {
+        "start": 354,
+        "end": 365
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 7 entities. Checked coordinates and character offsets."
+  }
+}

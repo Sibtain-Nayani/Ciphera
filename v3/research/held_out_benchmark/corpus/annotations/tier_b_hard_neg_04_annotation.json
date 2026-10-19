@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_04",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_04_chemical_safety_data_sheet.pdf",
+  "sha256": "a13efbfe99afa56450ce2f7c4e602b28959906a0d2f802440ec2744e8dbba23b",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "INDUSTRIAL_CHEMICAL_SAFETY_DATA_SHEET",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "GHS compliant material safety datasheet with CAS numbers, boiling points, and formulas.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

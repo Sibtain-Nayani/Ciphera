@@ -148,3 +148,16 @@ desktop.ini
 .idea/
 *.suo
 *.user
+
+# ── Academic Reports & External Formats (Never commit/push to git) ─
+IPD Report Format.docx
+Sample Report.pdf
+*.docx
+*IPD*Report*
+reports/
+academic_report/
+# -- Runtime Data & Local Databases -----------------------------
+v3/data/
+*.db
+*.sqlite
+*.sqlite3

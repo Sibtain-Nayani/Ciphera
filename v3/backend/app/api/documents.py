@@ -211,7 +211,7 @@ def get_redaction_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
-    has_artifact = bool(job.status == JobStatus.COMPLETED and (job.result_storage_key or job.error_message))
+    has_artifact = bool(job.status == JobStatus.COMPLETED and bool(job.result_storage_key))
     return {
         "job_id": job.id,
         "status": job.status,
@@ -234,12 +234,22 @@ def download_redacted_job(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
+    if job.status == JobStatus.REVIEW_REQUIRED:
+        raise HTTPException(status_code=422, detail="Document requires manual review before it can be downloaded")
+
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
         
-    storage_key = job.result_storage_key or job.error_message
+    storage_key = job.result_storage_key
     if not storage_key:
-        raise HTTPException(status_code=404, detail="Storage key not found")
+        raise HTTPException(status_code=404, detail="Artifact not found for this completed job")
+
+    clean_key = os.path.normpath(storage_key).replace("\\", "/")
+    if clean_key.startswith("..") or not clean_key.startswith("redacted/"):
+        raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+    if job.document and job.document.safety_status != SafetyStatus.VERIFIED:
+        raise HTTPException(status_code=403, detail="Document safety verification not cleared for release")
         
     from app.core.config import settings
     if settings.STORAGE_BACKEND == "s3":
@@ -247,9 +257,42 @@ def download_redacted_job(
         presigned_url = StorageService.generate_presigned_url(storage_key)
         return RedirectResponse(url=presigned_url)
     else:
-        # Local fallback, stream bytes
+        # Local fallback: enforce race-resistant canonical filesystem containment
+        import stat
+        base_dir = os.path.realpath(settings.LOCAL_STORAGE_DIR)
+        redacted_dir = os.path.realpath(os.path.join(base_dir, "redacted"))
+        target_path = os.path.join(base_dir, storage_key)
+        
+        # Open file descriptor securely
+        open_flags = os.O_RDONLY
+        if hasattr(os, "O_BINARY"):
+            open_flags |= os.O_BINARY
+        if hasattr(os, "O_NOFOLLOW"):
+            open_flags |= os.O_NOFOLLOW
+            
         try:
-            file_bytes = StorageService.get_document(storage_key)
+            fd = os.open(target_path, open_flags)
+        except OSError:
+            raise HTTPException(status_code=404, detail="Redacted document artifact not found")
+
+        try:
+            st = os.fstat(fd)
+            # Ensure opened candidate is strictly a regular file
+            if not stat.S_ISREG(st.st_mode):
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            # Platform-specific symlink/reparse-point defense (Windows compatibility where O_NOFOLLOW is absent)
+            if hasattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT") and bool(getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            # Verify the canonical path of the opened file resides strictly within redacted_dir
+            opened_path = os.path.realpath(target_path)
+            if not opened_path.startswith(redacted_dir + os.sep) or opened_path == redacted_dir:
+                raise HTTPException(status_code=403, detail="Unauthorized artifact access")
+
+            with os.fdopen(fd, "rb", closefd=False) as f:
+                file_bytes = f.read()
+
             return Response(
                 content=file_bytes,
                 media_type="application/pdf",
@@ -257,5 +300,8 @@ def download_redacted_job(
                     "Content-Disposition": f'attachment; filename="redacted_{job.document.filename}"' if job.document else 'attachment; filename="redacted.pdf"'
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                pass

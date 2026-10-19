@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_06",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_06_telangana_rythu_bandhu_sanction.pdf",
+  "sha256": "81508d6603785eb22080f32bb3a6db8a5c89654184760dc045d32277500c40f6",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_TELUGU_AGRICULTURAL_SUBSIDY",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Agricultural investment direct benefit transfer record.",
+    "is_synthetic": true,
+    "limitations": "Telugu/English mixed notice."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "7788 9900 2233",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.28,
+        "y0": 99.25,
+        "x1": 224.56,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 130,
+        "end": 144
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9849012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 144.48,
+        "y0": 119.25,
+        "x1": 200.08,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 168,
+        "end": 178
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "201928475612",
+      "page_num": 1,
+      "bbox": {
+        "x0": 136.14,
+        "y0": 139.25,
+        "x1": 202.86,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 198,
+        "end": 210
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "UBIN0801928",
+      "page_num": 1,
+      "bbox": {
+        "x0": 165.04,
+        "y0": 159.25,
+        "x1": 227.85,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 235,
+        "end": 246
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

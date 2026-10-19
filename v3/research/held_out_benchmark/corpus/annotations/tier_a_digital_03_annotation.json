@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_03",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_03_telecom_postpaid_bill.pdf",
+  "sha256": "2c437aa564cfd9bc5aa3b0ce2a846124170f49acc9740418ef503bc3ba4e5608",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "TELECOM_SERVICE_INVOICE",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Standard broadband/cellular monthly billing invoice.",
+    "is_synthetic": true,
+    "limitations": "Vector bill with account numbers and tariff breakdown."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 97112 34567",
+      "page_num": 1,
+      "bbox": {
+        "x0": 152.8,
+        "y0": 119.25,
+        "x1": 230.92,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 134,
+        "end": 149
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "ARKPJ9921B",
+      "page_num": 1,
+      "bbox": {
+        "x0": 111.14,
+        "y0": 139.25,
+        "x1": 172.28,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 164,
+        "end": 174
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "rakesh.j@airconnect-demo.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 123.35,
+        "y0": 159.25,
+        "x1": 253.54,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 193,
+        "end": 220
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "409100293847",
+      "page_num": 1,
+      "bbox": {
+        "x0": 167.28,
+        "y0": 179.25,
+        "x1": 234.0,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 246,
+        "end": 258
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0004128",
+      "page_num": 1,
+      "bbox": {
+        "x0": 138.37,
+        "y0": 199.25,
+        "x1": 200.63,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 277,
+        "end": 288
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

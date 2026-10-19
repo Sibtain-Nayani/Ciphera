@@ -1,0 +1,83 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_05",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_05_electricity_board_bill.pdf",
+  "sha256": "8381b72db5be9a3cf442c2584b434c61f9964e70afb8cdaad41c23a2d669cbbe",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_UTILITY_ELECTRIC_BILL",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Scanned utility distribution company monthly bill.",
+    "is_synthetic": true,
+    "limitations": "Dot-matrix style scanned text."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "GHIPS8812L",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 180,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9810981098",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 160,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "consumer.power@state-discom.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 290,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 31
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 3 entities. Checked coordinates and character offsets."
+  }
+}

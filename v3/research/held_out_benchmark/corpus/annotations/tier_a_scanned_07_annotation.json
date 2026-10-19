@@ -1,0 +1,83 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_07",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_07_rent_agreement_stamp_sheet.pdf",
+  "sha256": "915a06831ebbb72c05ca095edc3e003cd4b7d14b1d7e360eef7cb3e1bcbaf204",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_E_STAMP_NOTARIZED_AGREEMENT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Notarized rental deed scan with rubber stamps simulation.",
+    "is_synthetic": true,
+    "limitations": "Heavily compressed scanned legal paper."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "8877 6655 4433",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 220,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "JKLPS7729P",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 180,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 96500 12345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 200,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 15
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 3 entities. Checked coordinates and character offsets."
+  }
+}

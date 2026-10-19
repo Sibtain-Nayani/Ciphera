@@ -25,8 +25,24 @@ class DetectionEngine:
         pipeline = cls.get_pipeline()
         
         # 1. Run inference on full text (to preserve context windows)
-        raw_entities = pipeline.run(text=doc.full_text, threshold=threshold)
+        raw_entities = list(pipeline.run(text=doc.full_text, threshold=threshold))
         
+        # Propagate table column context from verified headers to unflagged cells
+        text_table_inferred = ColumnarInferenceEngine.infer_text_tables(doc.full_text)
+        for inf in text_table_inferred:
+            overlap = any(
+                max(inf["start"], getattr(r, "start", -1)) < min(inf["end"], getattr(r, "end", -1))
+                for r in raw_entities
+            )
+            if not overlap:
+                class InferredCandidate:
+                    def __init__(self, t, s, e, score):
+                        self.entity_type = t
+                        self.start = s
+                        self.end = e
+                        self.score = score
+                raw_entities.append(InferredCandidate(inf["entity_type"], inf["start"], inf["end"], inf["score"]))
+
         redactions = []
         
         # 2. Map back to canonical blocks

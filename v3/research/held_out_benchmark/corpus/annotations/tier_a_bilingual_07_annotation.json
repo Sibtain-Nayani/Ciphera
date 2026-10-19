@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_07",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_07_kannada_revenue_khata_extract.pdf",
+  "sha256": "fd67c9d50a25e48304c90e33476031e3c64c07070cf638b4979a051ca5355b01",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_KANNADA_MUNICIPAL_KHATA",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Bilingual urban land revenue khata certificate.",
+    "is_synthetic": true,
+    "limitations": "Kannada script with English alphanumeric property numbers."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "8899 0011 3344",
+      "page_num": 1,
+      "bbox": {
+        "x0": 173.4,
+        "y0": 99.25,
+        "x1": 245.68,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 144,
+        "end": 158
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "BBBPS4410H",
+      "page_num": 1,
+      "bbox": {
+        "x0": 158.94,
+        "y0": 119.25,
+        "x1": 221.75,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 187,
+        "end": 197
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9845098450",
+      "page_num": 1,
+      "bbox": {
+        "x0": 117.24,
+        "y0": 139.25,
+        "x1": 172.84,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 212,
+        "end": 222
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "basavaraj@property-eval.karnataka.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 112.79,
+        "y0": 159.25,
+        "x1": 288.56,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 236,
+        "end": 273
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

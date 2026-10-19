@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_03",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_03_bengali_panchayat_grant_voucher.pdf",
+  "sha256": "d9bdad3d9eb9e34d8993e3c46547f79f15b6878a20391cec2f63f4997cc38e8f",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_BENGALI_RURAL_DEVELOPMENT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Panchayat rural development direct benefit transfer slip.",
+    "is_synthetic": true,
+    "limitations": "Bengali/English dual headers."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "4455 6677 8899",
+      "page_num": 1,
+      "bbox": {
+        "x0": 129.5,
+        "y0": 99.25,
+        "x1": 201.78,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 135,
+        "end": 149
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9830012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 117.83,
+        "y0": 119.25,
+        "x1": 173.43,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 169,
+        "end": 179
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "409100293847",
+      "page_num": 1,
+      "bbox": {
+        "x0": 166.16,
+        "y0": 139.25,
+        "x1": 232.88,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 204,
+        "end": 216
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "PUNB0BGRB01",
+      "page_num": 1,
+      "bbox": {
+        "x0": 105.02,
+        "y0": 159.25,
+        "x1": 177.82,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 228,
+        "end": 239
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

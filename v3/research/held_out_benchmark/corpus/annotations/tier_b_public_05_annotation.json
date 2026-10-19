@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_public_05",
+  "tier": "Tier B",
+  "category": "public_template",
+  "file_name": "tier_b_public_05_rbi_sovereign_gold_bond_application.pdf",
+  "sha256": "30d6cce0b93dbb99a6b67e80fc02d895d29a5898e83f451d4f215c12f95936b4",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "CENTRAL_BANK_SOVEREIGN_GOLD_BOND_APPLICATION",
+    "source_url": "https://rbi.org.in/scripts/BS_SGBForms.aspx",
+    "access_date": "2026-10-10",
+    "license_or_reuse_conditions": "Specimen financial application layout adapted with synthetic details.",
+    "generation_procedure": "Reserve Bank of India SGB investor application form.",
+    "is_synthetic": true,
+    "limitations": "Central bank specimen application."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "ABHPS5510N",
+      "page_num": 1,
+      "bbox": {
+        "x0": 171.15,
+        "y0": 119.25,
+        "x1": 234.51,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 160,
+        "end": 170
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "7766 5544 3322",
+      "page_num": 1,
+      "bbox": {
+        "x0": 137.81,
+        "y0": 139.25,
+        "x1": 210.09,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 189,
+        "end": 203
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9820123456",
+      "page_num": 1,
+      "bbox": {
+        "x0": 140.05,
+        "y0": 159.25,
+        "x1": 195.65,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 223,
+        "end": 233
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "arundhati.b@sgb-eval.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 166.13,
+        "y0": 179.25,
+        "x1": 281.33,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 260,
+        "end": 284
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "001928374651",
+      "page_num": 1,
+      "bbox": {
+        "x0": 187.3,
+        "y0": 199.25,
+        "x1": 254.02,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 315,
+        "end": 327
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0000300",
+      "page_num": 1,
+      "bbox": {
+        "x0": 138.37,
+        "y0": 219.25,
+        "x1": 200.63,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 346,
+        "end": 357
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

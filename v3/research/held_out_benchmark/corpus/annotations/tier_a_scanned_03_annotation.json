@@ -1,0 +1,83 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_03",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_03_courier_consignment_pod.pdf",
+  "sha256": "c2122f553379ca6cf4271678aae43a9c342f4485794b75e7099ec23fa9bee719",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_LOGISTICS_PROOF_OF_DELIVERY",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Thermal-printed proof of delivery with scanner artifacting.",
+    "is_synthetic": true,
+    "limitations": "Degraded thermal slip."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "BCDPK9920R",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 200,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98989 89898",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 220,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 15
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "pod@blue-express.demo",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 260,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 21
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 3 entities. Checked coordinates and character offsets."
+  }
+}

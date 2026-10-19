@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_06",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_06_commercial_fleet_driver_manifest.pdf",
+  "sha256": "3f079ee0fb162fe52371acca3f33861402324e317eb5744e968020a47d690b99",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "LOGISTICS_FLEET_DRIVER_ROSTER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Long-haul interstate transport fleet driver roster.",
+    "is_synthetic": true,
+    "limitations": "Tabular layout with Driver Contact and PAN identity."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98140 12345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 128.45,
+        "x1": 322.31,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 202,
+        "end": 217
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "BSPPB9912K",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 128.45,
+        "x1": 407.03,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 218,
+        "end": 228
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "9988 7766 5544",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 128.45,
+        "x1": 515.05,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 229,
+        "end": 243
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98150 23456",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 159.7,
+        "x1": 322.31,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 270,
+        "end": 285
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PAN_NUMBER",
+      "text": "GGPPG1029L",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 159.7,
+        "x1": 409.03,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 286,
+        "end": 296
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "8877 6655 4433",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 159.7,
+        "x1": 515.05,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 297,
+        "end": 311
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_07",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_07_vendor_purchase_order.pdf",
+  "sha256": "69c7291270a77c78fddb5b2097111337adf5bc5fd556dc482f571220335e66cb",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "CORPORATE_PURCHASE_ORDER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "B2B commercial purchase contract.",
+    "is_synthetic": true,
+    "limitations": "Corporate procurement memo."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "SKPPS7721N",
+      "page_num": 1,
+      "bbox": {
+        "x0": 130.59,
+        "y0": 119.25,
+        "x1": 193.4,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 126,
+        "end": 136
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 99887 76655",
+      "page_num": 1,
+      "bbox": {
+        "x0": 189.52,
+        "y0": 139.25,
+        "x1": 267.64,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 166,
+        "end": 181
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "billing@kalmadi-logistics.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 145.03,
+        "y0": 159.25,
+        "x1": 264.64,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 204,
+        "end": 232
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "50100293847561",
+      "page_num": 1,
+      "bbox": {
+        "x0": 170.61,
+        "y0": 179.25,
+        "x1": 248.45,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 258,
+        "end": 272
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "KKBK0000281",
+      "page_num": 1,
+      "bbox": {
+        "x0": 131.69,
+        "y0": 199.25,
+        "x1": 197.29,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 290,
+        "end": 301
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

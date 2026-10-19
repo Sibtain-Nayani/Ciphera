@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_05",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_05_gujarati_cooperative_milk_bill.pdf",
+  "sha256": "a44ef7db03ef6d488c74b50833f8c95319905aab0e31627d219d867f5b34857b",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_GUJARATI_DAIRY_COOPERATIVE",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Dairy union farmer producer payment dispatch receipt.",
+    "is_synthetic": true,
+    "limitations": "Gujarati script dual labels."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "6677 8899 1122",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.95,
+        "y0": 99.25,
+        "x1": 226.23,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 122,
+        "end": 136
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "BPPPB1192M",
+      "page_num": 1,
+      "bbox": {
+        "x0": 145.04,
+        "y0": 119.25,
+        "x1": 208.96,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 160,
+        "end": 170
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98250 98250",
+      "page_num": 1,
+      "bbox": {
+        "x0": 148.37,
+        "y0": 139.25,
+        "x1": 226.49,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 195,
+        "end": 210
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "1102938475",
+      "page_num": 1,
+      "bbox": {
+        "x0": 173.95,
+        "y0": 159.25,
+        "x1": 229.55,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 237,
+        "end": 247
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "GSCB0000045",
+      "page_num": 1,
+      "bbox": {
+        "x0": 103.91,
+        "y0": 179.25,
+        "x1": 171.17,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 259,
+        "end": 270
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_bilingual_04",
+  "tier": "Tier A",
+  "category": "bilingual_indic",
+  "file_name": "tier_a_bilingual_04_marathi_zilla_parishad_pension.pdf",
+  "sha256": "c40816a861848dea2a10b71036fbf3fc8526f5f477242ca3c459971febd5f30a",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "BILINGUAL_MARATHI_DISTRICT_PENSION_ORDER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Maharashtra Zilla Parishad welfare pension sanction order.",
+    "is_synthetic": true,
+    "limitations": "Marathi Devanagari and English mixed context."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "5566 7788 9900",
+      "page_num": 1,
+      "bbox": {
+        "x0": 135.06,
+        "y0": 99.25,
+        "x1": 207.34,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 146,
+        "end": 160
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "PTSPS9942R",
+      "page_num": 1,
+      "bbox": {
+        "x0": 109.48,
+        "y0": 119.25,
+        "x1": 171.73,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 178,
+        "end": 188
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "12/06/1954",
+      "page_num": 1,
+      "bbox": {
+        "x0": 147.28,
+        "y0": 139.25,
+        "x1": 197.32,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 217,
+        "end": 227
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "60019283741",
+      "page_num": 1,
+      "bbox": {
+        "x0": 167.83,
+        "y0": 159.25,
+        "x1": 228.99,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 253,
+        "end": 264
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "MAHB0000123",
+      "page_num": 1,
+      "bbox": {
+        "x0": 112.8,
+        "y0": 179.25,
+        "x1": 180.61,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 278,
+        "end": 289
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9822012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 122.25,
+        "y0": 199.25,
+        "x1": 177.85,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 306,
+        "end": 316
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_08",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_08_consulting_agreement.pdf",
+  "sha256": "08a7127bb7a43f6941593c143e384415338cf27ef91cc171f2ef08cfb51e1e9a",
+  "total_pages": 2,
+  "provenance": {
+    "source_family": "LEGAL_PROFESSIONAL_SERVICES_CONTRACT",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Independent consultant engagement agreement.",
+    "is_synthetic": true,
+    "limitations": "Multi-page legal agreement (2 pages)."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "6677 8899 0011",
+      "page_num": 1,
+      "bbox": {
+        "x0": 174.5,
+        "y0": 99.25,
+        "x1": 246.78,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 106,
+        "end": 120
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "TVPPS1192M",
+      "page_num": 1,
+      "bbox": {
+        "x0": 131.14,
+        "y0": 119.25,
+        "x1": 194.5,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 137,
+        "end": 147
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9811122233",
+      "page_num": 1,
+      "bbox": {
+        "x0": 140.05,
+        "y0": 139.25,
+        "x1": 195.65,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 167,
+        "end": 177
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "1192004829103",
+      "page_num": 2,
+      "bbox": {
+        "x0": 207.84,
+        "y0": 79.25,
+        "x1": 280.12,
+        "y1": 92.99
+      },
+      "character_span": {
+        "start": 82,
+        "end": 95
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "PUNB0014200",
+      "page_num": 2,
+      "bbox": {
+        "x0": 175.61,
+        "y0": 99.25,
+        "x1": 242.31,
+        "y1": 112.99
+      },
+      "character_span": {
+        "start": 122,
+        "end": 133
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "tanya.varma@counsel-eval.org",
+      "page_num": 2,
+      "bbox": {
+        "x0": 188.38,
+        "y0": 119.25,
+        "x1": 326.91,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 165,
+        "end": 193
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "04/10/1988",
+      "page_num": 2,
+      "bbox": {
+        "x0": 163.38,
+        "y0": 139.25,
+        "x1": 213.42,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 222,
+        "end": 232
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 7 entities. Checked coordinates and character offsets."
+  }
+}

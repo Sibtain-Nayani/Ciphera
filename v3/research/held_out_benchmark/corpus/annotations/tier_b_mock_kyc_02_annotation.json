@@ -1,0 +1,159 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_mock_kyc_02",
+  "tier": "Tier B",
+  "category": "independent_mock_kyc",
+  "file_name": "tier_b_mock_kyc_02_crypto_exchange_cdd_dossier.pdf",
+  "sha256": "a5b96d8509bef46a466ec06cbb42cda2a3adf8c13205dc8f21a5d53fe4e15f75",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "CRYPTO_VDA_EXCHANGE_CUSTOMER_DUE_DILIGENCE",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Independently authored synthetic dossier.",
+    "generation_procedure": "Virtual Digital Asset exchange PMLA compliance dossier.",
+    "is_synthetic": true,
+    "limitations": "High-scrutiny AML/CDD customer profile."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "4411 2299 8833",
+      "page_num": 1,
+      "bbox": {
+        "x0": 168.38,
+        "y0": 119.25,
+        "x1": 240.66,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 140,
+        "end": 154
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "VGRPS3310P",
+      "page_num": 1,
+      "bbox": {
+        "x0": 95.57,
+        "y0": 139.25,
+        "x1": 159.49,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 164,
+        "end": 174
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PASSPORT_NUMBER",
+      "text": "Z1928401",
+      "page_num": 1,
+      "bbox": {
+        "x0": 133.36,
+        "y0": 159.25,
+        "x1": 178.39,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 192,
+        "end": 200
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9811298112",
+      "page_num": 1,
+      "bbox": {
+        "x0": 105.59,
+        "y0": 179.25,
+        "x1": 161.19,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 212,
+        "end": 222
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "varun.g@coinshield-eval.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 80.56,
+        "y0": 199.25,
+        "x1": 207.42,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 230,
+        "end": 257
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "11029384756102",
+      "page_num": 1,
+      "bbox": {
+        "x0": 159.49,
+        "y0": 219.25,
+        "x1": 237.33,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 281,
+        "end": 295
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "IFSC_CODE",
+      "text": "UTIB0000045",
+      "page_num": 1,
+      "bbox": {
+        "x0": 120.58,
+        "y0": 239.25,
+        "x1": 182.28,
+        "y1": 252.99
+      },
+      "character_span": {
+        "start": 310,
+        "end": 321
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 7 entities. Checked coordinates and character offsets."
+  }
+}

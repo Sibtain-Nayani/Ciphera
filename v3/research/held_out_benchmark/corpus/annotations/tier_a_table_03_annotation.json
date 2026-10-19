@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_03",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_03_mutual_fund_sip_mandate_register.pdf",
+  "sha256": "55cb9c439c5cd2b1ae74485f7bd89e9cef6ac99cd3d7bc0743e15395bbc63f73",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "MUTUAL_FUND_SYSTEMATIC_INVESTMENT_LOG",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Asset management company recurring debit schedule.",
+    "is_synthetic": true,
+    "limitations": "Tabular banking mandate list."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "001102938475",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 128.45,
+        "x1": 312.05,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 172,
+        "end": 184
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "IFSC_CODE",
+      "text": "SBIN0001928",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 128.45,
+        "x1": 407.03,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 185,
+        "end": 196
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9811223344",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 128.45,
+        "x1": 500.04,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 197,
+        "end": 207
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "002203948576",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 159.7,
+        "x1": 312.05,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 232,
+        "end": 244
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "IFSC_CODE",
+      "text": "HDFC0000128",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 159.7,
+        "x1": 411.02,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 245,
+        "end": 256
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9822334455",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 159.7,
+        "x1": 500.04,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 257,
+        "end": 267
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

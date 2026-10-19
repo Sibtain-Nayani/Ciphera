@@ -1,0 +1,178 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_04",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_04_cooperative_society_shareholder_dividend.pdf",
+  "sha256": "ce3a8486983bcab9e9d7d81a3392795ee9c00dd88a35102f9fc399e57f531e8e",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "COOPERATIVE_CREDIT_SOCIETY_DIVIDEND_REGISTER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Annual general meeting member dividend distribution list.",
+    "is_synthetic": true,
+    "limitations": "Tabular format with member ID, Aadhaar, and dividend credit details."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "1029 3847 5610",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 128.45,
+        "x1": 218.05,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 161,
+        "end": 175
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "DVPPS1234N",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 128.45,
+        "x1": 309.02,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 176,
+        "end": 186
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "9911029384",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 128.45,
+        "x1": 401.04,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 187,
+        "end": 197
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "IFSC_CODE",
+      "text": "PUNB0192800",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 128.45,
+        "x1": 510.03,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 198,
+        "end": 209
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "2039 4857 6120",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 159.7,
+        "x1": 218.05,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 228,
+        "end": 242
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "PAN_NUMBER",
+      "text": "MAPPS5678P",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 159.7,
+        "x1": 309.53,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 243,
+        "end": 253
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_007",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "9922039485",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 159.7,
+        "x1": 401.04,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 254,
+        "end": 264
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_008",
+      "entity_type": "IFSC_CODE",
+      "text": "BARB0RAILWX",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 159.7,
+        "x1": 514.02,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 265,
+        "end": 276
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 8 entities. Checked coordinates and character offsets."
+  }
+}

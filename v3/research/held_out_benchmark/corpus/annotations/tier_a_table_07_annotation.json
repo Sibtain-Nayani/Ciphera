@@ -1,0 +1,140 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_07",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_07_medical_insurance_hospital_claims_batch.pdf",
+  "sha256": "3669728d179c8cd6382f5f0666f60d2ed88b4b77fbbeeef66c74fb3e127158cb",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "HEALTHCARE_TPA_CLAIMS_SETTLEMENT_BATCH",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Third Party Administrator batch hospital claim settlement schedule.",
+    "is_synthetic": true,
+    "limitations": "Multi-claim grid with patient DOB, policy holder, and contact details."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "18/02/1968",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 128.45,
+        "x1": 297.04,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 188,
+        "end": 198
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9841012345",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 128.45,
+        "x1": 401.04,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 199,
+        "end": 209
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "1100 3322 5544",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 128.45,
+        "x1": 515.05,
+        "y1": 140.82
+      },
+      "character_span": {
+        "start": 210,
+        "end": 224
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "07/08/1955",
+      "page_num": 1,
+      "bbox": {
+        "x0": 252.0,
+        "y0": 159.7,
+        "x1": 297.04,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 248,
+        "end": 258
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9820054321",
+      "page_num": 1,
+      "bbox": {
+        "x0": 351.0,
+        "y0": 159.7,
+        "x1": 401.04,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 259,
+        "end": 269
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_006",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "2200 4433 6655",
+      "page_num": 1,
+      "bbox": {
+        "x0": 450.0,
+        "y0": 159.7,
+        "x1": 515.05,
+        "y1": 172.07
+      },
+      "character_span": {
+        "start": 270,
+        "end": 284
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 6 entities. Checked coordinates and character offsets."
+  }
+}

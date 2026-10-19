@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_scanned_08",
+  "tier": "Tier A",
+  "category": "scanned_degraded",
+  "file_name": "tier_a_scanned_08_gas_connection_subscription_voucher.pdf",
+  "sha256": "0b10e10ece9762ec1b04d83738766e02757e685070ecf8834f93d519613694da",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCAN_LPG_CONSUMER_SUBSCRIPTION_VOUCHER",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "LPG domestic gas distributor voucher scan.",
+    "is_synthetic": true,
+    "limitations": "Scanned carbon paper receipt."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "1100 2299 3388",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 100,
+        "x1": 220,
+        "y1": 115
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "BANK_ACCOUNT",
+      "text": "10293847561029",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 120,
+        "x1": 220,
+        "y1": 135
+      },
+      "character_span": {
+        "start": 0,
+        "end": 14
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "IFSC_CODE",
+      "text": "BARB0DELHIX",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 140,
+        "x1": 180,
+        "y1": 155
+      },
+      "character_span": {
+        "start": 0,
+        "end": 11
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "9818098180",
+      "page_num": 1,
+      "bbox": {
+        "x0": 50,
+        "y0": 160,
+        "x1": 160,
+        "y1": 175
+      },
+      "character_span": {
+        "start": 0,
+        "end": 10
+      },
+      "is_ocr_derived": true,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

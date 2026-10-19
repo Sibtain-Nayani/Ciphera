@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_01",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_01_property_registration.pdf",
+  "sha256": "4b4b770ebdddf0a9788aa8dce1c694ff0e90a2345c2b5ec1dd4256c2bd602436",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "MUNICIPAL_PROPERTY_DEED",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic generated under MIT evaluation terms; no proprietary source data used.",
+    "generation_procedure": "Programmatic layout via PyMuPDF vector text primitives with realistic municipal conveyancing format.",
+    "is_synthetic": true,
+    "limitations": "Standard vector font rendering without noise."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "3847 2910 4481",
+      "page_num": 1,
+      "bbox": {
+        "x0": 161.71,
+        "y0": 129.25,
+        "x1": 233.99,
+        "y1": 142.99
+      },
+      "character_span": {
+        "start": 132,
+        "end": 146
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "BPLPS8841M",
+      "page_num": 1,
+      "bbox": {
+        "x0": 181.72,
+        "y0": 149.25,
+        "x1": 244.53,
+        "y1": 162.99
+      },
+      "character_span": {
+        "start": 173,
+        "end": 183
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 98450 12398",
+      "page_num": 1,
+      "bbox": {
+        "x0": 122.25,
+        "y0": 169.25,
+        "x1": 200.37,
+        "y1": 182.99
+      },
+      "character_span": {
+        "start": 200,
+        "end": 215
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "v.sen@conveyance-demo.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 113.9,
+        "y0": 189.25,
+        "x1": 246.88,
+        "y1": 202.99
+      },
+      "character_span": {
+        "start": 232,
+        "end": 257
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

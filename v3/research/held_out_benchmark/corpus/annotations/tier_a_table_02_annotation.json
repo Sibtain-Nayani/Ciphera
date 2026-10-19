@@ -1,0 +1,102 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_table_02",
+  "tier": "Tier A",
+  "category": "dense_table",
+  "file_name": "tier_a_table_02_vendor_statutory_tds_annexure.pdf",
+  "sha256": "042eec6f62df790683fc0513746ab3a8d5bb5a2c59c8f1b5d19af8acdce7b727",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "TAXATION_TDS_QUARTERLY_ANNEXURE",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Form 26Q Section 194C / 194J statutory deduction schedule.",
+    "is_synthetic": true,
+    "limitations": "Dense grid of vendor PANs and contact details."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "PAN_NUMBER",
+      "text": "AAACA1234B",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 117.82,
+        "x1": 209.53,
+        "y1": 130.19
+      },
+      "character_span": {
+        "start": 172,
+        "end": 182
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "PAN_NUMBER",
+      "text": "RAMPM9912Q",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 142.82,
+        "x1": 213.52,
+        "y1": 155.19
+      },
+      "character_span": {
+        "start": 219,
+        "end": 229
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PAN_NUMBER",
+      "text": "AAACZ5512P",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 167.82,
+        "x1": 209.03,
+        "y1": 180.19
+      },
+      "character_span": {
+        "start": 268,
+        "end": 278
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PAN_NUMBER",
+      "text": "AAACL8841R",
+      "page_num": 1,
+      "bbox": {
+        "x0": 153.0,
+        "y0": 192.82,
+        "x1": 209.03,
+        "y1": 205.19
+      },
+      "character_span": {
+        "start": 317,
+        "end": 327
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 4 entities. Checked coordinates and character offsets."
+  }
+}

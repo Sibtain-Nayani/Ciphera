@@ -1,0 +1,25 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_hard_neg_03",
+  "tier": "Tier B",
+  "category": "hard_negative",
+  "file_name": "tier_b_hard_neg_03_astronomy_deep_sky_catalog.pdf",
+  "sha256": "d1d05ae4993124d400dd481681f2baf4c13db09854ab066b52cd66f448abac1e",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "SCIENTIFIC_ASTRONOMY_OBSERVATIONAL_CATALOG",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic negative control fixture.",
+    "generation_procedure": "Observational star coordinates, Right Ascension, Declination, and magnitudes.",
+    "is_synthetic": true,
+    "limitations": "Strict negative control: 0 PII entities."
+  },
+  "expected_entities": [],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "clean_negative",
+    "notes": "Ground-truth verified for 0 entities. Checked coordinates and character offsets."
+  }
+}

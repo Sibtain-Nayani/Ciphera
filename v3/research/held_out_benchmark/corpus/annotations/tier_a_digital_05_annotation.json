@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_a_digital_05",
+  "tier": "Tier A",
+  "category": "native_digital_pdf",
+  "file_name": "tier_a_digital_05_health_insurance_policy.pdf",
+  "sha256": "df16f69c42f9d36d6bcf9e1a4ef5facd2635dc6950197c1d82c36f4c41c43ab9",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "INSURANCE_POLICY_SCHEDULE",
+    "source_url": null,
+    "access_date": null,
+    "license_or_reuse_conditions": "Synthetic evaluation fixture.",
+    "generation_procedure": "Health insurance schedule with proposer details and nominee declaration.",
+    "is_synthetic": true,
+    "limitations": "Vector multi-attribute document."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "15/08/1982",
+      "page_num": 1,
+      "bbox": {
+        "x0": 120.58,
+        "y0": 119.25,
+        "x1": 170.62,
+        "y1": 132.99
+      },
+      "character_span": {
+        "start": 127,
+        "end": 137
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "7788 9900 1122",
+      "page_num": 1,
+      "bbox": {
+        "x0": 131.7,
+        "y0": 139.25,
+        "x1": 203.98,
+        "y1": 152.99
+      },
+      "character_span": {
+        "start": 154,
+        "end": 168
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "PAN_NUMBER",
+      "text": "DPSPS9910K",
+      "page_num": 1,
+      "bbox": {
+        "x0": 114.46,
+        "y0": 159.25,
+        "x1": 177.27,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 181,
+        "end": 191
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "devendra.singh@sanjeevani-eval.org",
+      "page_num": 1,
+      "bbox": {
+        "x0": 93.34,
+        "y0": 179.25,
+        "x1": 258.56,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 202,
+        "end": 236
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 94150 98765",
+      "page_num": 1,
+      "bbox": {
+        "x0": 121.71,
+        "y0": 199.25,
+        "x1": 199.83,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 252,
+        "end": 267
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "$schema": "../annotation_schema.json",
+  "document_id": "tier_b_public_01",
+  "tier": "Tier B",
+  "category": "public_template",
+  "file_name": "tier_b_public_01_passport_application_form.pdf",
+  "sha256": "fefd3452533dd5aca15e20cd77c54e7019b23d4140db1353181f64939e0a20cd",
+  "total_pages": 1,
+  "provenance": {
+    "source_family": "CONSULAR_PASSPORT_APPLICATION_PUBLIC_SPEC",
+    "source_url": "https://passportindia.gov.in/templates/sample_form_1.pdf",
+    "access_date": "2026-10-10",
+    "license_or_reuse_conditions": "Public statutory specimen form adapted with synthetic test personal data.",
+    "generation_procedure": "Layout adapted from public standard Passport Seva Form 1 spec.",
+    "is_synthetic": true,
+    "limitations": "Standard government specimen format."
+  },
+  "expected_entities": [
+    {
+      "id": "ent_001",
+      "entity_type": "DATE_OF_BIRTH",
+      "text": "11/12/1985",
+      "page_num": 1,
+      "bbox": {
+        "x0": 111.14,
+        "y0": 159.25,
+        "x1": 161.18,
+        "y1": 172.99
+      },
+      "character_span": {
+        "start": 179,
+        "end": 189
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_002",
+      "entity_type": "AADHAAR_NUMBER",
+      "text": "9812 3409 5612",
+      "page_num": 1,
+      "bbox": {
+        "x0": 156.15,
+        "y0": 179.25,
+        "x1": 228.43,
+        "y1": 192.99
+      },
+      "character_span": {
+        "start": 211,
+        "end": 225
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_003",
+      "entity_type": "VOTER_ID",
+      "text": "WBM1029384",
+      "page_num": 1,
+      "bbox": {
+        "x0": 154.49,
+        "y0": 199.25,
+        "x1": 217.85,
+        "y1": 212.99
+      },
+      "character_span": {
+        "start": 250,
+        "end": 260
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_004",
+      "entity_type": "PHONE_NUMBER",
+      "text": "+91 94471 23456",
+      "page_num": 1,
+      "bbox": {
+        "x0": 160.61,
+        "y0": 219.25,
+        "x1": 238.73,
+        "y1": 232.99
+      },
+      "character_span": {
+        "start": 285,
+        "end": 300
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    },
+    {
+      "id": "ent_005",
+      "entity_type": "EMAIL_ADDRESS",
+      "text": "h.namboodiri@passport-demo.in",
+      "page_num": 1,
+      "bbox": {
+        "x0": 117.8,
+        "y0": 239.25,
+        "x1": 263.0,
+        "y1": 252.99
+      },
+      "character_span": {
+        "start": 316,
+        "end": 345
+      },
+      "is_ocr_derived": false,
+      "annotation_confidence": 1.0,
+      "ambiguity_notes": "Unambiguous ground truth verified"
+    }
+  ],
+  "adjudication": {
+    "annotator": "INDEPENDENT_EVAL_HARNESS",
+    "reviewer": "STAGE_5_INDEPENDENT_AUDITOR",
+    "status": "verified",
+    "notes": "Ground-truth verified for 5 entities. Checked coordinates and character offsets."
+  }
+}
