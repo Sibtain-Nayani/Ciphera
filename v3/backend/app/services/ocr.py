@@ -6,30 +6,27 @@ import io
 from typing import List, Tuple
 
 from app.schemas.document import CanonicalBlock, BoundingBox
+from app.services.image_enhancer import ImageScanEnhancer
 
 class OCRProcessor:
     @staticmethod
     def preprocess_image(image_bytes: bytes) -> np.ndarray:
         """
-        Enhance image for better OCR accuracy (especially for noisy Aadhaar/PAN cards).
+        Enhance scanned images for higher OCR accuracy on physical IDs, cards, and bills.
+        Applies automated deskewing, glare/shadow removal, and contrast enhancement.
         """
-        # Convert bytes to numpy array
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        # Convert to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Denoise
-        denoised = cv2.fastNlMeansDenoising(gray, h=10, searchWindowSize=21, templateWindowSize=7)
-        
-        # Adaptive Threshold (Binarization)
-        # Using THRESH_BINARY_INV might be needed depending on background, but standard is BINARY
-        binary = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-        )
-        
-        return binary
+        try:
+            cleaned, angle = ImageScanEnhancer.preprocess_for_ocr(
+                image_bytes, auto_deskew=True, remove_glare=True
+            )
+            return cleaned
+        except Exception:
+            # Safe fallback if advanced processing encounters an unexpected format
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+            if img is not None:
+                return img
+            return np.zeros((100, 100), dtype=np.uint8)
 
     @staticmethod
     def extract_blocks_with_stats(
@@ -42,7 +39,7 @@ class OCRProcessor:
         - ocr_stats: dict containing word_count, confidences, mean_confidence, alphanumeric_char_count, total_char_count, raw_text
         """
         try:
-            # Preprocess image with OpenCV
+            # Preprocess image with OpenCV (deskew + glare removal)
             processed_img_np = OCRProcessor.preprocess_image(image_bytes)
             processed_img = Image.fromarray(processed_img_np)
         except Exception:

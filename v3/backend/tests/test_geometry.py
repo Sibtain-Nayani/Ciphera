@@ -13,6 +13,7 @@ def test_geometry_150_dpi(mock_ocr):
     # Mock a PDF page with 72 PDF points width/height, but a 150 DPI pixmap
     mock_doc = MagicMock()
     mock_doc.__len__.return_value = 1
+    mock_doc.is_encrypted = False
     mock_page = MagicMock()
     
     # 72 points = 1 inch
@@ -58,12 +59,15 @@ def test_geometry_300_dpi(mock_ocr):
     # Mock a PDF page with 72 PDF points width/height, but a 300 DPI pixmap
     mock_doc = MagicMock()
     mock_doc.__len__.return_value = 1
+    mock_doc.is_encrypted = False
     mock_page = MagicMock()
     
     # 72 points = 1 inch
     mock_page.rect = MagicMock()
     mock_page.rect.width = 72.0
     mock_page.rect.height = 72.0
+    
+    # Text dict returns no text so it triggers OCR
     mock_page.get_text.return_value = {"blocks": []}
     
     # Pixmap at 300 DPI = 300 pixels per inch
@@ -101,6 +105,7 @@ def test_geometry_native_pdf():
     # Native digital PDF, should not trigger OCR or scaling
     mock_doc = MagicMock()
     mock_doc.__len__.return_value = 1
+    mock_doc.is_encrypted = False
     mock_page = MagicMock()
     
     # Native text block

@@ -1,14 +1,17 @@
 import uuid
+import re
 from typing import List
 
 from app.schemas.document import CanonicalDocument, RedactionEntity, BoundingBox
 from app.services.columnar_inference import ColumnarInferenceEngine
+from app.services.fuzzy_checksum import FuzzyOCRChecksumValidator
 import feature1_pipeline_upgrade as f1
 
 class DetectionEngine:
     """
-    Phase 4: Detection Engine 2.0
-    Takes a CanonicalDocument and extracts entities using the existing V3.6 Pipeline.
+    Phase 4: Detection Engine 2.0 (Enhanced with Columnar Inference & Fuzzy OCR Checksums)
+    Takes a CanonicalDocument and extracts entities using the V3.6 Pipeline.
+    Recovers OCR typos in Aadhaar and PAN numbers on scanned documents.
     Projects the entities back onto their exact page and bounding box coordinates.
     """
     
@@ -27,7 +30,43 @@ class DetectionEngine:
         # 1. Run inference on full text (to preserve context windows)
         raw_entities = list(pipeline.run(text=doc.full_text, threshold=threshold))
         
-        # Propagate table column context from verified headers to unflagged cells
+        # 1b. Fuzzy OCR Recovery for Scanned Aadhaar credentials
+        for match in re.finditer(r'\b(?:\w{4}[-\s]?\w{4}[-\s]?\w{4}|\w{12})\b', doc.full_text):
+            cand_text = match.group(0)
+            is_valid, repaired, score = FuzzyOCRChecksumValidator.validate_aadhaar_fuzzy(cand_text)
+            if is_valid and score >= 0.90:
+                overlap = any(
+                    max(match.start(), getattr(r, "start", -1)) < min(match.end(), getattr(r, "end", -1))
+                    for r in raw_entities
+                )
+                if not overlap:
+                    class FuzzyCandidate:
+                        def __init__(self, t, s, e, score):
+                            self.entity_type = t
+                            self.start = s
+                            self.end = e
+                            self.score = score
+                    raw_entities.append(FuzzyCandidate("AADHAAR_NUMBER", match.start(), match.end(), score))
+
+        # 1c. Fuzzy OCR Recovery for Scanned PAN credentials
+        for match in re.finditer(r'\b[A-Za-z0-9]{10}\b', doc.full_text):
+            cand_text = match.group(0)
+            is_valid, repaired, score = FuzzyOCRChecksumValidator.validate_pan_fuzzy(cand_text)
+            if is_valid and score >= 0.90:
+                overlap = any(
+                    max(match.start(), getattr(r, "start", -1)) < min(match.end(), getattr(r, "end", -1))
+                    for r in raw_entities
+                )
+                if not overlap:
+                    class FuzzyCandidate:
+                        def __init__(self, t, s, e, score):
+                            self.entity_type = t
+                            self.start = s
+                            self.end = e
+                            self.score = score
+                    raw_entities.append(FuzzyCandidate("PAN_NUMBER", match.start(), match.end(), score))
+
+        # 1d. Propagate table column context from verified headers to unflagged cells
         text_table_inferred = ColumnarInferenceEngine.infer_text_tables(doc.full_text)
         for inf in text_table_inferred:
             overlap = any(
@@ -47,37 +86,25 @@ class DetectionEngine:
         
         # 2. Map back to canonical blocks
         for ent in raw_entities:
-            # Find which block(s) this entity belongs to based on character indices
             for block in doc.blocks:
-                # Check for overlap
                 overlap_start = max(ent.start, block.start_index)
                 overlap_end = min(ent.end, block.end_index)
                 
                 if overlap_start < overlap_end:
-                    # There is an overlap! This block contains (part of) the entity.
-                    # We compute the exact bounding box proportionally for PDF text.
-                    # (In Phase 3 OCR, each word is a block, so we just take the block's bbox)
-                    
                     bbox = block.bbox
                     if bbox and block.start_index < block.end_index:
-                        # Estimate horizontal proportional bounding box for the substring
-                        # The parser appends a newline to block text, but the PDF bbox only covers visible chars!
-                        # We must compute width using the visible length to avoid falling short at the end.
                         visible_len = len(block.text.rstrip('\n'))
-                        visible_len = max(visible_len, 1) # Prevent division by zero
+                        visible_len = max(visible_len, 1)
                         
                         char_width = (bbox.x1 - bbox.x0) / visible_len
                         
                         rel_start = overlap_start - block.start_index
                         rel_end = overlap_end - block.start_index
-                        
-                        # If the entity includes the trailing newline, cap it to visible_len for bbox calc
                         rel_end = min(rel_end, visible_len)
                         
                         exact_x0 = bbox.x0 + (rel_start * char_width)
                         exact_x1 = bbox.x0 + (rel_end * char_width)
                         
-                        # Add a tiny padding (1 pixel) to ensure full coverage due to font kerning
                         exact_x0 = max(bbox.x0, exact_x0 - 1)
                         exact_x1 = min(bbox.x1, exact_x1 + 2)
                         
@@ -100,8 +127,4 @@ class DetectionEngine:
                         status="pending"
                     ))
                     
-        
-        # 3. Apply Columnar Inference to catch missed tabular records
-        redactions = ColumnarInferenceEngine.run_inference(doc, redactions)
-        
         return redactions
