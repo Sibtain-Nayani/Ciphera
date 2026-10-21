@@ -34,7 +34,18 @@ async def upload_document(
 ):
     if current_user.global_role != "super_admin":
         user_org_ids = [m.org_id for m in current_user.org_memberships]
-        if org_id not in user_org_ids:
+        if org_id == "default-org" and not user_org_ids:
+            from app.models.identity import Organization, OrganizationMember, OrgRole
+            default_org = db.query(Organization).filter(Organization.id == "default-org").first()
+            if not default_org:
+                default_org = Organization(id="default-org", name="Default Organization", created_by=current_user.id)
+                db.add(default_org)
+                db.flush()
+            member = OrganizationMember(org_id=default_org.id, user_id=current_user.id, role=OrgRole.MEMBER)
+            db.add(member)
+            db.commit()
+            user_org_ids.append(default_org.id)
+        elif org_id not in user_org_ids:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this organization")
             
     # Read file with stream chunk size limiting (25MB default)
