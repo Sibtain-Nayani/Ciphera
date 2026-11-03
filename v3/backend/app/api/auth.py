@@ -50,29 +50,38 @@ def create_access_token(
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def _ensure_user_default_org(user: User, db: DBSession) -> str:
-    """Ensures user belongs to at least one organization so uploads succeed."""
+    """
+    Ensures user has their own private default organization so that
+    tenants are cryptographically and logically isolated from each other.
+    """
     if user.org_memberships:
         return user.org_memberships[0].org_id
 
-    default_org = db.query(Organization).filter(Organization.id == "default-org").first()
-    if not default_org:
-        default_org = Organization(id="default-org", name="Default Organization", created_by=user.id)
-        db.add(default_org)
+    # Create private personal org for user to prevent cross-account data leakage
+    user_personal_org_id = f"org_{user.id}"
+    personal_org = db.query(Organization).filter(Organization.id == user_personal_org_id).first()
+    if not personal_org:
+        personal_org = Organization(
+            id=user_personal_org_id,
+            name=f"{user.full_name or 'Personal'} Org",
+            created_by=user.id
+        )
+        db.add(personal_org)
         db.flush()
 
     membership = db.query(OrganizationMember).filter(
-        OrganizationMember.org_id == default_org.id,
+        OrganizationMember.org_id == personal_org.id,
         OrganizationMember.user_id == user.id
     ).first()
     if not membership:
         membership = OrganizationMember(
-            org_id=default_org.id,
+            org_id=personal_org.id,
             user_id=user.id,
-            role=OrgRole.ADMIN if user.global_role.value == "super_admin" else OrgRole.MEMBER
+            role=OrgRole.OWNER
         )
         db.add(membership)
         db.commit()
-    return default_org.id
+    return personal_org.id
 
 @router.post("/register", response_model=TokenResponse)
 def register(user_in: UserCreate, db: DBSession = Depends(get_db)):
