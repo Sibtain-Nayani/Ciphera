@@ -25,8 +25,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
+from typing import Optional
+from app.api.auth import get_current_user
+from app.models.identity import User
 
 logger = logging.getLogger("ciphera.audit")
 router = APIRouter(prefix="/api/v3/audit", tags=["Audit"])
@@ -97,7 +100,12 @@ class AuditStats(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/log")
-async def write_log(entry: AuditLogEntry):
+async def write_log(
+    entry: AuditLogEntry,
+    current_user: User = Depends(get_current_user),
+):
+    # Enforce session ownership
+    entry.session_id = current_user.id
     try:
         with get_db() as conn:
             conn.execute("""
@@ -131,10 +139,14 @@ async def write_log(entry: AuditLogEntry):
 
 @router.get("/logs")
 async def get_logs(
-    session_id: str   = Query("default"),
-    limit:      int   = Query(50, le=200),
-    offset:     int   = Query(0),
+    session_id: Optional[str] = Query(None),
+    limit:      int           = Query(50, le=200),
+    offset:     int           = Query(0),
+    current_user: User        = Depends(get_current_user),
 ):
+    # Enforce isolation: scope query strictly to authenticated user's session
+    effective_session = session_id if (session_id and current_user.global_role.value == "super_admin") else current_user.id
+    session_id = effective_session
     with get_db() as conn:
         rows = conn.execute("""
             SELECT * FROM audit_logs
@@ -157,7 +169,12 @@ async def get_logs(
 
 
 @router.get("/stats", response_model=AuditStats)
-async def get_stats(session_id: str = Query("default")):
+async def get_stats(
+    session_id: Optional[str] = Query(None),
+    current_user: User        = Depends(get_current_user),
+):
+    effective_session = session_id if (session_id and current_user.global_role.value == "super_admin") else current_user.id
+    session_id = effective_session
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM audit_logs WHERE session_id = ?", (session_id,)
@@ -216,7 +233,12 @@ async def get_stats(session_id: str = Query("default")):
 
 
 @router.get("/metrics")
-async def get_metrics(session_id: str = Query("default")):
+async def get_metrics(
+    session_id: Optional[str] = Query(None),
+    current_user: User        = Depends(get_current_user),
+):
+    effective_session = session_id if (session_id and current_user.global_role.value == "super_admin") else current_user.id
+    session_id = effective_session
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM session_metrics WHERE session_id = ?", (session_id,)
