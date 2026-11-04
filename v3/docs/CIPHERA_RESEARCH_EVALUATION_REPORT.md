@@ -1,7 +1,9 @@
 # Ciphera Research Evaluation & Ablation Report (v1.0)
 
+> **Research artifact — not a production assurance statement.** The figures below are historical reported results and have not been reconciled with the current v3 source in this documentation pass. The overview says the corpus contains 72 ground-truth entities, while the context-gating table reports 84 true positives; those values cannot describe the same aggregate evaluation. Treat all numeric results and statements such as “guarantees” as unverified until the corpus, evaluator version, commands, and raw outputs are reproduced and reconciled. Do not use this report as evidence of production readiness, regulatory compliance, or detection completeness.
+
 ## Executive Summary
-This technical evaluation documents the empirical ablation results for the **Ciphera Zero-Trust PII Redaction and Verification Architecture**. Each core system mechanism is isolated against controlled benchmarks across four distinct evaluation suites (31 canonical documents, 72 ground-truth entities) and adversarial defect injections.
+- This is a historical report of experiments on a bounded synthetic/research corpus. Its numbers do not establish performance on arbitrary customer documents.
 
 ---
 ## 1. Dataset Composition & Ground-Truth Statistics

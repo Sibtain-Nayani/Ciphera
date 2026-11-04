@@ -33,8 +33,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.identity import User, Session as DBSessionObj
+from app.models.identity import User, Session as DBSessionObj, RefreshToken
 from app.api.auth import create_access_token
 import os
 import secrets
@@ -49,11 +50,6 @@ from fastapi.responses import RedirectResponse
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
-
-from feature15_auth import (
-    get_db, create_refresh_token,
-    hash_token,
-)
 
 logger = logging.getLogger("ciphera.social_auth")
 
@@ -171,12 +167,20 @@ def _create_session_for_user(user: User, ip: str = "oauth") -> tuple[str, str]:
         session_obj = DBSessionObj(
             user_id=user.id,
             refresh_token_hash=refresh_token_hash,
+            signing_key_version=settings.auth_key_version,
             expires_at=expires_at
         )
         db.add(session_obj)
+        db.flush()
+        db.add(RefreshToken(
+            session_id=session_obj.id,
+            token_hash=refresh_token_hash,
+            expires_at=expires_at,
+        ))
+        access_token = create_access_token(
+            user.id, user.email, user.global_role.value, session_id=session_obj.id
+        )
         db.commit()
-        
-        access_token = create_access_token(user.id, user.email, user.global_role.value)
         return access_token, refresh_token_plain
     finally:
         db.close()

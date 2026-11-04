@@ -1,1 +1,23 @@
 Generic single-database configuration.
+
+# v3 migration workflow
+
+Alembic revisions in `versions/` manage the SQLAlchemy schema loaded by `app/core/database.py`. They do not currently cover every active feature store: API keys, audit data, reports, webhooks, and parts of legacy authentication still use direct SQLite persistence. A successful Alembic upgrade therefore does not mean the full application has been migrated to PostgreSQL.
+
+Run commands from `v3/backend` against an isolated development or test database:
+
+```bash
+python -m alembic current
+python -m alembic upgrade head
+python -m alembic history
+```
+
+Before adding a revision:
+
+1. Add or update the SQLAlchemy model and migration together.
+2. Test upgrade from an empty database and from the previous supported revision using synthetic data.
+3. Check foreign keys, indexes, tenant-scoped uniqueness, and downgrade behavior where downgrade is safe.
+4. Review generated SQL and data backfill behavior; never point a migration experiment at production.
+5. For Supabase, use separate least-privilege runtime and migration credentials, verify connection mode/pool sizing, and test row-level security separately from application authorization.
+
+The Supabase migration is not complete. See the [production roadmap](../../docs/PRODUCTION_REMEDIATION_ROADMAP.md) and [security architecture](../../docs/CIPHERA_BACKEND_SECURITY_ARCHITECTURE.md) before planning a cutover.

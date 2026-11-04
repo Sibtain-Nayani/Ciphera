@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session as DBSession
+import hashlib
+import os
 import uuid
 
 from app.core.database import get_db
@@ -19,28 +21,35 @@ def _get_doc_for_user(db: DBSession, document_id: str, current_user: User) -> Do
         
     if current_user.global_role != "super_admin":
         user_org_ids = [m.org_id for m in current_user.org_memberships]
-        if doc.org_id not in user_org_ids and doc.uploaded_by != current_user.id:
+        # The old shared default organization is quarantined until its records
+        # are moved by the legacy-org isolation migration.
+        if doc.org_id == "default-org" or doc.org_id not in user_org_ids:
             raise HTTPException(status_code=404, detail="Document not found") # 404 to prevent enumeration
             
     return doc
 
 
-@router.post("/upload")
+@router.post(
+    "/upload",
+    responses={
+        413: {"description": "Upload exceeds the configured byte limit"},
+        415: {"description": "Unsupported file format or invalid text encoding"},
+    },
+)
 async def upload_document(
-    org_id: str,
+    org_id: str | None = None,
     file: UploadFile = File(...), 
     db: DBSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
+    # Older clients send the shared sentinel. Resolve it server-side to this
+    # user's private workspace; never accept it as an actual tenant ID.
+    if not org_id or org_id == "default-org":
+        from app.api.auth import _ensure_user_default_org
+        org_id = _ensure_user_default_org(current_user, db)
+
     if current_user.global_role != "super_admin":
         user_org_ids = [m.org_id for m in current_user.org_memberships]
-        if not user_org_ids:
-            from app.api.auth import _ensure_user_default_org
-            user_personal_org = _ensure_user_default_org(current_user, db)
-            user_org_ids.append(user_personal_org)
-            if org_id == "default-org":
-                org_id = user_personal_org
-
         if org_id not in user_org_ids:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this organization")
             
@@ -71,7 +80,10 @@ async def upload_document(
     # Process through Phase 5 Decision Engine
     from app.services.decision_engine import DecisionEngine
     # In a real app we fetch org.policy_config. Using default standard policy.
-    entities = DecisionEngine.apply_policies(raw_entities, policy_config={"mode": "balanced"})
+    policy_snapshot = {"mode": "balanced", "version": "balanced-v1"}
+    entities = DecisionEngine.apply_policies(raw_entities, policy_config=policy_snapshot)
+    canonical_representation = canonical_doc.model_dump()
+    canonical_representation.setdefault("metadata", {})["redaction_policy"] = policy_snapshot
     
     # Save file using Phase 9 Cloud Storage Abstraction (only after successful validation)
     storage_key = StorageService.save_document(file_bytes, file.filename, directory="uploads")
@@ -85,9 +97,10 @@ async def upload_document(
             filename=file.filename,
             file_type=file.content_type,
             storage_key=storage_key,
+            source_sha256=hashlib.sha256(file_bytes).hexdigest(),
             status=JobStatus.COMPLETED,
             safety_status=SafetyStatus.UNVERIFIED,
-            canonical_representation=canonical_doc.model_dump(),
+            canonical_representation=canonical_representation,
             detected_entities=[e.model_dump() for e in entities]
         )
         
@@ -123,47 +136,20 @@ def get_detected_entities(
     doc = _get_doc_for_user(db, document_id, current_user)
         
     return {"entities": doc.detected_entities or []}
-from fastapi.responses import StreamingResponse
 from app.schemas.document import RedactionEntity
-import io
 
-@router.post("/{document_id}/redact")
-def redact_document(
+@router.post("/{document_id}/redact", deprecated=True, responses={410: {"description": "Synchronous exports are disabled"}})
+def redact_document_legacy(
     document_id: str,
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    doc = _get_doc_for_user(db, document_id, current_user)
-        
-    if not doc.storage_key:
-        raise HTTPException(status_code=400, detail="Document file not found on server")
-        
-    try:
-        with open(doc.storage_key, "rb") as f:
-            file_bytes = f.read()
-    except Exception:
-        raise HTTPException(status_code=500, detail="Could not read original file")
-        
-    # Reconstruct RedactionEntity objects from the DB JSON
-    entities = []
-    if doc.detected_entities:
-        for ent_data in doc.detected_entities:
-            entities.append(RedactionEntity(**ent_data))
-            
-    from app.services.redaction_engine import SecureRedactionEngine
-    from app.services.verification_engine import VerificationEngine
-    
-    redacted_bytes = SecureRedactionEngine.redact_document(file_bytes, doc.filename, entities)
-    
-    # Phase 7: Verification Engine (Zero-Trust)
-    # Ensure no sensitive data leaked into the redacted bytes
-    VerificationEngine.verify_redacted_file(redacted_bytes, f"redacted_{doc.filename}", entities)
-    
-    # Return as downloadable file
-    return StreamingResponse(
-        io.BytesIO(redacted_bytes),
-        media_type=doc.file_type or "application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename=redacted_{doc.filename}"}
+    # Do not preserve this synchronous export path. It returned bytes directly,
+    # bypassing the immutable job/policy snapshot and the async release checks.
+    _get_doc_for_user(db, document_id, current_user)
+    raise HTTPException(
+        status_code=410,
+        detail="Synchronous redaction exports are disabled; use POST /api/v3/documents/{document_id}/redact/async",
     )
 from typing import List
 
@@ -184,19 +170,39 @@ def update_detected_entities(
 from app.models.document import RedactionJob, JobStatus
 from app.tasks.redaction_tasks import process_redaction
 
-@router.post("/{document_id}/redact/async")
+@router.post("/{document_id}/redact/async", responses={415: {"description": "No verified release contract exists for this file format"}})
 def redact_document_async(
     document_id: str,
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     doc = _get_doc_for_user(db, document_id, current_user)
-        
+
+    from app.services.release_gate import require_verified_pdf, UnsupportedReleaseFormat
+    try:
+        require_verified_pdf(doc.filename, doc.file_type)
+    except UnsupportedReleaseFormat as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    from app.services.release_gate import canonical_sha256
+    policy_snapshot = (doc.canonical_representation or {}).get("metadata", {}).get("redaction_policy")
+    if not doc.storage_key or not doc.source_sha256:
+        raise HTTPException(status_code=409, detail="Document has no immutable source checksum; upload it again before redaction")
+    if not isinstance(policy_snapshot, dict) or not policy_snapshot.get("version"):
+        raise HTTPException(status_code=409, detail="Document has no versioned policy snapshot; reprocess it before redaction")
+    entities_snapshot = doc.detected_entities or []
+
     # Create job record
     job = RedactionJob(
         id=str(uuid.uuid4()),
         document_id=doc.id,
-        status=JobStatus.QUEUED
+        status=JobStatus.QUEUED,
+        policy_config=policy_snapshot,
+        policy_version=policy_snapshot["version"],
+        policy_sha256=canonical_sha256(policy_snapshot),
+        source_storage_key=doc.storage_key,
+        source_sha256=doc.source_sha256,
+        entities_snapshot=entities_snapshot,
+        entities_sha256=canonical_sha256(entities_snapshot),
     )
     db.add(job)
     db.commit()
@@ -218,7 +224,11 @@ def get_redaction_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
     _get_doc_for_user(db, job.document_id, current_user) # enforce IDOR protection
         
-    has_artifact = bool(job.status == JobStatus.COMPLETED and bool(job.result_storage_key))
+    has_artifact = bool(
+        job.status == JobStatus.COMPLETED
+        and job.result_storage_key
+        and job.result_sha256
+    )
     return {
         "job_id": job.id,
         "status": job.status,
@@ -226,9 +236,7 @@ def get_redaction_job_status(
         "has_artifact": has_artifact
     }
 
-from fastapi.responses import Response, RedirectResponse
-import os
-import io
+from fastapi.responses import Response
 
 @router.get("/redact/jobs/{job_id}/download")
 def download_redacted_job(
@@ -246,10 +254,18 @@ def download_redacted_job(
 
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Job not completed")
+
+    from app.services.release_gate import assert_document_matches_job_snapshot, InvalidReleaseSnapshot
+    try:
+        assert_document_matches_job_snapshot(job, job.document)
+    except InvalidReleaseSnapshot as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
         
     storage_key = job.result_storage_key
     if not storage_key:
         raise HTTPException(status_code=404, detail="Artifact not found for this completed job")
+    if not job.result_sha256:
+        raise HTTPException(status_code=409, detail="Verified artifact checksum is missing; reprocess the document")
 
     clean_key = os.path.normpath(storage_key).replace("\\", "/")
     if clean_key.startswith("..") or not clean_key.startswith("redacted/"):
@@ -260,9 +276,25 @@ def download_redacted_job(
         
     from app.core.config import settings
     if settings.STORAGE_BACKEND == "s3":
-        # Redirect to presigned S3 URL
-        presigned_url = StorageService.generate_presigned_url(storage_key)
-        return RedirectResponse(url=presigned_url)
+        # Return the exact bytes whose checksum was verified. A presigned URL
+        # could otherwise serve different bytes if an object key were replaced
+        # between this check and the client's later GET request.
+        try:
+            file_bytes = StorageService.get_document(storage_key)
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail="Redacted document artifact not found") from exc
+        from app.services.release_gate import assert_artifact_integrity
+        try:
+            assert_artifact_integrity(job.result_sha256, file_bytes)
+        except InvalidReleaseSnapshot as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return Response(
+            content=file_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="redacted_{job.document.filename}"' if job.document else 'attachment; filename="redacted.pdf"'
+            },
+        )
     else:
         # Local fallback: enforce race-resistant canonical filesystem containment
         import stat
@@ -299,6 +331,12 @@ def download_redacted_job(
 
             with os.fdopen(fd, "rb", closefd=False) as f:
                 file_bytes = f.read()
+
+            from app.services.release_gate import assert_artifact_integrity
+            try:
+                assert_artifact_integrity(job.result_sha256, file_bytes)
+            except InvalidReleaseSnapshot as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
 
             return Response(
                 content=file_bytes,

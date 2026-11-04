@@ -12,7 +12,7 @@ from fastapi import HTTPException
 class DocumentParser:
     """
     Phase 2: Canonical Document Engine.
-    Converts any input file into a standardized CanonicalDocument (JSON representation).
+    Converts supported PDFs, images, and UTF-8 plain text into a CanonicalDocument.
     """
     
     @staticmethod
@@ -29,8 +29,10 @@ class DocumentParser:
         elif mime_type == "text/plain":
             return DocumentParser._parse_text(file_bytes, filename)
         else:
-            # Fallback for unknown
-            return DocumentParser._parse_text(file_bytes, filename)
+            raise HTTPException(
+                status_code=415,
+                detail="Unsupported document format; upload a PDF, supported image, or UTF-8 plain-text file",
+            )
             
     @staticmethod
     def _parse_pdf(file_bytes: bytes, filename: str) -> CanonicalDocument:
@@ -149,7 +151,13 @@ class DocumentParser:
 
     @staticmethod
     def _parse_text(file_bytes: bytes, filename: str) -> CanonicalDocument:
-        text = file_bytes.decode('utf-8', errors='ignore')
+        try:
+            text = file_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=415,
+                detail="Plain-text uploads must use valid UTF-8 encoding",
+            ) from exc
         block = CanonicalBlock(
             page_num=1,
             text=text,

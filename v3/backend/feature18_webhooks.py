@@ -66,8 +66,10 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, HttpUrl
+from app.api.auth import get_current_user
+from app.models.identity import User
 
 logger = logging.getLogger("ciphera.webhooks")
 router = APIRouter()
@@ -128,22 +130,6 @@ try:
     init_webhook_tables()
 except Exception as e:
     logger.warning("Webhook table init failed (DB may not be ready yet): %s", e)
-
-
-# ── Auth helper (reuse JWT from feature15_auth.py) ────────────────────────────
-def _get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    """Minimal JWT check — reuses the existing auth logic."""
-    from feature15_auth import decode_access_token
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Authorization required")
-    token = authorization.split(" ", 1)[1]
-    try:
-        payload = decode_access_token(token)
-    except Exception:
-        raise HTTPException(401, "Invalid or expired token")
-    if not payload:
-        raise HTTPException(401, "Invalid or expired token")
-    return payload
 
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
@@ -366,7 +352,7 @@ async def fire_webhook(
 @router.post("/api/v3/webhooks/register", response_model=WebhookResponse)
 async def register_webhook(
     request: RegisterWebhookRequest,
-    current_user: dict = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Register a webhook URL. Returns the signing secret once — store it securely.
@@ -380,7 +366,7 @@ async def register_webhook(
     with get_db() as conn:
         count = conn.execute(
             "SELECT COUNT(*) FROM webhooks WHERE user_id = ? AND is_active = 1",
-            (current_user["sub"],)
+            (current_user.id,)
         ).fetchone()[0]
         if count >= 10:
             raise HTTPException(400, "Maximum of 10 active webhooks per user")
@@ -396,11 +382,11 @@ async def register_webhook(
             (webhook_id, user_id, api_key_id, url, secret, description, is_active, created_at, events)
             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
         """, (
-            webhook_id, current_user["sub"], request.api_key_id,
+            webhook_id, current_user.id, request.api_key_id,
             request.url, secret, request.description, now, events_str,
         ))
 
-    logger.info("Webhook registered: %s → %s (user=%s)", webhook_id, request.url, current_user["sub"])
+    logger.info("Webhook registered: %s → %s (user=%s)", webhook_id, request.url, current_user.id)
 
     return WebhookResponse(
         webhook_id=webhook_id,
@@ -415,12 +401,12 @@ async def register_webhook(
 
 
 @router.get("/api/v3/webhooks/list")
-async def list_webhooks(current_user: dict = Depends(_get_current_user)):
+async def list_webhooks(current_user: User = Depends(get_current_user)):
     """List all active webhooks for the current user. Secrets are not returned."""
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM webhooks WHERE user_id = ? ORDER BY created_at DESC",
-            (current_user["sub"],)
+            (current_user.id,)
         ).fetchall()
 
     return {
@@ -443,7 +429,7 @@ async def list_webhooks(current_user: dict = Depends(_get_current_user)):
 @router.delete("/api/v3/webhooks/{webhook_id}")
 async def delete_webhook(
     webhook_id:   str,
-    current_user: dict = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Deactivate a webhook. Does not delete delivery history."""
     with get_db() as conn:
@@ -452,7 +438,7 @@ async def delete_webhook(
         ).fetchone()
         if not row:
             raise HTTPException(404, "Webhook not found")
-        if row["user_id"] != current_user["sub"]:
+        if row["user_id"] != current_user.id:
             raise HTTPException(403, "Not your webhook")
         conn.execute(
             "UPDATE webhooks SET is_active = 0 WHERE webhook_id = ?", (webhook_id,)
@@ -466,7 +452,7 @@ async def delete_webhook(
 async def get_deliveries(
     webhook_id:   str,
     limit:        int = 20,
-    current_user: dict = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """View delivery history for a webhook — success/failure, response times, errors."""
     with get_db() as conn:
@@ -476,7 +462,7 @@ async def get_deliveries(
         ).fetchone()
         if not row:
             raise HTTPException(404, "Webhook not found")
-        if row["user_id"] != current_user["sub"]:
+        if row["user_id"] != current_user.id:
             raise HTTPException(403, "Not your webhook")
 
         rows = conn.execute("""
@@ -518,7 +504,7 @@ async def get_deliveries(
 @router.post("/api/v3/webhooks/{webhook_id}/test")
 async def test_webhook(
     webhook_id:   str,
-    current_user: dict = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Send a test ping to a webhook URL.
@@ -531,7 +517,7 @@ async def test_webhook(
         ).fetchone()
         if not row:
             raise HTTPException(404, "Webhook not found or inactive")
-        if row["user_id"] != current_user["sub"]:
+        if row["user_id"] != current_user.id:
             raise HTTPException(403, "Not your webhook")
 
     test_payload = {

@@ -1,4 +1,5 @@
 ﻿from datetime import datetime
+from datetime import timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session as DBSession
 import jwt
@@ -90,9 +91,19 @@ def invite_member(org_id: str, req: InviteRequest, db: DBSession = Depends(get_d
         
     # In a real app, we would send an email with a JWT token or a random string stored in DB
     # For now, we return a mock token just like the old implementation
+    now = datetime.now(timezone.utc)
     token = jwt.encode(
-        {"org_id": org_id, "email": req.email, "role": req.role.value, "exp": datetime.utcnow().timestamp() + 86400 * 7},
-        settings.SECRET_KEY, 
+        {
+            "org_id": org_id,
+            "email": req.email,
+            "role": req.role.value,
+            "type": "org_invite",
+            "iss": settings.JWT_ISSUER,
+            "aud": settings.ORG_INVITE_AUDIENCE,
+            "iat": now,
+            "exp": now + timedelta(days=7),
+        },
+        settings.jwt_signing_secret,
         algorithm=settings.ALGORITHM
     )
     
@@ -101,7 +112,16 @@ def invite_member(org_id: str, req: InviteRequest, db: DBSession = Depends(get_d
 @router.post("/accept-invite")
 def accept_invite(req: InviteAcceptRequest, db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
-        payload = jwt.decode(req.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            req.token,
+            settings.jwt_signing_secret,
+            algorithms=[settings.ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=settings.ORG_INVITE_AUDIENCE,
+            options={"require": ["email", "org_id", "role", "type", "iss", "aud", "exp", "iat"]},
+        )
+        if payload.get("type") != "org_invite":
+            raise ValueError("Wrong token purpose")
         org_id = payload.get("org_id")
         email = payload.get("email")
         role_str = payload.get("role")

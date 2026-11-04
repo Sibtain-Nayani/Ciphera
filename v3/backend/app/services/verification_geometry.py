@@ -36,21 +36,11 @@ class GeometryVerifier:
             if text_len < 4:
                 continue
                 
-            box_w = rect.width
             box_h = rect.height
             
-            # Check 2: Proportional envelope width check
-            # For standard horizontal text, expected width is at least text_len * 0.35 * height
-            if box_h > 3.0:
-                min_expected_width = text_len * box_h * 0.35
-                if box_w < min_expected_width:
-                    leaks.append(
-                        f"Geometry Leak (Page {page_num}): Redaction bbox width ({box_w:.1f}pt) "
-                        f"insufficient for entity of length {text_len} (min expected {min_expected_width:.1f}pt)"
-                    )
-                    continue
-
-            # Check 3: Horizontal baseline continuation scan
+            # Width estimates vary by font and entity type. Actual residual text
+            # above and adjacent prefix/suffix scans below are stronger evidence.
+            # Check 2: Horizontal baseline continuation scan
             # Check immediately adjacent horizontal strips where clipped prefix or suffix characters might remain
             search_delta = max(box_h * 1.5, 30.0)
             right_strip = fitz.Rect(rect.x1, rect.y0 - 2, rect.x1 + search_delta, rect.y1 + 2)

@@ -28,6 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // ── On mount — restore session ──────────────────────────────────────────
     useEffect(() => {
+        const handleAuthExpired = () => {
+            useSessionStore.getState().clearSession();
+            setIsGuest(false);
+            setUser(null);
+        };
+        window.addEventListener("ciphera:auth-expired", handleAuthExpired);
+
         const stored = getStoredUser();
         if (stored) {
             setUser(stored);
@@ -52,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
         setLoading(false);
+        return () => window.removeEventListener("ciphera:auth-expired", handleAuthExpired);
     }, []);
 
     // ── Login ─────────────────────────────────────────────────────────────────

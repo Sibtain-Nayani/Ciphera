@@ -44,6 +44,7 @@ services:
       - DATABASE_URL=postgresql://ciphera:ciphera_password@postgres:5432/ciphera_db
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AUTH_RATE_LIMIT_REDIS_URL=redis://redis:6379/1
     env_file:
       - .env
     volumes:
@@ -74,6 +75,7 @@ services:
       - DATABASE_URL=postgresql://ciphera:ciphera_password@postgres:5432/ciphera_db
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AUTH_RATE_LIMIT_REDIS_URL=redis://redis:6379/1
     env_file:
       - .env
     volumes:

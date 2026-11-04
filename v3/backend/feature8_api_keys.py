@@ -30,12 +30,23 @@ from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from feature15_auth import get_current_user, get_db
+from app.api.auth import get_current_user as get_session_user
+from app.models.identity import User
+from feature15_auth import get_db
 
 logger = logging.getLogger("ciphera.api_keys_v2")
 
 public_router = APIRouter(prefix="/api/v3/public", tags=["Public API"])
 api_router    = APIRouter(prefix="/api/v3/keys",   tags=["API Key Management"])
+
+
+def get_api_key_manager_user(current_user: User = Depends(get_session_user)) -> dict:
+    """Adapt the canonical v3 user to this feature's existing response shape."""
+    return {
+        "sub": current_user.id,
+        "org_id": f"org_{current_user.id}",
+        "role": "user",
+    }
 
 # ── DB init ───────────────────────────────────────────────────────────────────
 def _init_keys_table():
@@ -212,80 +223,23 @@ async def public_health():
     }
 
 
-@public_router.post("/redact", response_model=PublicRedactResponse)
+@public_router.post(
+    "/redact",
+    response_model=PublicRedactResponse,
+    deprecated=True,
+    responses={410: {"description": "Direct text exports are disabled"}},
+)
 async def public_redact(
     req:      PublicRedactRequest,
     request:  Request,
     key_data: dict = Depends(require_api_key),
 ):
-    t0 = time.time()
-    import feature1_pipeline_upgrade as f1
-
-    pipeline = f1.pipeline
-    if not pipeline:
-        raise HTTPException(503, "Detection pipeline not ready")
-
-    # Language routing
-    lang = req.language
-    if lang == "auto":
-        from feature12_hindi_support import detect_script
-        info = detect_script(req.text)
-        lang = info.get("mode", "english")
-
-    if lang in ("hindi", "hi"):
-        from feature12_hindi_support import hindi_pipeline
-        entities_raw = hindi_pipeline.run(req.text, threshold=req.threshold)
-        entities_dicts = [e.to_dict() for e in entities_raw]
-    elif lang in ("mixed",):
-        from feature12_hindi_support import hindi_pipeline, mixed_handler
-        en_ents = pipeline.run(req.text, threshold=req.threshold)
-        hi_ents = hindi_pipeline.run(req.text, threshold=req.threshold, language_hint="mixed")
-        entities_dicts = mixed_handler.merge_english_and_hindi(en_ents, hi_ents)
-    else:
-        raw = pipeline.run(req.text, threshold=req.threshold)
-        entities_dicts = [e.to_dict() for e in raw]
-
-    # Filter by entity type if requested
-    if req.entity_types:
-        types_upper = {t.upper() for t in req.entity_types}
-        entities_dicts = [e for e in entities_dicts if e["entity_type"] in types_upper]
-
-    # Build redacted text
-    redacted  = list(req.text)
-    counters: dict[str, int] = {}
-    replacements = []
-    for e in sorted(entities_dicts, key=lambda x: x["start"]):
-        et = e["entity_type"]
-        counters[et] = counters.get(et, 0) + 1
-        replacements.append((e["start"], e["end"], f"[{et}_{counters[et]}]"))
-
-    for s, en, rep in sorted(replacements, key=lambda x: x[0], reverse=True):
-        redacted[s:en] = list(rep)
-
-    redacted_text = "".join(redacted)
-    ms = int((time.time() - t0) * 1000)
-    ip = request.client.host if request.client else "unknown"
-    _log_api_usage(key_data["key_id"], "/public/redact", 200, ms, len(entities_dicts), ip)
-
-    # Fire webhooks for API key consumers (non-blocking)
-    if key_data and key_data.get("key_id"):  # only fires when called via API key, not browser session
-        import asyncio
-        from feature18_webhooks import fire_webhook
-        asyncio.create_task(fire_webhook(
-            api_key_id       = key_data["key_id"],
-            user_id          = key_data.get("user_id"),
-            job_id           = f"RUN-{int(time.time())}",
-            entity_count     = len(entities_dicts),
-            processing_ms    = ms,
-            entities_by_type = counters,
-            document_type    = "unknown",
-        ))
-
-    return PublicRedactResponse(
-        redacted_text=redacted_text,
-        entities_found=len(entities_dicts),
-        entities_redacted=len(replacements),
-        processing_ms=ms,
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Direct text redaction is disabled until output verification and a "
+            "versioned release policy are available. Use the verified document-job workflow."
+        ),
     )
 
 
@@ -317,7 +271,7 @@ async def public_analyze(
 @api_router.post("/create")
 async def create_key(
     req:          CreateKeyRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_api_key_manager_user),
 ):
     user_id = current_user["sub"]
     org_id  = current_user.get("org_id")
@@ -373,7 +327,7 @@ async def create_key(
 
 
 @api_router.get("/list")
-async def list_keys(current_user: dict = Depends(get_current_user)):
+async def list_keys(current_user: dict = Depends(get_api_key_manager_user)):
     conn = get_db()
     rows = conn.execute("""
         SELECT key_id, name, description, key_prefix, created_at, expires_at,
@@ -387,7 +341,7 @@ async def list_keys(current_user: dict = Depends(get_current_user)):
 
 
 @api_router.delete("/{key_id}")
-async def revoke_key(key_id: str, current_user: dict = Depends(get_current_user)):
+async def revoke_key(key_id: str, current_user: dict = Depends(get_api_key_manager_user)):
     conn = get_db()
     row  = conn.execute(
         "SELECT user_id FROM api_keys_v2 WHERE key_id = ?", (key_id,)
@@ -407,7 +361,7 @@ async def revoke_key(key_id: str, current_user: dict = Depends(get_current_user)
 
 
 @api_router.get("/{key_id}/usage")
-async def key_usage(key_id: str, current_user: dict = Depends(get_current_user)):
+async def key_usage(key_id: str, current_user: dict = Depends(get_api_key_manager_user)):
     conn = get_db()
     key  = conn.execute(
         "SELECT * FROM api_keys_v2 WHERE key_id = ? AND user_id = ?",

@@ -154,6 +154,45 @@
         }
       }
     },
+    "/api/v3/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication (SQLAlchemy)"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v3_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v3/auth/google/init": {
       "get": {
         "tags": [
@@ -522,9 +561,16 @@
           {
             "name": "org_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Org Id"
             }
           }
@@ -547,6 +593,12 @@
                 "schema": {}
               }
             }
+          },
+          "413": {
+            "description": "Upload exceeds the configured byte limit"
+          },
+          "415": {
+            "description": "Unsupported file format or invalid text encoding"
           },
           "422": {
             "description": "Validation Error",
@@ -713,8 +765,9 @@
         "tags": [
           "Documents"
         ],
-        "summary": "Redact Document",
-        "operationId": "redact_document_api_v3_documents__document_id__redact_post",
+        "summary": "Redact Document Legacy",
+        "operationId": "redact_document_legacy_api_v3_documents__document_id__redact_post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -739,6 +792,9 @@
                 "schema": {}
               }
             }
+          },
+          "410": {
+            "description": "Synchronous exports are disabled"
           },
           "422": {
             "description": "Validation Error",
@@ -784,6 +840,9 @@
                 "schema": {}
               }
             }
+          },
+          "415": {
+            "description": "No verified release contract exists for this file format"
           },
           "422": {
             "description": "Validation Error",
@@ -930,7 +989,7 @@
     "/api/v3/redact-pdf": {
       "post": {
         "summary": "Redact Pdf",
-        "description": "Upload a PDF. Get back a fully redacted PDF with black boxes burned in.\nWorks on EVERY page. Download directly.",
+        "description": "Reject direct downloads until they use the canonical release gate.",
         "operationId": "redact_pdf_api_v3_redact_pdf_post",
         "requestBody": {
           "content": {
@@ -951,6 +1010,9 @@
               }
             }
           },
+          "410": {
+            "description": "Direct PDF exports are disabled"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -961,18 +1023,19 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
-    "/api/v3/redact-image": {
+    "/api/v3/detect-faces": {
       "post": {
-        "summary": "Redact Image",
-        "operationId": "redact_image_api_v3_redact_image_post",
+        "summary": "Detect Faces",
+        "operationId": "detect_faces_api_v3_detect_faces_post",
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_redact_image_api_v3_redact_image_post"
+                "$ref": "#/components/schemas/Body_detect_faces_api_v3_detect_faces_post"
               }
             }
           },
@@ -984,7 +1047,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImageRedactResponse"
+                  "$ref": "#/components/schemas/FaceDetectionResponse"
                 }
               }
             }
@@ -1004,18 +1067,9 @@
     },
     "/api/v3/redact-image/download": {
       "post": {
-        "summary": "Redact Image Download",
-        "operationId": "redact_image_download_api_v3_redact_image_download_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_redact_image_download_api_v3_redact_image_download_post"
-              }
-            }
-          },
-          "required": true
-        },
+        "summary": "Disabled Image Export",
+        "description": "Reject direct image artifacts; face detection now returns annotations only.",
+        "operationId": "disabled_image_export_api_v3_redact_image_download_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1025,17 +1079,32 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "410": {
+            "description": "Direct image exports are disabled"
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/api/v3/redact-image": {
+      "post": {
+        "summary": "Disabled Image Export",
+        "description": "Reject direct image artifacts; face detection now returns annotations only.",
+        "operationId": "disabled_image_export_api_v3_redact_image_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
+          },
+          "410": {
+            "description": "Direct image exports are disabled"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v3/score-entities": {
@@ -1297,6 +1366,9 @@
               }
             }
           },
+          "410": {
+            "description": "Direct text exports are disabled"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1308,6 +1380,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "APIKeyHeader": []
@@ -1453,7 +1526,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v3/audit/logs": {
@@ -1463,14 +1541,25 @@
         ],
         "summary": "Get Logs",
         "operationId": "get_logs_api_v3_audit_logs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "session_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "default",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Session Id"
             }
           },
@@ -1525,14 +1614,25 @@
         ],
         "summary": "Get Stats",
         "operationId": "get_stats_api_v3_audit_stats_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "session_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "default",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -1568,14 +1668,25 @@
         ],
         "summary": "Get Metrics",
         "operationId": "get_metrics_api_v3_audit_metrics_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "session_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "default",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -1609,6 +1720,11 @@
         ],
         "summary": "Delete Log",
         "operationId": "delete_log_api_v3_audit__run_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "run_id",
@@ -1649,14 +1765,25 @@
         ],
         "summary": "Clear All Logs",
         "operationId": "clear_all_logs_api_v3_audit_clear_all_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "session_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "default",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -2000,7 +2127,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v3/audit/verify/{content_hash}": {
@@ -2011,6 +2143,11 @@
         "summary": "Verify Report",
         "description": "Verify a report hash against the ledger.\nReturns the report metadata if the hash exists, 404 if not found (tampered/invalid).",
         "operationId": "verify_report_api_v3_audit_verify__content_hash__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "content_hash",
@@ -2052,14 +2189,25 @@
         "summary": "Report History",
         "description": "List all generated reports for a session (hash chain view).",
         "operationId": "report_history_api_v3_audit_report_history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "session_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "default",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -2091,33 +2239,15 @@
         "summary": "Register Webhook",
         "description": "Register a webhook URL. Returns the signing secret once \u2014 store it securely.\nThe secret is used to verify X-Ciphera-Signature on incoming deliveries.",
         "operationId": "register_webhook_api_v3_webhooks_register_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RegisterWebhookRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -2140,7 +2270,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v3/webhooks/list": {
@@ -2148,24 +2283,6 @@
         "summary": "List Webhooks",
         "description": "List all active webhooks for the current user. Secrets are not returned.",
         "operationId": "list_webhooks_api_v3_webhooks_list_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2174,18 +2291,13 @@
                 "schema": {}
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v3/webhooks/{webhook_id}": {
@@ -2193,6 +2305,11 @@
         "summary": "Delete Webhook",
         "description": "Deactivate a webhook. Does not delete delivery history.",
         "operationId": "delete_webhook_api_v3_webhooks__webhook_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "webhook_id",
@@ -2201,22 +2318,6 @@
             "schema": {
               "type": "string",
               "title": "Webhook Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           }
         ],
@@ -2247,6 +2348,11 @@
         "summary": "Get Deliveries",
         "description": "View delivery history for a webhook \u2014 success/failure, response times, errors.",
         "operationId": "get_deliveries_api_v3_webhooks__webhook_id__deliveries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "webhook_id",
@@ -2265,22 +2371,6 @@
               "type": "integer",
               "default": 20,
               "title": "Limit"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           }
         ],
@@ -2311,6 +2401,11 @@
         "summary": "Test Webhook",
         "description": "Send a test ping to a webhook URL.\nUseful for verifying the endpoint is reachable and signature verification works.",
         "operationId": "test_webhook_api_v3_webhooks__webhook_id__test_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "webhook_id",
@@ -2319,22 +2414,6 @@
             "schema": {
               "type": "string",
               "title": "Webhook Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           }
         ],
@@ -2508,7 +2587,14 @@
       "AuditLogEntry": {
         "properties": {
           "id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "name": {
@@ -2550,7 +2636,6 @@
         },
         "type": "object",
         "required": [
-          "id",
           "name",
           "date"
         ],
@@ -2624,6 +2709,25 @@
         ],
         "title": "Body_analyze_pdf_api_v3_analyze_pdf_post"
       },
+      "Body_detect_faces_api_v3_detect_faces_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "sensitivity": {
+            "type": "string",
+            "title": "Sensitivity",
+            "default": "medium"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_detect_faces_api_v3_detect_faces_post"
+      },
       "Body_ocr_and_analyze_api_v3_ocr_analyze_hindi_document_post": {
         "properties": {
           "file": {
@@ -2685,59 +2789,6 @@
           "file"
         ],
         "title": "Body_ocr_pdf_hindi_api_v3_ocr_pdf_hindi_post"
-      },
-      "Body_redact_image_api_v3_redact_image_post": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary",
-            "title": "File"
-          },
-          "mode": {
-            "type": "string",
-            "title": "Mode",
-            "default": "blur"
-          },
-          "sensitivity": {
-            "type": "string",
-            "title": "Sensitivity",
-            "default": "medium"
-          },
-          "return_b64": {
-            "type": "boolean",
-            "title": "Return B64",
-            "default": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_redact_image_api_v3_redact_image_post"
-      },
-      "Body_redact_image_download_api_v3_redact_image_download_post": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary",
-            "title": "File"
-          },
-          "mode": {
-            "type": "string",
-            "title": "Mode",
-            "default": "blur"
-          },
-          "sensitivity": {
-            "type": "string",
-            "title": "Sensitivity",
-            "default": "medium"
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_redact_image_download_api_v3_redact_image_download_post"
       },
       "Body_redact_pdf_api_v3_redact_pdf_post": {
         "properties": {
@@ -3052,6 +3103,47 @@
         ],
         "title": "FaceBox"
       },
+      "FaceDetectionResponse": {
+        "properties": {
+          "face_count": {
+            "type": "integer",
+            "title": "Face Count"
+          },
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/FaceBox"
+            },
+            "type": "array",
+            "title": "Faces"
+          },
+          "original_size": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Original Size"
+          },
+          "detector": {
+            "type": "string",
+            "title": "Detector"
+          }
+        },
+        "type": "object",
+        "required": [
+          "face_count",
+          "faces",
+          "original_size",
+          "detector"
+        ],
+        "title": "FaceDetectionResponse"
+      },
       "GlobalRole": {
         "type": "string",
         "enum": [
@@ -3198,57 +3290,6 @@
         ],
         "title": "HindiEntityResponse"
       },
-      "ImageRedactResponse": {
-        "properties": {
-          "face_count": {
-            "type": "integer",
-            "title": "Face Count"
-          },
-          "faces": {
-            "items": {
-              "$ref": "#/components/schemas/FaceBox"
-            },
-            "type": "array",
-            "title": "Faces"
-          },
-          "redacted_b64": {
-            "type": "string",
-            "title": "Redacted B64"
-          },
-          "original_size": {
-            "prefixItems": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "integer"
-              }
-            ],
-            "type": "array",
-            "maxItems": 2,
-            "minItems": 2,
-            "title": "Original Size"
-          },
-          "mode": {
-            "type": "string",
-            "title": "Mode"
-          },
-          "detector": {
-            "type": "string",
-            "title": "Detector"
-          }
-        },
-        "type": "object",
-        "required": [
-          "face_count",
-          "faces",
-          "redacted_b64",
-          "original_size",
-          "mode",
-          "detector"
-        ],
-        "title": "ImageRedactResponse"
-      },
       "InviteAcceptRequest": {
         "properties": {
           "token": {
@@ -3292,6 +3333,8 @@
           },
           "password": {
             "type": "string",
+            "maxLength": 72,
+            "minLength": 1,
             "title": "Password"
           },
           "device_hint": {
@@ -3812,6 +3855,7 @@
         "properties": {
           "refresh_token": {
             "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
             "title": "Refresh Token"
           },
           "device_hint": {
@@ -3877,19 +3921,27 @@
       "ReportRequest": {
         "properties": {
           "session_id": {
-            "type": "string",
-            "title": "Session Id",
-            "default": "default"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           },
           "report_title": {
             "type": "string",
+            "maxLength": 160,
             "title": "Report Title",
             "default": "Ciphera PII Redaction Audit Report"
           },
           "date_from": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -3900,7 +3952,8 @@
           "date_to": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -3912,20 +3965,6 @@
             "type": "boolean",
             "title": "Include Raw Log",
             "default": false
-          },
-          "logs": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Logs"
           }
         },
         "type": "object",
@@ -4121,6 +4160,11 @@
             "title": "Token Type",
             "default": "bearer"
           },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 3600
+          },
           "user_id": {
             "type": "string",
             "title": "User Id"
@@ -4147,6 +4191,8 @@
           },
           "password": {
             "type": "string",
+            "maxLength": 72,
+            "minLength": 8,
             "title": "Password"
           },
           "full_name": {
@@ -4168,6 +4214,10 @@
             "type": "string",
             "title": "Id"
           },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -4179,6 +4229,16 @@
           },
           "global_role": {
             "$ref": "#/components/schemas/GlobalRole"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "user"
+          },
+          "plan": {
+            "type": "string",
+            "title": "Plan",
+            "default": "enterprise"
           },
           "is_active": {
             "type": "boolean",
@@ -4193,6 +4253,7 @@
         "type": "object",
         "required": [
           "id",
+          "user_id",
           "email",
           "full_name",
           "global_role",

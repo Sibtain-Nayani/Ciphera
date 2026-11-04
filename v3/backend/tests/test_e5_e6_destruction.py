@@ -118,7 +118,12 @@ def test_e2e_destruction_native_pdf(pii_type, pii_text, pii_value):
 
 def test_human_custom_bbox_destruction():
     """Verify manual user-specified custom bounding box is permanently destroyed."""
-    pdf_bytes = create_native_pdf(["Top Secret Internal Key: SECRET_PROJECT_X"])
+    pdf_bytes = create_native_pdf([
+        "Top Secret Internal Key: SECRET_PROJECT_X",
+        "",
+        "",
+        "Public Document Footer",
+    ])
     
     # Manually defined bounding box by human reviewer
     custom_entity = RedactionEntity(

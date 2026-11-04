@@ -1,226 +1,175 @@
-# Ciphera Android Client Integration Guide (Common Backend)
+# Android and API client integration (v3)
 
-This guide provides everything needed for the Android client development team (and automated AI coding agents) to integrate with the Ciphera common backend.
+This guide documents the current v3 API workflow for a native Android client. It is based on routes mounted by `v3/backend/main.py` and `v3/backend/app/api/`. The generated OpenAPI document at `<base-url>/openapi.json` is authoritative for exact schemas; `docs/openapi.json` is a checked-in snapshot for review and client generation.
 
----
+> **Integration status:** v3 is pre-production. The API still has open authentication lifecycle, persistence consolidation, resource-bound, and deployment findings. Use synthetic data until the release gates in the [production roadmap](PRODUCTION_REMEDIATION_ROADMAP.md) are closed.
 
-## 1. OpenAPI Specification Contract
-The complete, authoritative OpenAPI 3.1 schema is exported and committed at:
-- **[`docs/openapi.json`](file:///docs/openapi.json)** (contains all 59 backend endpoints, models, query parameters, and error schemas).
+## 1. Base URL and transport
 
-You can import this JSON directly into Postman, Insomnia, or use OpenAPI Generator / Retrofit / Ktor code generators:
-```bash
-# Example Retrofit / Kotlin generator
-openapi-generator-cli generate -i docs/openapi.json -g kotlin -o android_client/
-```
+| Client | Development base URL | Notes |
+|---|---|---|
+| Android emulator | `http://10.0.2.2:8000` | Android emulator alias for the host machine |
+| Physical device on a trusted LAN | `http://<host-lan-ip>:8000` | Only for local development on a controlled network |
+| Physical device over USB | `http://localhost:8000` | Start `adb reverse tcp:8000 tcp:8000` |
+| Production | Deployment-provided HTTPS URL | No production hostname is currently defined by this repository |
 
----
+The backend's default CORS regex includes localhost and the Android emulator alias. Native HTTP clients are not governed by browser CORS, but browser-based clients are. Do not enable cleartext traffic globally in a release Android build; use HTTPS for any deployed environment.
 
-## 2. Network Configuration & Base URLs
+## 2. Authentication
 
-| Environment | Base URL | Notes |
-| :--- | :--- | :--- |
-| **Android Emulator** | `http://10.0.2.2:8000` | `10.0.2.2` is the special Android emulator loopback alias to the host machine's `localhost`. |
-| **Physical Android Device (LAN)** | `http://<HOST_LAN_IP>:8000` | Phone and host machine must be on the same Wi-Fi network (e.g. `http://192.168.1.50:8000`). |
-| **Physical Device via USB (Recommended)** | `http://localhost:8000` | Run `adb reverse tcp:8000 tcp:8000`. This allows the phone to directly address `localhost:8000`! |
-| **Production Cloud** | `https://api.ciphera.io` | When deployed to production reverse proxy. |
+Protected routes use:
 
-### Android `network_security_config.xml` (For Local HTTP Testing)
-Because local development uses `http://` instead of `https://`, ensure your Android app allows cleartext traffic for local loopbacks:
-```xml
-<!-- res/xml/network_security_config.xml -->
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">127.0.0.1</domain>
-    </domain-config>
-</network-security-config>
-```
-In `AndroidManifest.xml`:
-```xml
-<application
-    android:networkSecurityConfig="@xml/network_security_config"
-    ... >
-```
-
----
-
-## 3. Authentication & Headers
-
-All protected endpoints require an `Authorization` header containing the JWT access token:
 ```http
 Authorization: Bearer <access_token>
 ```
 
-### Authentication Flow
-1. **User Login:**
-   - **Endpoint:** `POST /api/v1/auth/login`
-   - **Content-Type:** `application/json`
-   - **Payload:**
-     ```json
-     {
-       "email": "agent@enterprise.com",
-       "password": "SecurePassword123"
-     }
-     ```
-   - **Response (200 OK):**
-     ```json
-     {
-       "access_token": "eyJhbGciOi...",
-       "token_type": "bearer",
-       "user": {
-         "id": "usr_981a",
-         "email": "agent@enterprise.com",
-         "full_name": "Compliance Officer",
-         "org_id": "org_default"
-       }
-     }
-     ```
-2. Store `access_token` securely in Android `EncryptedSharedPreferences` or Android Keystore.
-3. Attach `Authorization: Bearer <access_token>` to all subsequent requests.
+### Register or log in
 
----
+```http
+POST /api/v3/auth/register
+Content-Type: application/json
+```
 
-## 4. Core Endpoints for Mobile Workflows
+```json
+{
+  "email": "developer@example.test",
+  "password": "use-a-long-test-password",
+  "full_name": "Example User"
+}
+```
 
-### Workflow A: Camera / File Document Upload & Asynchronous Redaction
-Mobile field workers capture or select a PDF / image and submit it for irreversible redaction:
+Login uses `POST /api/v3/auth/login` with `email` and `password`. Both return a `TokenResponse` containing `access_token`, `refresh_token`, `token_type`, `expires_in`, `user_id`, and `user`. Current code sets the access-token lifetime to 15 minutes and refresh lifetime to 30 days. Refresh rotation is single-use and replay revokes the session family; clients should serialize refresh attempts to avoid treating concurrent use as a token replay.
 
-1. **Upload Document:**
-   - **Endpoint:** `POST /api/v1/documents/upload`
-   - **Content-Type:** `multipart/form-data`
-   - **Form Fields:**
-     - `file`: Binary file stream (PDF, PNG, JPG).
-     - Limits: Max 25 MB file size; max 100 pages for PDFs (exceeding returns HTTP 413).
-   - **Response (201 Created):**
-     ```json
-     {
-       "id": "doc_8f1a23e4",
-       "filename": "kyc_scan.pdf",
-       "file_type": "application/pdf",
-       "status": "PROCESSING",
-       "job_id": "job_c7a91b"
-     }
-     ```
+Store credentials using Android Keystore-backed encrypted storage. Do not put tokens in URLs, logs, crash reports, clipboard, or ordinary preferences. Refresh before retrying the original request and ensure only one refresh request runs at a time.
 
-2. **Poll Processing Status:**
-   - **Endpoint:** `GET /api/v1/documents/{job_id}/status`
-   - **Response (200 OK):**
-     ```json
-     {
-       "job_id": "job_c7a91b",
-       "status": "PENDING_REVIEW",  // QUEUED, PROCESSING, PENDING_REVIEW, COMPLETED, FAILED
-       "safety_status": "VERIFIED", // UNVERIFIED, VERIFIED, LEAK_DETECTED
-       "has_artifact": true,
-       "error_message": null
-     }
-     ```
-   - *Android implementation note:* Poll every 1.5 to 2.0 seconds until status is `COMPLETED`, `PENDING_REVIEW`, or `FAILED`.
+### Refresh and logout
 
-3. **Download Secure Redacted PDF:**
-   - **Endpoint:** `GET /api/v1/documents/{job_id}/download`
-   - **Response (200 OK):** Binary PDF stream (`application/pdf`) with `Content-Disposition: attachment; filename="redacted_kyc_scan.pdf"`.
-   - *Security Guard:* If the Independent Verifier flags an unredacted leak, download returns HTTP 403 Forbidden (`Verification failed: privacy breach risk`).
+```http
+POST /api/v3/auth/refresh
+Content-Type: application/json
+```
 
----
+```json
+{ "refresh_token": "<refresh-token>" }
+```
 
-### Workflow B: Mobile Maker / Checker Compliance Review
-For supervisor tablets or mobile compliance officers:
+On success, replace both stored tokens with the returned values. Logout is `POST /api/v3/auth/logout` with the same request body. Clear local credentials even if the network request fails. `GET /api/v3/auth/me` returns the current user when the access token is valid.
 
-1. **List Documents Awaiting Clearance:**
-   - **Endpoint:** `GET /api/v1/documents/pending-review`
-   - **Response (200 OK):** List of document objects requiring sign-off.
+## 3. Document redaction workflow
 
-2. **Submit Checker Review Decision:**
-   - **Endpoint:** `POST /api/v1/documents/{job_id}/review`
-   - **Content-Type:** `application/json`
-   - **Payload:**
-     ```json
-     {
-       "decision": "APPROVED", // "APPROVED" or "REJECTED"
-       "reviewer_notes": "All Aadhaar and PAN numbers verified scrubbed from ledger.",
-       "modifications": []     // Optional bounding-box corrections
-     }
-     ```
-   - **Response (200 OK):**
-     ```json
-     {
-       "status": "COMPLETED",
-       "safety_status": "VERIFIED"
-     }
-     ```
+The current document API accepts PDFs, images, and plain text based on filename/MIME detection. Encrypted PDFs are rejected. The parser currently falls back to text for unknown formats, so clients should allow only formats explicitly supported by their product workflow; server-side strict format rejection remains an open issue.
 
----
+### Step 1: Upload
 
-### Workflow C: Real-Time Field Text Redaction / Inspection
-For instant offline/online text redaction (e.g. pasted SMS, OCR text notes, or form fields):
+```http
+POST /api/v3/documents/upload
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+```
 
-- **Endpoint:** `POST /api/v3/analyze`
-- **Content-Type:** `application/json`
-- **Payload:**
-  ```json
-  {
-    "text": "Customer Aadhaar is 4532 8812 9901 and PAN is ABCDE1234F.",
-    "threshold": 0.5,
-    "include_context": true
-  }
-  ```
-- **Response (200 OK):**
-  ```json
-  {
-    "entity_count": 2,
-    "entities": [
-      {
-        "entity_type": "AADHAAR_NUMBER",
-        "text": "4532 8812 9901",
-        "start": 20,
-        "end": 34,
-        "score": 0.98,
-        "source": "STRUCTURED_VALIDATOR"
-      },
-      {
-        "entity_type": "PAN_NUMBER",
-        "text": "ABCDE1234F",
-        "start": 46,
-        "end": 56,
-        "score": 0.95,
-        "source": "STRUCTURED_VALIDATOR"
-      }
-    ]
-  }
-  ```
+Multipart field `file` is required. An optional `org_id` query parameter selects a workspace; when omitted, the server resolves the user's private workspace. The current defaults limit uploads to 25 MiB and PDFs to 100 pages.
 
----
+Example response:
 
-## 5. Standard HTTP Status Codes
+```json
+{
+  "message": "Document parsed successfully",
+  "document_id": "<document-id>",
+  "metadata": {
+    "filename": "example.pdf",
+    "type": "pdf",
+    "page_count": 1,
+    "scanned_pages": [],
+    "has_scanned_pages": false
+  },
+  "page_count": 1
+}
+```
 
-| Code | Reason | Meaning for Android App |
-| :--- | :--- | :--- |
-| `200 OK` | Success | Normal operation. |
-| `201 Created` | Upload Accepted | Document queued for processing. |
-| `401 Unauthorized` | Invalid/Expired Token | Redirect user to Login screen. |
-| `403 Forbidden` | Access Denied / Verification Failed | Cross-tenant attempt or blocked download of quarantined leak file. |
-| `404 Not Found` | Resource Missing | Invalid job ID or document ID. |
-| `413 Payload Too Large` | Resource Limit Exceeded | File exceeds 25 MB or PDF exceeds 100 pages. Display user alert. |
-| `422 Unprocessable` | Validation Error | Malformed JSON or unsupported MIME type. |
-| `500 Server Error` | Pipeline Failure | Background worker issue. Display retry prompt. |
+Upload parsing and entity detection currently happen in the request path. Keep client timeouts appropriate for file size and processing time.
 
----
+### Step 2: Inspect or revise detected entities
 
-## 6. Verification and Health Check
-To verify backend connectivity from the Android device before authenticating:
-- **Endpoint:** `GET /api/v3/health`
-- **Expected Response (200 OK):**
-  ```json
-  {
-    "status": "ok",
-    "version": "3.4.0",
-    "features": {
-      "auth": true,
-      "rbac": true,
-      "english_pipeline": true
-    }
-  }
-  ```
+- `GET /api/v3/documents/{document_id}/canonical` returns the canonical representation, including extracted text.
+- `GET /api/v3/documents/{document_id}/entities` returns detected entities.
+- `PUT /api/v3/documents/{document_id}/entities` replaces the entity list. Each entity follows the `RedactionEntity` schema in `/openapi.json`; set `status` deliberately (`accepted`, `modified`, or `rejected`). Do not assume fields omitted by a client are preserved.
+
+These responses can contain original PII. Keep them out of logs, analytics, and unencrypted local caches.
+
+### Step 3: Queue redaction
+
+```http
+POST /api/v3/documents/{document_id}/redact/async
+Authorization: Bearer <access_token>
+```
+
+Example response:
+
+```json
+{
+  "message": "Redaction job queued",
+  "job_id": "<job-id>"
+}
+```
+
+The backend needs Redis and a running Celery worker. Poll with backoff rather than a tight loop:
+
+```http
+GET /api/v3/documents/redact/jobs/{job_id}
+Authorization: Bearer <access_token>
+```
+
+The response includes `job_id`, `status`, `error_message`, and `has_artifact`. Current terminal outcomes include `completed`, `failed`, and `review_required`. Scanned/raster pages may be routed to `review_required`; an artifact is not made available for that state.
+
+The verified export job currently accepts only a `.pdf` file uploaded as `application/pdf`. Other formats receive `415 Unsupported Media Type` until a format-specific verifier is implemented.
+
+### Step 4: Download
+
+```http
+GET /api/v3/documents/redact/jobs/{job_id}/download
+Authorization: Bearer <access_token>
+```
+
+Download is allowed only for an authorized tenant when the job is completed, the result key is in the redacted area, the document has a verified safety status, and the stored PDF bytes match the checksum recorded by the worker. Local and S3 modes return the checksum-verified bytes through the API; the client does not receive a storage URL.
+
+## 4. Text analysis
+
+`POST /api/v3/analyze` accepts JSON with `text`, `threshold`, `enabled_stages`, `clean_ocr`, and `include_context`. It currently has no authentication dependency. Its response can include the original entity `text` and context; do not use this public route for sensitive data on an internet-accessible deployment until access controls and rate limits are reviewed.
+
+## 5. Other useful endpoints
+
+| Method and path | Use |
+|---|---|
+| `GET /api/v3/health` | Basic API/pipeline process status; not full DB/Redis/worker readiness |
+| `GET /api/v3/entities` | List entity types |
+| `GET /api/v3/org/me` | List current user's organization memberships |
+| `GET /docs` | Interactive Swagger UI in development |
+| `GET /openapi.json` | Generated API schema |
+
+API keys and webhooks have routes in the current server, but they still use transitional persistence/auth paths. Their contracts are not recommended for a production mobile integration until A01/S05 remediation is complete.
+
+## 6. Status and client error handling
+
+| HTTP status | Client behavior |
+|---:|---|
+| `200` | Parse the endpoint response; upload and job creation currently return 200, not 201 |
+| `400` | Invalid state or unsupported processing input; show safe error and preserve no unredacted artifact |
+| `401` | Missing, expired, invalid, or revoked authentication; attempt one serialized refresh, then clear credentials and prompt sign-in |
+| `403` | Authenticated but not authorized, or artifact release blocked |
+| `404` | Document/job not found or not visible to this tenant |
+| `413` | Upload exceeds configured byte limit |
+| `422` | Request validation error or document/job requires review |
+| `5xx` | Transient/service error; retry only idempotent operations with bounded backoff |
+
+Use the API's actual response status and schema from OpenAPI rather than assuming that all errors share a single shape.
+
+## 7. Security and privacy checklist
+
+- Require HTTPS outside local development.
+- Keep bearer and refresh tokens in Android Keystore-backed encrypted storage; serialize refresh requests.
+- Do not log authorization headers, uploaded document bytes, canonical text, detected entity values, or report signatures.
+- Encrypt local document caches and delete them according to the product's retention policy.
+- Do not expose `/api/v3/analyze`, API-key routes, or webhooks publicly without their open authorization, rate-limit, and SSRF findings being closed.
+- Confirm that the selected deployment has private storage, backup/retention settings, and a documented incident response path.
+
+For the system data flow and current limitations, see [Architecture and security](CIPHERA_BACKEND_SECURITY_ARCHITECTURE.md). For changes to endpoint schemas, update this guide and verify against `/openapi.json`.

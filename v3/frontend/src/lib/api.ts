@@ -15,6 +15,8 @@
  *   import { apiFetch, apiUrl } from '@/lib/api';
  */
 
+import { authFetch } from '@/lib/auth';
+
 // The env var is baked in at build time via Next.js NEXT_PUBLIC_ convention.
 // Falls back to localhost for local dev without an .env.local file.
 export const API_BASE =
@@ -29,37 +31,13 @@ export function api(path: string): string {
 }
 
 /**
- * Authenticated fetch wrapper — auto-refreshes JWT on 401.
- * Drop-in replacement for the authFetch in lib/auth.ts but uses API_BASE.
+ * Authenticated fetch wrapper. Refresh and retry behavior lives in auth.ts.
  */
 export async function apiFetch(
     path: string,
     options: RequestInit = {},
 ): Promise<Response> {
-    const { getAccessToken, refreshTokens } = await import('@/lib/auth');
-
-    const token = getAccessToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers || {}),
-    };
-
-    let res = await fetch(api(path), { ...options, headers });
-
-    // Auto-refresh on 401
-    if (res.status === 401) {
-        const ok = await refreshTokens();
-        if (ok) {
-            const newToken = getAccessToken();
-            res = await fetch(api(path), {
-                ...options,
-                headers: { ...headers, Authorization: `Bearer ${newToken}` },
-            });
-        }
-    }
-
-    return res;
+    return authFetch(api(path), options);
 }
 
 /**

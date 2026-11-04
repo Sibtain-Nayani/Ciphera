@@ -1,0 +1,14 @@
+# Local configuration and generated secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Runtime databases and uploads
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/data/
+backend/uploads/

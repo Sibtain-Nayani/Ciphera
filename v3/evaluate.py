@@ -5,7 +5,8 @@ import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BACKEND_IMPORT_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+sys.path.insert(0, BACKEND_IMPORT_ROOT)
 
 from feature1_pipeline_upgrade import DetectionPipeline
 from feature12_hindi_support import HindiPipeline, MixedDocumentHandler

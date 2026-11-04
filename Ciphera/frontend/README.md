@@ -1,5 +1,7 @@
 # React + Vite
 
+> **Archived prototype.** This README belongs to the historical v1 frontend. Active development is in `v3/`; this project must not be used as a v3 runtime dependency. See the repository root README for current setup and status.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

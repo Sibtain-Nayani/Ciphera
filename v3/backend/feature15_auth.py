@@ -50,11 +50,14 @@ logger = logging.getLogger("ciphera.auth")
 router = APIRouter(prefix="/api/v3/auth", tags=["Authentication"])
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_PATH       = Path(__file__).parent / "data" / "ciphera.db"
-DB_PATH.parent.mkdir(exist_ok=True)
+DB_PATH = Path(os.getenv(
+    "CIPHERA_LEGACY_AUTH_DB_PATH",
+    str(Path(__file__).parent / "data" / "ciphera.db"),
+))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 from app.core.config import settings
-JWT_SECRET = settings.SECRET_KEY
+JWT_SECRET = settings.jwt_signing_secret
 JWT_ALGORITHM      = "HS256"
 ACCESS_TOKEN_MINS  = 15
 REFRESH_TOKEN_DAYS = 30

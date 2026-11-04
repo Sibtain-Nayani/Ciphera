@@ -1,4 +1,7 @@
 import os
+import hashlib
+
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -12,10 +15,44 @@ class Settings(BaseSettings):
     )
     
     # Auth
-    SECRET_KEY: str = os.getenv("CIPHERA_JWT_SECRET", "super-secret-key-change-me")
+    SECRET_KEY: SecretStr = Field(validation_alias="CIPHERA_JWT_SECRET")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 604800
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    JWT_ISSUER: str = "ciphera-v3"
+    JWT_AUDIENCE: str = "ciphera-api"
+    ORG_INVITE_AUDIENCE: str = "ciphera-org-invite"
+    AUTH_RATE_LIMIT_REDIS_URL: str = Field(
+        default_factory=lambda: os.getenv("AUTH_RATE_LIMIT_REDIS_URL")
+        or os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    )
+    AUTH_LOGIN_IP_LIMIT: int = 20
+    AUTH_LOGIN_ACCOUNT_LIMIT: int = 8
+    AUTH_LOGIN_WINDOW_SECONDS: int = 900
+    AUTH_REFRESH_IP_LIMIT: int = 120
+    AUTH_REFRESH_ACCOUNT_LIMIT: int = 30
+    AUTH_REFRESH_WINDOW_SECONDS: int = 300
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_signing_key(cls, value: SecretStr) -> SecretStr:
+        raw = value.get_secret_value().strip()
+        normalized = raw.casefold()
+        if (
+            len(raw.encode("utf-8")) < 32
+            or len(set(raw)) < 12
+            or normalized.startswith(("your_", "replace-with", "change-me", "changeme"))
+        ):
+            raise ValueError("CIPHERA_JWT_SECRET must be a non-placeholder random value of at least 32 bytes")
+        return SecretStr(raw)
+
+    @property
+    def jwt_signing_secret(self) -> str:
+        return self.SECRET_KEY.get_secret_value()
+
+    @property
+    def auth_key_version(self) -> str:
+        return hashlib.sha256(self.jwt_signing_secret.encode("utf-8")).hexdigest()
     
     # Storage (Phase 9)
     STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local") # "local" or "s3"

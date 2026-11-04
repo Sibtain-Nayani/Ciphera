@@ -26,8 +26,7 @@ class SecureRedactionEngine:
         elif mime_type == "text/plain":
             return SecureRedactionEngine._redact_text(file_bytes, active_entities)
         
-        # Fallback
-        return file_bytes
+        raise ValueError("Unsupported document format; refusing to return the source bytes as redacted output")
 
     @staticmethod
     def _redact_pdf(file_bytes: bytes, entities: List[RedactionEntity]) -> bytes:
@@ -40,7 +39,15 @@ class SecureRedactionEngine:
                 
             page = doc[ent.page_num - 1]
             if ent.bbox:
-                rect = fitz.Rect(ent.bbox.x0, ent.bbox.y0, ent.bbox.x1, ent.bbox.y1)
+                # Expand detector/reviewer boxes slightly so glyphs touching a
+                # measured boundary are removed by PyMuPDF's containment rules.
+                margin_pt = 2.0
+                rect = fitz.Rect(
+                    ent.bbox.x0 - margin_pt,
+                    ent.bbox.y0 - margin_pt,
+                    ent.bbox.x1 + margin_pt,
+                    ent.bbox.y1 + margin_pt,
+                )
                 # PyMuPDF add_redact_annot prepares the redaction.
                 # It marks the area for redaction and draws a black box by default.
                 page.add_redact_annot(rect, fill=(0, 0, 0))

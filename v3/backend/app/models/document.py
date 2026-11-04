@@ -32,6 +32,7 @@ class Document(Base):
     filename = Column(String, nullable=False)
     file_type = Column(String)  # e.g., application/pdf, text/plain
     storage_key = Column(String) # Object storage path/URI
+    source_sha256 = Column(String(64), nullable=True)
     
     status = Column(SQLEnum(JobStatus), default=JobStatus.QUEUED)
     safety_status = Column(SQLEnum(SafetyStatus), default=SafetyStatus.UNVERIFIED)
@@ -52,7 +53,14 @@ class RedactionJob(Base):
     
     # Store settings for the job (e.g. risk mode, target entities)
     policy_config = Column(JSON, nullable=True)
+    policy_version = Column(String, nullable=True)
+    policy_sha256 = Column(String(64), nullable=True)
+    source_storage_key = Column(String, nullable=True)
+    source_sha256 = Column(String(64), nullable=True)
+    entities_snapshot = Column(JSON, nullable=True)
+    entities_sha256 = Column(String(64), nullable=True)
     result_storage_key = Column(String, nullable=True)
+    result_sha256 = Column(String(64), nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)

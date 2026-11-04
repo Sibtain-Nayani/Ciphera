@@ -1,5 +1,7 @@
 # Ciphera V3 — UI/UX Redesign Specification & Architecture Guide
 
+> **Design proposal, not an implementation or security contract.** This document contains aspirational copy and interaction concepts, including compliance and verification language. Do not present those claims in the product unless current code, tests, and operational evidence support them. The [architecture and security model](CIPHERA_BACKEND_SECURITY_ARCHITECTURE.md) documents current behavior; the [production roadmap](PRODUCTION_REMEDIATION_ROADMAP.md) defines open work.
+
 > **Target Audience:** Frontend Engineers & UI/UX Designers  
 > **Document Purpose:** Exhaustive specification of all pages, components, data flows, visual design tokens, interaction states, and backend contracts required to completely redesign and modernize the Ciphera web platform.
 

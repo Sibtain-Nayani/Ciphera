@@ -2,8 +2,12 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from app.core.database import SessionLocal
-from app.models.identity import User, Organization, OrganizationMember
+from app.core.config import settings
+from app.models.identity import User, Session, Organization, OrganizationMember
 from app.models.document import Document
+from app.api.auth import create_access_token
+from datetime import datetime, timedelta
+import hashlib
 import uuid
 
 client = TestClient(app)
@@ -41,12 +45,29 @@ def setup_test_users():
         filename="test.pdf", file_type="application/pdf", storage_key="fake"
     )
     
-    db.add_all([mem_a, mem_b, doc_a])
+    session_a = Session(
+        user_id=user_a_id,
+        refresh_token_hash=hashlib.sha256(uuid.uuid4().hex.encode()).hexdigest(),
+        signing_key_version=settings.auth_key_version,
+        expires_at=datetime.utcnow() + timedelta(days=1),
+    )
+    session_b = Session(
+        user_id=user_b_id,
+        refresh_token_hash=hashlib.sha256(uuid.uuid4().hex.encode()).hexdigest(),
+        signing_key_version=settings.auth_key_version,
+        expires_at=datetime.utcnow() + timedelta(days=1),
+    )
+    db.add_all([mem_a, mem_b, doc_a, session_a, session_b])
     db.commit()
+    db.refresh(session_a)
+    db.refresh(session_b)
     
-    from feature15_auth import create_access_token
-    token_a = create_access_token(user_a_id, f"a_{suffix}@example.com", org_a_id, "user")
-    token_b = create_access_token(user_b_id, f"b_{suffix}@example.com", org_b_id, "user")
+    token_a = create_access_token(
+        user_a_id, f"a_{suffix}@example.com", org_a_id, "user", session_id=session_a.id
+    )
+    token_b = create_access_token(
+        user_b_id, f"b_{suffix}@example.com", org_b_id, "user", session_id=session_b.id
+    )
     
     db.close()
     return token_a, token_b, doc_a_id
@@ -56,7 +77,7 @@ def test_idor_document_access():
     
     # User A can access
     res = client.get(f"/api/v3/documents/{doc_a_id}/canonical", headers={"Authorization": f"Bearer {token_a}"})
-    assert res.status_code in [200, 404]
+    assert res.status_code == 200
     
     # User B CANNOT access (IDOR blocked)
     res_b = client.get(f"/api/v3/documents/{doc_a_id}/canonical", headers={"Authorization": f"Bearer {token_b}"})

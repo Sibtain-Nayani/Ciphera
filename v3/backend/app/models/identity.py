@@ -42,10 +42,30 @@ class Session(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     refresh_token_hash = Column(String, nullable=False)
+    # Null marks a pre-key-version session, which must be revoked on refresh.
+    signing_key_version = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     
     user = relationship("User", back_populates="sessions")
+    refresh_tokens = relationship(
+        "RefreshToken", back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class RefreshToken(Base):
+    """Hashed refresh-token history for one-time rotation and replay detection."""
+
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    session_id = Column(String, ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    consumed_at = Column(DateTime, nullable=True)
+
+    session = relationship("Session", back_populates="refresh_tokens")
 
 class Organization(Base):
     __tablename__ = "organizations"

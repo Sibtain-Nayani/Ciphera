@@ -109,12 +109,12 @@ export default function DashboardPage() {
             setBackendOnline(Boolean(health?.status === 'ok' || health?.status === 'loading'));
 
             // Audit stats
-            const stats = await apiFetch('/api/v3/audit/stats?session_id=default')
+            const stats = await apiFetch('/api/v3/audit/stats')
                 .then(r => r.ok ? r.json() : null).catch(() => null);
             if (stats) setBackendStats(stats);
 
             // Audit logs (paginated — fetch all for search, limit 100)
-            const logs = await apiFetch('/api/v3/audit/logs?session_id=default&limit=100')
+            const logs = await apiFetch('/api/v3/audit/logs?limit=100')
                 .then(r => r.ok ? r.json() : null).catch(() => null);
             if (logs?.logs) setBackendLogs(logs.logs);
 
@@ -259,17 +259,14 @@ export default function DashboardPage() {
     // ── Report download ──────────────────────────────────────────────────
     const handleDownloadReport = async () => {
         if (isDownloading) return;
-        if (!allLogs.length) { useUiStore.getState().addToast("No audit logs to generate a report from.", "error"); return; }
         setIsDownloading(true);
         try {
             useUiStore.getState().addToast("Generating signed report…", "info");
             const response = await apiFetch('/api/v3/audit/report', {
                 method: 'POST',
                 body: JSON.stringify({
-                    session_id:   'default',
                     report_title: `Ciphera Audit Report — ${user?.full_name || 'Session'}`,
                     include_raw_log: true,
-                    logs: allLogs,
                 }),
             });
             if (!response.ok) {

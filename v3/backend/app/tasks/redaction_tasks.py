@@ -7,6 +7,8 @@ from app.services.verification_engine import VerificationEngine, VerificationUnc
 from app.services.storage import StorageService
 import uuid
 import os
+from datetime import datetime
+import hashlib
 
 @celery.task(bind=True, name="app.tasks.redaction_tasks.process_redaction")
 def process_redaction(self, job_id: str):
@@ -15,6 +17,31 @@ def process_redaction(self, job_id: str):
         job = db.query(RedactionJob).filter(RedactionJob.id == job_id).first()
         if not job:
             return {"error": "Job not found"}
+
+        doc = job.document
+        from app.services.release_gate import (
+            require_verified_pdf,
+            assert_document_matches_job_snapshot,
+            UnsupportedReleaseFormat,
+            InvalidReleaseSnapshot,
+        )
+        try:
+            require_verified_pdf(doc.filename if doc else None, doc.file_type if doc else None)
+            assert_document_matches_job_snapshot(job, doc)
+        except (UnsupportedReleaseFormat, InvalidReleaseSnapshot) as e:
+            if job.result_storage_key:
+                try:
+                    StorageService.delete_document(job.result_storage_key)
+                except Exception:
+                    pass
+                job.result_storage_key = None
+                job.result_sha256 = None
+            job.status = JobStatus.REVIEW_REQUIRED
+            job.error_message = VerificationEngine.sanitize_error_string(str(e))
+            if doc:
+                doc.safety_status = SafetyStatus.VERIFICATION_FAILED
+            db.commit()
+            return {"status": "review_required", "reason": job.error_message}
             
         job.status = JobStatus.PROCESSING
         # Cleanup any old/stale artifact if this is a retry or re-run
@@ -24,27 +51,36 @@ def process_redaction(self, job_id: str):
             except Exception:
                 pass
             job.result_storage_key = None
+            job.result_sha256 = None
         job.error_message = None
         db.commit()
         
-        doc = job.document
-        
         # Load file using Cloud Storage Abstraction
         try:
-            file_bytes = StorageService.get_document(doc.storage_key)
+            file_bytes = StorageService.get_document(job.source_storage_key)
         except Exception as e:
             job.status = JobStatus.FAILED
             job.result_storage_key = None
+            job.result_sha256 = None
             job.error_message = VerificationEngine.sanitize_error_string(f"Failed to retrieve file: {str(e)}")
             if doc:
                 doc.safety_status = SafetyStatus.VERIFICATION_FAILED
             db.commit()
             return {"error": job.error_message}
+
+        if hashlib.sha256(file_bytes).hexdigest() != job.source_sha256:
+            job.status = JobStatus.REVIEW_REQUIRED
+            job.result_storage_key = None
+            job.result_sha256 = None
+            job.error_message = "Source document checksum changed after the job was queued"
+            doc.safety_status = SafetyStatus.VERIFICATION_FAILED
+            db.commit()
+            return {"status": "review_required", "reason": job.error_message}
             
         # Reconstruct entities
         entities = []
-        if doc.detected_entities:
-            for ent_data in doc.detected_entities:
+        if job.entities_snapshot:
+            for ent_data in job.entities_snapshot:
                 entities.append(RedactionEntity(**ent_data))
                 
         # Run Redaction
@@ -83,6 +119,7 @@ def process_redaction(self, job_id: str):
                 except Exception:
                     pass
                 job.result_storage_key = None
+                job.result_sha256 = None
             job.error_message = "Scanned/raster document requires human review under safety policy"
             if doc:
                 doc.safety_status = SafetyStatus.VERIFICATION_FAILED
@@ -93,7 +130,9 @@ def process_redaction(self, job_id: str):
         redacted_storage_key = StorageService.save_document(redacted_bytes, f"redacted_{doc.filename}", directory="redacted")
             
         job.status = JobStatus.COMPLETED
+        job.completed_at = datetime.utcnow()
         job.result_storage_key = redacted_storage_key
+        job.result_sha256 = hashlib.sha256(redacted_bytes).hexdigest()
         job.error_message = None
         if doc:
             doc.safety_status = SafetyStatus.VERIFIED
@@ -109,6 +148,7 @@ def process_redaction(self, job_id: str):
             except Exception:
                 pass
             job.result_storage_key = None
+            job.result_sha256 = None
         job.error_message = VerificationEngine.sanitize_error_string(e.detail)
         if job.document:
             job.document.safety_status = SafetyStatus.VERIFICATION_FAILED
@@ -122,6 +162,7 @@ def process_redaction(self, job_id: str):
             except Exception:
                 pass
             job.result_storage_key = None
+            job.result_sha256 = None
         err_msg = getattr(e, "detail", str(e))
         job.error_message = VerificationEngine.sanitize_error_string(str(err_msg))
         if job.document:

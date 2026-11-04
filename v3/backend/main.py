@@ -86,7 +86,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["X-Ciphera-Report-ID", "X-Ciphera-Content-Hash"],
+    expose_headers=["X-Ciphera-Report-ID", "X-Ciphera-Content-Hash", "X-Ciphera-Signature", "X-Ciphera-Prev-Hash"],
 )
 
 app.include_router(auth_router)

@@ -1,14 +1,18 @@
 import pytest
 import io
 import fitz
+import hashlib
+from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from main import app
 from app.core.database import SessionLocal
-from app.models.identity import User, Organization, OrganizationMember
+from app.models.identity import User, Organization, OrganizationMember, Session as AuthSession
 from app.models.document import Document, RedactionJob, JobStatus
+from app.core.config import settings
 from app.services.verification_engine import VerificationEngine
+from app.services.release_gate import canonical_sha256
 from app.schemas.document import RedactionEntity
-from feature15_auth import create_access_token
+from app.api.auth import create_access_token
 from app.tasks.redaction_tasks import process_redaction
 from unittest.mock import patch
 
@@ -24,6 +28,7 @@ def p0_test_env():
     db.query(RedactionJob).filter(RedactionJob.id.like("p0_job%")).delete()
     db.query(Document).filter(Document.id.like("p0_doc%")).delete()
     db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
+    db.query(AuthSession).filter(AuthSession.user_id == user_id).delete()
     db.query(Organization).filter(Organization.id == org_id).delete()
     db.query(User).filter(User.id == user_id).delete()
     db.commit()
@@ -38,7 +43,17 @@ def p0_test_env():
     db.add(membership)
     db.commit()
     
-    token = create_access_token(user_id, "p0_user@security.test", org_id, "admin")
+    auth_session = AuthSession(
+        user_id=user_id,
+        refresh_token_hash=hashlib.sha256(b"p0-refresh-token").hexdigest(),
+        signing_key_version=settings.auth_key_version,
+        expires_at=datetime.utcnow() + timedelta(days=1),
+    )
+    db.add(auth_session)
+    db.commit()
+    token = create_access_token(
+        user_id, "p0_user@security.test", org_id, "user", session_id=auth_session.id
+    )
     
     yield {"token": token, "org_id": org_id, "user_id": user_id}
     
@@ -46,6 +61,7 @@ def p0_test_env():
     db.query(RedactionJob).filter(RedactionJob.id.like("p0_job%")).delete()
     db.query(Document).filter(Document.id.like("p0_doc%")).delete()
     db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
+    db.query(AuthSession).filter(AuthSession.user_id == user_id).delete()
     db.query(Organization).filter(Organization.id == org_id).delete()
     db.query(User).filter(User.id == user_id).delete()
     db.commit()
@@ -110,13 +126,22 @@ def test_celery_task_and_api_job_status_do_not_leak_pii(p0_test_env):
     # Document record
     doc_record = Document(
         id=doc_id, org_id=org_id, uploaded_by=user_id,
-        filename="confidential.pdf", file_type="application/pdf", storage_key="/tmp/fake_p0.pdf"
+        filename="confidential.pdf", file_type="application/pdf", storage_key="/tmp/fake_p0.pdf",
+        source_sha256=hashlib.sha256(b"synthetic p0 source").hexdigest(),
+        canonical_representation={"metadata": {"redaction_policy": {"mode": "balanced", "version": "test-balanced-v1"}}},
+        detected_entities=[],
     )
     db.add(doc_record)
     
     # Create job in QUEUED status
     job_record = RedactionJob(
-        id=job_id, document_id=doc_id, status=JobStatus.QUEUED
+        id=job_id, document_id=doc_id, status=JobStatus.QUEUED,
+        policy_config={"mode": "balanced", "version": "test-balanced-v1"},
+        policy_version="test-balanced-v1",
+        policy_sha256=canonical_sha256({"mode": "balanced", "version": "test-balanced-v1"}),
+        source_storage_key="/tmp/fake_p0.pdf",
+        source_sha256=hashlib.sha256(b"synthetic p0 source").hexdigest(),
+        entities_snapshot=[], entities_sha256=canonical_sha256([]),
     )
     db.add(job_record)
     db.commit()

@@ -21,21 +21,24 @@ from __future__ import annotations
 import sqlite3
 import json
 import logging
+import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
-from typing import Optional
 from app.api.auth import get_current_user
 from app.models.identity import User
 
 logger = logging.getLogger("ciphera.audit")
 router = APIRouter(prefix="/api/v3/audit", tags=["Audit"])
 
-DB_PATH = Path(__file__).parent / "data" / "audit.db"
-DB_PATH.parent.mkdir(exist_ok=True)
+DB_PATH = Path(
+    os.getenv("CIPHERA_AUDIT_DB_PATH", str(Path(__file__).parent / "data" / "audit.db"))
+)
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def get_db() -> sqlite3.Connection:
@@ -78,7 +81,9 @@ init_db()
 # ── Models ────────────────────────────────────────────────────────────────────
 
 class AuditLogEntry(BaseModel):
-    id:                   str
+    # Accepted for compatibility with existing clients, but never used as the
+    # persistent record ID. The server always generates that value.
+    id:                   Optional[str] = None
     name:                 str
     size:                 str = "Unknown"
     date:                 str
@@ -104,20 +109,22 @@ async def write_log(
     entry: AuditLogEntry,
     current_user: User = Depends(get_current_user),
 ):
-    # Enforce session ownership
-    entry.session_id = current_user.id
+    # Never trust a client-provided row ID or session ID. In particular, do not
+    # use INSERT OR REPLACE: the table's primary key is global across tenants.
+    log_id = str(uuid.uuid4())
+    session_id = current_user.id
     try:
         with get_db() as conn:
             conn.execute("""
-                INSERT OR REPLACE INTO audit_logs
+                INSERT INTO audit_logs
                 (id, name, size, date, status, entities_discovered, rules_applied, created_at, session_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                entry.id, entry.name, entry.size, entry.date,
+                log_id, entry.name, entry.size, entry.date,
                 entry.status, entry.entities_discovered,
                 json.dumps(entry.rules_applied),
                 datetime.now(timezone.utc).isoformat(),
-                entry.session_id,
+                session_id,
             ))
 
             # Update session metrics
@@ -128,10 +135,10 @@ async def write_log(
                     total_documents_secured = total_documents_secured + 1,
                     total_entities_masked   = total_entities_masked + excluded.total_entities_masked,
                     updated_at              = excluded.updated_at
-            """, (entry.session_id, entry.entities_discovered, datetime.now(timezone.utc).isoformat()))
+            """, (session_id, entry.entities_discovered, datetime.now(timezone.utc).isoformat()))
 
             conn.commit()
-        return {"ok": True}
+        return {"ok": True, "id": log_id}
     except Exception as e:
         logger.error("Failed to write audit log: %s", e)
         raise HTTPException(500, str(e))
@@ -249,17 +256,36 @@ async def get_metrics(
 
 
 @router.delete("/{run_id}")
-async def delete_log(run_id: str):
+async def delete_log(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+):
     with get_db() as conn:
-        conn.execute("DELETE FROM audit_logs WHERE id = ?", (run_id,))
+        if current_user.global_role.value == "super_admin":
+            result = conn.execute("DELETE FROM audit_logs WHERE id = ?", (run_id,))
+        else:
+            result = conn.execute(
+                "DELETE FROM audit_logs WHERE id = ? AND session_id = ?",
+                (run_id, current_user.id),
+            )
         conn.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Audit log not found")
     return {"ok": True, "deleted": run_id}
 
 
 @router.delete("/clear/all")
-async def clear_all_logs(session_id: str = Query("default")):
+async def clear_all_logs(
+    session_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+):
+    effective_session = (
+        session_id
+        if session_id and current_user.global_role.value == "super_admin"
+        else current_user.id
+    )
     with get_db() as conn:
-        conn.execute("DELETE FROM audit_logs WHERE session_id = ?", (session_id,))
-        conn.execute("DELETE FROM session_metrics WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM audit_logs WHERE session_id = ?", (effective_session,))
+        conn.execute("DELETE FROM session_metrics WHERE session_id = ?", (effective_session,))
         conn.commit()
-    return {"ok": True}
+    return {"ok": True, "session_id": effective_session}

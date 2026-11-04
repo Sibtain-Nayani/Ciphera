@@ -12,7 +12,6 @@ Upgrades over v3 (Haar cascades):
 
 from __future__ import annotations
 
-import base64
 import logging
 import os
 from pathlib import Path
@@ -20,7 +19,6 @@ from pathlib import Path
 import cv2
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from fastapi.responses import Response
 from pydantic import BaseModel
 
 logger = logging.getLogger("ciphera.image")
@@ -32,12 +30,10 @@ class FaceBox(BaseModel):
     confidence: float; scale_hint: str
 
 
-class ImageRedactResponse(BaseModel):
+class FaceDetectionResponse(BaseModel):
     face_count: int
     faces: list[FaceBox]
-    redacted_b64: str
     original_size: tuple[int, int]
-    mode: str
     detector: str
 
 
@@ -46,12 +42,18 @@ class FaceRedactor:
     def __init__(self):
         self.yunet = None
         self.dnn_net = None
+        self.haar_frontal = None
+        self.haar_alt2 = None
+        self.haar_profile = None
         self.detector_type = "haar"
         self._load_yunet()
         if self.yunet is None:
             self._load_dnn()
-        if self.yunet is None and self.dnn_net is None:
+        try:
             self._load_haar()
+        except RuntimeError:
+            if self.yunet is None and self.dnn_net is None:
+                raise
 
     def _load_yunet(self):
         target_dir = os.path.join(os.path.dirname(__file__), "models")
@@ -227,7 +229,7 @@ class FaceRedactor:
         all_boxes: list[tuple[int,int,int,int,float]] = []
 
         for cascade in [self.haar_frontal, self.haar_alt2]:
-            if cascade.empty(): continue
+            if cascade is None or cascade.empty(): continue
             dets = cascade.detectMultiScale(gray, **params, flags=cv2.CASCADE_SCALE_IMAGE)
             if len(dets) > 0:
                 for (x, y, bw, bh) in dets:
@@ -236,7 +238,7 @@ class FaceRedactor:
                         all_boxes.append((x, y, bw, bh, score))
 
         # Profile face (catches side-facing faces)
-        if not self.haar_profile.empty():
+        if self.haar_profile is not None and not self.haar_profile.empty():
             dets = self.haar_profile.detectMultiScale(gray, **params, flags=cv2.CASCADE_SCALE_IMAGE)
             if len(dets) > 0:
                 for (x, y, bw, bh) in dets:
@@ -342,12 +344,10 @@ face_redactor = FaceRedactor()
 ALLOWED = {"image/jpeg","image/png","image/webp","image/bmp"}
 
 
-@router.post("/api/v3/redact-image", response_model=ImageRedactResponse)
-async def redact_image(
+@router.post("/api/v3/detect-faces", response_model=FaceDetectionResponse)
+async def detect_faces(
     file: UploadFile = File(...),
-    mode: str = Form("blur"),
     sensitivity: str = Form("medium"),
-    return_b64: bool = Form(True),
 ):
     if file.content_type not in ALLOWED:
         raise HTTPException(400, f"Unsupported type: {file.content_type}")
@@ -361,33 +361,20 @@ async def redact_image(
     h, w = img.shape[:2]
     faces    = face_redactor.detect_faces(img, sensitivity)
     logger.info("Detected %d face(s) in %dx%d image [%s]", len(faces), w, h, face_redactor.detector_type)
-    redacted = face_redactor.redact_faces(img, faces, mode)
-    _, buf   = cv2.imencode(".png", redacted)
-    b64      = base64.b64encode(buf.tobytes()).decode() if return_b64 else ""
-    return ImageRedactResponse(
-        face_count=len(faces), faces=faces, redacted_b64=b64,
-        original_size=(w,h), mode=mode, detector=face_redactor.detector_type,
+    return FaceDetectionResponse(
+        face_count=len(faces), faces=faces,
+        original_size=(w,h), detector=face_redactor.detector_type,
     )
 
 
-@router.post("/api/v3/redact-image/download")
-async def redact_image_download(
-    file: UploadFile = File(...),
-    mode: str = Form("blur"),
-    sensitivity: str = Form("medium"),
-):
-    if file.content_type not in ALLOWED:
-        raise HTTPException(400, "Unsupported")
-    data = await file.read()
-    arr  = np.frombuffer(data, np.uint8)
-    img  = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise HTTPException(422, "Invalid image")
-    faces    = face_redactor.detect_faces(img, sensitivity)
-    redacted = face_redactor.redact_faces(img, faces, mode)
-    _, buf   = cv2.imencode(".png", redacted)
-    stem     = Path(file.filename or "image").stem
-    return Response(
-        content=buf.tobytes(), media_type="image/png",
-        headers={"Content-Disposition": f'attachment; filename="{stem}_redacted.png"'},
+@router.post("/api/v3/redact-image", deprecated=True, responses={410: {"description": "Direct image exports are disabled"}})
+@router.post("/api/v3/redact-image/download", deprecated=True, responses={410: {"description": "Direct image exports are disabled"}})
+async def disabled_image_export():
+    """Reject direct image artifacts; face detection now returns annotations only."""
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Direct image exports are disabled; use /api/v3/detect-faces for face "
+            "annotations and the asynchronous verified document workflow for exports"
+        ),
     )

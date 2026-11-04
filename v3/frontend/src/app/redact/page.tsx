@@ -3,7 +3,6 @@ import { ConfidenceSlider } from '@/components/redact/ConfidenceSlider';
 import { TemplateSelector } from '@/components/redact/TemplateSelector';
 import { ExportModal, ExportPageSelection } from '@/components/redact/ExportModal';
 import { EntityReviewModal } from '@/components/redact/EntityReviewModal';
-import { exportMultiplePages } from '@/lib/multiPageExport';
 import { useTemplateStore } from '@/store/templateStore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -21,11 +20,11 @@ import { useUiStore } from '@/store/uiStore';
 import { redactionEngine, Token, sessionMapper } from '@/lib/redactionEngine';
 import { useSessionStore } from '@/store/sessionStore';
 import { AnimatedToken, PlainTextToken } from '@/components/redact/AnimatedToken';
-import { extractTextFromFile, exportRedactedText, exportVisualCanvas } from '@/lib/fileFormat';
+import { extractTextFromFile } from '@/lib/fileFormat';
 import { convertPdfToImages, PdfPageData } from '@/lib/pdfRenderer';
 import { extractOcrData, mapOcrToShapes, removeShapesByRule } from '@/lib/ocrEngine';
 import dynamic from 'next/dynamic';
-import { api } from '@/lib/api';
+import { api, apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -106,10 +105,9 @@ function persistAuditLog(
     skip = false,
 ) {
     if (skip) return;
-    fetch(api('/api/v3/audit/log'), {
+    apiFetch('/api/v3/audit/log', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...entry, session_id: 'default' }),
+        body: JSON.stringify(entry),
     }).catch(() => {});
 }
 
@@ -401,16 +399,16 @@ export default function WorkspacePage() {
         try {
             const blob = await (await fetch(src)).blob();
             let fd = new FormData();
-            fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'medium');
-            let resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
+            fd.append('file', blob, 'image.png'); fd.append('sensitivity', 'medium');
+            let resp = await fetch(api('/api/v3/detect-faces'), { method: 'POST', body: fd });
             if (!resp.ok) throw new Error(`${resp.status}`);
             let data = await resp.json();
 
             // If 0 faces found at medium sensitivity, try high sensitivity
             if (data.face_count === 0) {
                 fd = new FormData();
-                fd.append('file', blob, 'image.png'); fd.append('mode', 'blur'); fd.append('sensitivity', 'high');
-                resp = await fetch(api('/api/v3/redact-image'), { method: 'POST', body: fd });
+                fd.append('file', blob, 'image.png'); fd.append('sensitivity', 'high');
+                resp = await fetch(api('/api/v3/detect-faces'), { method: 'POST', body: fd });
                 if (resp.ok) {
                     data = await resp.json();
                 }
@@ -440,17 +438,6 @@ export default function WorkspacePage() {
         } catch { useUiStore.getState().addToast("Face redaction failed.", "error"); }
         finally { setLoaderStage('idle'); }
     };
-
-    const buildRedactedText = (tokensToUse: Token[]) => tokensToUse.map(t => {
-        if (t.type === 'text') return t.value;
-        const isBI   = t.type in rules;
-        const cr     = customRules.find(r => `custom_${r.id}` === t.type || r.id === t.type);
-        const active = isBI ? rules[t.type as RuleType]?.isActive : cr?.isActive;
-        if (!active) return t.value;
-        const action = actionOverrides[t.id]
-            || (isBI ? (rules[t.type as RuleType]?.action || 'replace') : (cr?.action || 'replace'));
-        return redactionEngine.getRedactionReplacement(t.type, t.value, action, customRules);
-    }).join('');
 
     const exportSecureFile = async (formatOverride?: DocumentState['fileType'] | string) => {
         if (isGuest) { useUiStore.getState().addToast("Create a free account to export redacted files.", "info"); return; }

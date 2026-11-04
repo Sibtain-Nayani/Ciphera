@@ -16,10 +16,15 @@ data/
 *.log
 # ── Never bake secrets or live data into the image ────────────────
 .env
+.env.*
+!.env.example
 data/
 data/ciphera.db
 data/audit.db
 data/api_keys.json
+*.db
+*.sqlite
+*.sqlite3
 
 # ── Python noise ──────────────────────────────────────────────────
 __pycache__/

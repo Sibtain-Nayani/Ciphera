@@ -9,20 +9,18 @@
  ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
 ```
 
-**Client-side PII redaction. Nothing leaves your machine.**
+**Document PII detection and redaction with an API-backed review workflow.**
 
-[![Version](https://img.shields.io/badge/version-3.0.0-F5C400?style=flat-square)](https://github.com/Sibtain-Nayani/Ciphera)
-[![DPDP Act 2023](https://img.shields.io/badge/DPDP%20Act%202023-compliant-4ade80?style=flat-square)](#compliance)
-[![GDPR](https://img.shields.io/badge/GDPR%20Art.%2025-compliant-4ade80?style=flat-square)](#compliance)
-[![Local Inference](https://img.shields.io/badge/inference-local%20only-F5C400?style=flat-square)](#architecture)
-[![Next.js](https://img.shields.io/badge/Next.js-15-white?style=flat-square)](https://nextjs.org)
+[![Status](https://img.shields.io/badge/status-pre--production-yellow?style=flat-square)](docs/PRODUCTION_REMEDIATION_ROADMAP.md)
+[![Compliance](https://img.shields.io/badge/compliance-review%20required-yellow?style=flat-square)](#compliance)
+[![Next.js](https://img.shields.io/badge/Next.js-16-white?style=flat-square)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-white?style=flat-square)](https://fastapi.tiangolo.com)
 
 ---
 
-*Aadhaar. PAN. GSTIN. Biometrics. Found, flagged, and removed — before anything leaves your machine.*
+*Aadhaar. PAN. GSTIN. Detect, review, and redact sensitive document data.*
 
-[**Live Demo**](#) · [**Documentation**](#documentation) · [**API Reference**](#api-reference) · [**Report a Bug**](#contributing)
+[**v3 Documentation**](docs/README.md) · [**API Reference**](#api-reference) · [**Report a Bug**](#contributing)
 
 </div>
 
@@ -30,19 +28,20 @@
 
 ## What is Ciphera?
 
-Ciphera is a **client-side document redaction engine** built for individuals, compliance teams, legal departments, and data engineers who need to share documents without exposing sensitive personal information.
+Ciphera v3 is a document redaction application for individuals and teams. The Next.js browser client calls a FastAPI backend for analysis and document processing; uploaded content is sent to the backend configured for the deployment.
 
-It detects and removes **Personally Identifiable Information (PII)** — Aadhaar numbers, PAN cards, GSTIN codes, phone numbers, email addresses, biometric identifiers, bank account details, and more — using a four-stage ensemble detection pipeline. Everything runs locally. No data is ever transmitted to a server. No cloud processing. No retention.
+It detects and redacts **Personally Identifiable Information (PII)** such as Aadhaar, PAN, GSTIN, phone numbers, and email addresses. Storage, retention, and external data flows depend on deployment settings: the backend can use local or S3-compatible file storage, Google OAuth, optional external scoring, and outbound webhooks.
 
-**Zero bytes sent. Zero data stored.**
+**Review your deployment's data flows, storage, and retention before processing sensitive documents.**
 
-Built specifically for Indian regulatory compliance (DPDP Act 2023) with full GDPR and ISO 27001 alignment.
+Ciphera includes privacy and audit features, but the software does not establish DPDP, GDPR, or ISO 27001 compliance. Those claims require legal review and controls in the deployed environment. See [security architecture](docs/CIPHERA_BACKEND_SECURITY_ARCHITECTURE.md) and the [production roadmap](docs/PRODUCTION_REMEDIATION_ROADMAP.md).
 
 ---
 
 ## Table of Contents
 
 - [Why Ciphera](#why-ciphera)
+- [Version Boundaries](#version-boundaries)
 - [Features](#features)
 - [Detection Pipeline](#detection-pipeline)
 - [Architecture](#architecture)
@@ -74,7 +73,11 @@ Existing solutions either:
 - **Cover only Western PII formats** — missing Indian identifiers entirely
 - **Offer manual redaction only** — slow, error-prone, inconsistent
 
-Ciphera solves all of this. It runs entirely in your environment. It understands Indian document formats natively. It automates detection so nothing slips through. And it is free.
+Ciphera provides a workflow for detecting, reviewing, and redacting Indian and global PII formats. Detection is probabilistic; validate it against representative documents and measure false negatives before relying on it.
+
+## Version Boundaries
+
+`v3/` is the active application under development. Prototype directories are not intended as v3 code or runtime dependencies. The isolation audit is still open: `evaluate.py` currently adds the repository root to Python's import path. Treat the boundary as unverified until that path is removed and an isolated-checkout check passes. See the [roadmap item](docs/PRODUCTION_REMEDIATION_ROADMAP.md#execution-methods-for-the-six-open-high-priority-v3-items).
 
 ---
 
@@ -84,37 +87,36 @@ Ciphera solves all of this. It runs entirely in your environment. It understands
 - **Automated PII Detection** — four-stage ensemble pipeline with confidence scoring
 - **Indian PII Native Support** — Aadhaar (Verhoeff checksum), PAN, GSTIN, IFSC, Voter ID, Passport, Vehicle Registration
 - **Global PII Coverage** — email, phone, dates, names, addresses, SSN, credit cards, URLs, IP addresses
-- **Format-Aware Validation** — structural validation prevents false positives, not just pattern matching
+- **Format-Aware Checks** — recognizers combine patterns and validation rules; they do not guarantee that every false positive is prevented
 
 ### Redaction Modes
 - **Text Redaction** — replaces detected entities with typed placeholders `[AADHAAR_1]`
 - **Visual Canvas Redaction** — pixel-level black bar redaction for PDFs and images
-- **Synthetic Substitution** — replaces PII with realistic fake Indian data, preserving document readability
+- **Synthetic Substitution** — generates replacement-like values; they are not guaranteed to be checksum-valid or suitable as real identity data
 - **Selective Redaction** — human-in-the-loop review before any entity is removed
 
 ### Processing
-- **Single Document** — redact any file in seconds
-- **Batch Processing** — queue multiple documents, process with the same pipeline, export as ZIP
-- **Multi-format Support** — PDF, DOCX, TXT, CSV, JSON, MD, PNG, JPG, TIFF
+- **Document Workflow** — upload, inspect detected entities, queue redaction, and download an artifact
+- **Asynchronous Jobs** — Redis and Celery are used for the document redaction job path
+- **Format Support** — supported formats depend on the route and parser; verify the current API contract before use
 
 ### Developer Tools
-- **REST API** — authenticated endpoints for pipeline integration from any language
-- **Per-key Rate Limiting** — manage API access with granular controls
-- **Audit Logs** — full session history with entity counts, timestamps, confidence scores
-- **Docker Deployment** — fully air-gapped, on-premise via Docker Compose
+- **REST API** — route-specific JWT or API-key authentication; some routes still need an authorization review
+- **Per-key Rate Limiting** — process-local limits currently protect API-key endpoints; they are not shared across replicas
+- **Audit and Reports** — available, with persistence consolidation and release verification still in progress
+- **Docker Compose** — local development stack; it is not a hardened production deployment
 
 ### Compliance & Security
-- **Zero Data Retention** — nothing is stored after session ends
-- **Local Inference Only** — all ML models run on your machine
-- **DPDP Act 2023 Aligned** — built for Indian data protection law
-- **GDPR Article 25 Compliant** — privacy by design and default
-- **Full Audit Trail** — every redaction session logged with integrity verification
+- **Configurable Storage** — local disk by default, with an S3-compatible storage option
+- **External Integrations** — Google OAuth, optional Groq scoring, and configured webhooks can make outbound requests
+- **Security Remediation** — authentication, tenancy, retention, and deployment gaps are tracked in the production roadmap
+- **Compliance Review Required** — the application is not certified and does not itself establish legal compliance
 
 ---
 
 ## Detection Pipeline
 
-Ciphera uses a **four-stage weighted voting ensemble**. Every entity must pass through all four stages. The final verdict is determined by weighted consensus — not a single model's output.
+The following diagram describes the legacy text-analysis pipeline used by selected text routes. The authenticated document workflow has a separate canonical parser, detection service, and decision service; do not assume every route uses the same pipeline or threshold.
 
 ```
 INPUT DOCUMENT
@@ -130,7 +132,7 @@ INPUT DOCUMENT
       ▼
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 02 — Presidio NLP                   Weight: 1.0× │
-│  Microsoft's PII detection with 28 custom recognisers   │
+│  Presidio analyzer with application recognizers         │
 │  Handles unstructured text · Global PII patterns        │
 │  Phone · Credit card · Email · SSN · Medical ID · URL   │
 └─────────────────────────────────────────────────────────┘
@@ -138,7 +140,7 @@ INPUT DOCUMENT
       ▼
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 03 — spaCy NER                      Weight: 0.9× │
-│  en_core_web_lg transformer — context-aware recognition │
+│  en_core_web_lg — context-aware named entity recognition│
 │  Persons · Organisations · Locations · Dates            │
 │  Understands surrounding text to prevent false positives│
 └─────────────────────────────────────────────────────────┘
@@ -155,39 +157,30 @@ INPUT DOCUMENT
 REDACTED OUTPUT  ·  AUDIT LOG  ·  CONFIDENCE REPORT
 ```
 
-**Confidence threshold:** An entity is redacted only when the ensemble confidence score reaches **≥ 0.80**. Below that threshold, the entity is flagged for human review rather than automatically removed.
+**Confidence threshold:** The detector's default request threshold is **0.50**. The `0.80` value is used for a structured-entity type-lock rule; it is not a universal release threshold or a guarantee that uncertain results are always held for review. Validate the actual route and UI behavior before relying on it.
 
-**Type-lock:** If Stage 01 identifies a token as `AADHAAR` with ≥ 0.80 confidence, Stage 04 locks that classification. Stage 03 cannot reclassify it as a `DATE` or `LOCATION` based on surrounding context alone. This prevents a known failure mode in pure NER-based systems.
+**Type-lock:** The pipeline includes a structured-entity type-lock threshold. Its behavior should be treated as an implementation detail and covered by regression tests for each supported entity type.
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        USER'S MACHINE                           │
-│                                                                 │
-│  ┌──────────────────────────┐    ┌──────────────────────────┐   │
-│  │   FRONTEND               │    │   BACKEND                │   │
-│  │   Next.js 15             │    │   FastAPI (Python)       │   │
-│  │   React 19               │◄──►|   Presidio NLP           │   │
-│  │   TypeScript             │    │   spaCy Transformer      │   │
-│  │   Tailwind CSS           │    │   Tesseract OCR          |   │
-│  │                          │    │   Custom Regex Engine    │   │
-│  │   · Dashboard            │    │                          │   │
-│  │   · Redact Page          │    │   PostgreSQL (SQLite)    │   │
-│  │   · Batch Processing     │    │   Audit Log Storage      │   │
-│  │   · Settings             │    │   Session Management     │   │ 
-│  └──────────────────────────┘    └──────────────────────────┘   │
-│                                                                 │
-│                  ↕ 0 bytes leave this boundary                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-
-NO EXTERNAL API CALLS · NO CLOUD STORAGE · NO TELEMETRY
+```mermaid
+flowchart LR
+    Browser[Browser: Next.js 16] -->|API requests and uploads| API[FastAPI v3]
+    API --> DB[(Primary SQLAlchemy database<br/>SQLite default; PostgreSQL in Compose)]
+    API --> Legacy[(Feature SQLite stores<br/>audit, API keys, reports, webhooks)]
+    API --> Redis[Redis broker]
+    Redis --> Worker[Celery worker]
+    Worker --> DB
+    API --> Storage[StorageService<br/>local disk or S3-compatible]
+    Worker --> Storage
+    API -. optional OAuth .-> Google[Google]
+    API -. optional scoring .-> Groq[Groq]
+    API -. outbound webhook .-> Destinations[Configured destinations]
 ```
 
-Everything — the frontend, the detection models, the database, the file processing — runs within a single Docker Compose environment on your machine. The architecture is designed so that it is physically impossible for document content to leave your environment during normal operation.
+The browser sends requests and uploaded documents to the backend. Docker Compose includes PostgreSQL, Redis, the API, a worker, and the frontend. PostgreSQL serves the primary SQLAlchemy path, while several active feature modules still use separate SQLite stores. Optional providers and webhook destinations can receive data depending on configuration. This architecture is under remediation and is not production-ready; see the [current architecture and trust boundaries](docs/CIPHERA_BACKEND_SECURITY_ARCHITECTURE.md).
 
 ---
 
@@ -196,16 +189,17 @@ Everything — the frontend, the detection models, the database, the file proces
 ### Prerequisites
 
 ```
-Node.js          ≥ 18.0.0
-Python           ≥ 3.10
+Node.js          22 (frontend Docker image)
+Python           3.11 (backend Docker image)
 Docker           ≥ 24.0 (recommended)
 Docker Compose   ≥ 2.0  (recommended)
 ```
 
-For running without Docker:
+For manual backend setup, also provide:
 ```
-PostgreSQL       ≥ 14  (or SQLite for local dev)
-Tesseract OCR    ≥ 5.0
+Redis             7 or compatible (Celery broker)
+Tesseract OCR     English and Hindi language data
+spaCy models      en_core_web_lg and xx_ent_wiki_sm
 ```
 
 ---
@@ -214,7 +208,7 @@ Tesseract OCR    ≥ 5.0
 
 **Option 1 — Docker Compose (Recommended)**
 
-This is the fastest path to a fully working, air-gapped deployment.
+This starts the local development stack. It downloads container images and NLP model artifacts; the Compose file uses development credentials and publishes service ports, so do not treat it as a production deployment.
 
 ```bash
 # Clone the repository
@@ -224,13 +218,17 @@ cd Ciphera/v3
 # Copy environment template
 cp .env.example .env
 
+# Replace CIPHERA_JWT_SECRET and CIPHERA_REPORT_SIGNING_KEY with different
+# randomly generated values before starting the services.
+# Generate a value with: python -c "import secrets; print(secrets.token_hex(32))"
+
 # Start all services
 docker compose up --build
 ```
 
 Ciphera will be available at `http://localhost:3000`
 
-The first build downloads the spaCy language model (`en_core_web_lg`, ~560MB). Subsequent starts are fast.
+The first build downloads the pinned spaCy models and other build dependencies. Subsequent starts reuse cached images and volumes.
 
 ---
 
@@ -247,14 +245,18 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Create .env from .env.example and replace both signing-key placeholders.
+cp .env.example .env
+
 # Download spaCy model
 python -m spacy download en_core_web_lg
+python -m spacy download xx_ent_wiki_sm
 
 # Set up database
 python -m alembic upgrade head
 
 # Start backend
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 **Frontend:**
@@ -262,30 +264,26 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 cd frontend
 
 # Install dependencies
-npm install
+npm ci
 
-# Copy environment file
-cp .env.local.example .env.local
+# Create .env.local with NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
 # Start development server
 npm run dev
 ```
 
 Frontend: `http://localhost:3000`
-Backend API: `http://localhost:8000`
-API Docs: `http://localhost:8000/docs`
+Backend API: `http://127.0.0.1:8000`
+API Docs: `http://127.0.0.1:8000/docs`
 
 ---
 
 ### Docker Deployment
 
-**Production (air-gapped):**
+**Local Compose stack:**
 ```bash
-# Build production images
-docker compose -f docker-compose.prod.yml build
-
-# Run in detached mode
-docker compose -f docker-compose.prod.yml up -d
+# Start the configured development stack
+docker compose up --build -d
 
 # View logs
 docker compose logs -f
@@ -295,42 +293,43 @@ docker compose logs -f
 
 | Variable | Description | Default |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | `sqlite:///./ciphera.db` |
-| `SECRET_KEY` | Session secret key | Generate with `openssl rand -hex 32` |
-| `CONFIDENCE_THRESHOLD` | Minimum confidence for auto-redaction | `0.80` |
-| `MAX_FILE_SIZE_MB` | Maximum upload file size | `50` |
-| `AUDIT_LOG_RETENTION_DAYS` | How long to keep session logs | `90` |
+| `CIPHERA_JWT_SECRET` | JWT signing secret; required, random, at least 32 bytes | No default |
+| `CIPHERA_REPORT_SIGNING_KEY` | Independent report signing key | No default |
+| `DATABASE_URL` | Primary SQLAlchemy database URL | SQLite locally; Compose overrides with PostgreSQL |
+| `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | Redis queue and result backend | `redis://localhost:6379/0` |
+| `MAX_UPLOAD_SIZE_BYTES` | Upload size cap | `26214400` (25 MiB) |
+| `MAX_PDF_PAGE_COUNT` | PDF page cap | `100` |
+| `STORAGE_BACKEND` / `LOCAL_STORAGE_DIR` | File storage backend and local path | `local` / `./data/uploads` |
+| `CORS_ORIGINS` | Allowed browser origins | See `.env.example` |
+| `NEXT_PUBLIC_API_URL` | Frontend API URL; baked into the frontend image at build time | `http://localhost:8000` |
 
 ---
 
 ## Usage
 
+The document API currently parses PDFs, supported raster images, and UTF-8 plain text. Only PDF currently has a verified server-side artifact release contract; attempts to queue image or text exports return `415 Unsupported Media Type`. The Batch page can stage TXT, CSV, JSON, Markdown, and DOCX files, but secure batch processing and downloads are temporarily disabled because the previous browser-only redaction path bypassed the server verification gate. Unknown formats and invalid UTF-8 text uploads are rejected with `415` before storage. Use synthetic documents until format-specific verification and release gates are complete.
+
 ### Single Document Redaction
 
 1. Navigate to **Redact** in the sidebar
-2. Upload a document (PDF, DOCX, TXT, image)
-3. Ciphera scans the document through all four pipeline stages
+2. Upload a PDF for verified export. Raster images and plain text can be parsed for review, but their exports are currently blocked until a format-specific verifier is implemented.
+3. The backend parses the file and runs its document detection and decision services
 4. Detected entities are highlighted with their type and confidence score
 5. Review detections — approve, reject, or modify any entity
 6. Click **Redact** to apply
-7. Download the redacted document
+7. Download the artifact only when the job reports a completed, verified state; jobs requiring review must not be treated as releasable
 
-**Supported input formats:** PDF, DOCX, DOC, TXT, CSV, MD, PNG, JPG, JPEG, TIFF, BMP
+Each release job stores hashes for its source bytes, reviewed entity snapshot, versioned policy, and verified output. The download route rechecks that document state is unchanged and verifies the stored PDF checksum before returning the bytes. Downloads currently pass through the API for both local and S3 storage.
 
-**Output formats:** PDF (flattened), DOCX, TXT
+**Document API inputs:** PDF, images accepted by the image parser, and plain text. Only `application/pdf` files ending in `.pdf` can enter the verified export workflow. Password-protected PDFs are rejected. Other formats are not guaranteed to parse or redact safely.
+
+**Batch page inputs:** TXT, CSV, JSON, MD, DOCX can be staged. PDF and images are directed to the Redact page. The Batch page currently rejects processing requests with guidance to use the verified single-document workflow; no batch exports are available.
 
 ---
 
 ### Batch Processing
 
-1. Navigate to **Batch** in the sidebar
-2. Drop multiple files or click to select
-3. Choose export format (.TXT, .PDF, .DOCX, .CSV, .MD)
-4. Click **Start Batch**
-5. All files process through the same four-stage pipeline
-6. Download as ZIP when complete
-
-Batch processing applies your configured redaction rules automatically — no per-document review unless you enable human-in-the-loop mode in Settings.
+The Batch page is present in the UI, but processing is temporarily disabled. The prior browser-side path could generate downloadable output without the server's independent verifier. Use the Redact workspace for each document until the backend supports a verified batch job flow. Do not use earlier batch-generated artifacts as evidence of verification.
 
 ---
 
@@ -343,75 +342,39 @@ For PDFs and images where text extraction is unreliable (scanned documents, comp
 3. Detected text regions are highlighted automatically
 4. Draw additional redaction boxes manually over any area
 5. Black bars are applied at the pixel level
-6. Export as a flattened PDF — the underlying text is permanently destroyed
+6. Export the result only after independently checking the artifact. The current release-verification gate is not complete for every format and route.
 
-This mode uses Tesseract OCR for text detection before applying the pipeline.
+The backend uses Tesseract OCR on supported image/scanned-document paths. OCR coverage and redaction geometry must be validated against representative files; a successful export is not by itself proof that all sensitive content was removed.
 
 ---
 
 ### Synthetic Substitution
 
-Instead of replacing PII with `[PLACEHOLDER]` tags, Ciphera can substitute realistic fake Indian data:
+The `/api/v3/synthesize` endpoint returns replacement-like values for supported entity types. It is not a secure anonymization guarantee and currently has no route-level authentication.
 
-- Aadhaar numbers → Structurally valid fake Aadhaar (passes Verhoeff checksum)
+- Aadhaar numbers → 12-digit format-like value (not Verhoeff-validated)
 - PAN → Valid format fake PAN
 - Names → Common Indian names from a local dataset
 - Phone numbers → Valid Indian mobile number patterns
-- Addresses → Synthetic Indian addresses
+- URLs and IP addresses → Placeholder-like values for supported types
 
-Documents remain readable and structurally coherent — useful for creating test datasets or sharing document layouts without real personal data.
+The response includes original values in its `substitutions` array. Treat inputs and outputs as sensitive; use this endpoint only on a trusted local development instance until authentication and output handling are fixed.
 
-Enable in **Settings → Detection → Redaction Rules → Mode → Substitute**.
+The UI's substitution preferences are not guaranteed to be enforced consistently by every backend route.
 
 ---
 
 ## API Reference
 
-All endpoints require an API key passed as a header: `X-API-Key: ck_live_...`
+Authentication is route-specific. `/api/v3/public/redact` and `/api/v3/public/analyze` require an API key in `X-API-Key`; account and document routes use JWT bearer tokens. Other mounted routes do not all enforce authentication. In particular, `/api/v3/analyze`, `/api/v3/synthesize`, and `/api/v3/classify` currently lack route-level auth dependencies. Keep the API private until the route-security review is complete. The generated OpenAPI document at `/openapi.json` is the source for current request and response schemas.
 
-Generate keys in **Settings → API Keys**.
+Keys can be managed in **Settings → API Keys**. API-key storage currently uses a separate SQLite feature store and is not ready for a production multi-replica deployment.
 
 ---
 
 ### `POST /api/v3/public/redact`
 
-Redact PII from text and return the sanitised output.
-
-**Request:**
-```bash
-curl -X POST http://localhost:8000/api/v3/public/redact \
-  -H "X-API-Key: ck_live_..." \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Aadhaar: 4532 8812 9901, PAN: ABCPD1234E"}'
-```
-
-**Response:**
-```json
-{
-  "redacted_text": "Aadhaar: [AADHAAR_1], PAN: [PAN_1]",
-  "entities_found": 2,
-  "entities": [
-    {
-      "type": "AADHAAR",
-      "original": "4532 8812 9901",
-      "replacement": "[AADHAAR_1]",
-      "confidence": 0.99,
-      "start": 9,
-      "end": 23
-    },
-    {
-      "type": "PAN",
-      "original": "ABCPD1234E",
-      "replacement": "[PAN_1]",
-      "confidence": 0.97,
-      "start": 30,
-      "end": 40
-    }
-  ],
-  "processing_ms": 38,
-  "pipeline_version": "3.0.0"
-}
-```
+**Deprecated; currently returns `410 Gone`.** This stateless endpoint returned redacted text without independent output verification or a versioned release policy. Use the authenticated document upload, async redaction, status, and verified download workflow instead. The route remains in the API schema so existing clients receive a clear deprecation response.
 
 ---
 
@@ -432,9 +395,10 @@ curl -X POST http://localhost:8000/api/v3/public/analyze \
 
 Replace PII with synthetic Indian data instead of placeholders.
 
+**Authorization status:** this route currently has no route-level auth dependency. Do not expose it to untrusted callers. Its response includes original values in a `substitutions` array; treat both request and response as sensitive. Generated values are not guaranteed to pass identity checksums or be safe to use as real identity data.
+
 ```bash
 curl -X POST http://localhost:8000/api/v3/synthesize \
-  -H "X-API-Key: ck_live_..." \
   -H "Content-Type: application/json" \
   -d '{"text": "Name: Priya Sharma, Phone: +91 98765 43210"}'
 ```
@@ -443,12 +407,14 @@ curl -X POST http://localhost:8000/api/v3/synthesize \
 
 ### `POST /api/v3/classify`
 
-Auto-detect document type and return its PII risk profile.
+Classify text and return a document-type estimate. The route accepts JSON text, not a file upload.
+
+**Authorization status:** this route currently has no route-level auth dependency. Keep it on a trusted local development instance until route authentication is implemented.
 
 ```bash
 curl -X POST http://localhost:8000/api/v3/classify \
-  -H "X-API-Key: ck_live_..." \
-  -F "file=@document.pdf"
+  -H "Content-Type: application/json" \
+  -d '{"text":"Invoice number 123, total amount 5000", "filename":"invoice.txt"}'
 ```
 
 ---
@@ -457,15 +423,10 @@ curl -X POST http://localhost:8000/api/v3/classify \
 
 | Plan | Requests/minute | Max file size |
 |---|---|---|
-| Default | 60 | 50MB |
-| Custom (self-hosted) | Configurable | Configurable |
+| Default API key | 60 requests/minute | N/A for text API |
+| API key setting | 1–1000 requests/minute | N/A |
 
-Rate limit headers are returned on every response:
-```
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 58
-X-RateLimit-Reset: 1716800400
-```
+The API-key limiter is process-local memory. It is not coordinated across replicas, and the current implementation does not promise rate-limit response headers. The document upload route has a separate 25 MiB default cap.
 
 ---
 
@@ -473,7 +434,7 @@ X-RateLimit-Reset: 1716800400
 
 ### Detection Engine
 
-Configure per-entity redaction behaviour in **Settings → Detection → Redaction Rules**:
+The settings screen exposes client preferences and redaction options; not every setting is enforced consistently by every backend route. Treat the active API schema and implementation as authoritative:
 
 | Entity Type | Available Actions |
 |---|---|
@@ -492,22 +453,13 @@ Configure per-entity redaction behaviour in **Settings → Detection → Redacti
 
 ### Confidence Threshold
 
-Default: `0.80`
+The English pipeline's default request threshold is `0.50`; the Hindi pipeline uses `0.48`. The `0.80` constant is a structured-entity type-lock threshold, not the default redaction threshold.
 
-Entities below this threshold are flagged for human review rather than automatically redacted. Lower this value to catch more potential PII (increases false positives). Raise it for higher precision (may miss ambiguous cases).
-
-Configure in `.env`:
-```
-CONFIDENCE_THRESHOLD=0.80
-```
-
-Or per-request via API:
+The text analysis request accepts `threshold` as a request field:
 ```json
 {
   "text": "...",
-  "options": {
-    "confidence_threshold": 0.75
-  }
+  "threshold": 0.50
 }
 ```
 
@@ -519,12 +471,12 @@ Or per-request via API:
 
 | Type | Validation Method | Example |
 |---|---|---|
-| Aadhaar | Verhoeff checksum + format | `4532 8812 9901` |
+| Aadhaar | Pattern and pipeline validation; confirm the active route behavior | `4532 8812 9901` |
 | PAN | Alphanumeric structure + format | `ABCPD1234E` |
-| GSTIN | State code + PAN embed + checksum | `27AADCB2230M1ZP` |
+| GSTIN | Pattern-based structural checks | `27AADCB2230M1ZP` |
 | IFSC | Bank code + branch regex | `SBIN0001234` |
 | Voter ID | State prefix + alphanumeric | `ABC1234567` |
-| Passport | Country format + checksum | `A1234567` |
+| Passport | Pattern-based format check | `A1234567` |
 | Vehicle Reg | State code + district + serial | `MH12AB1234` |
 | Driving Licence | State + RTO + format | `MH0120110012345` |
 
@@ -540,7 +492,7 @@ Or per-request via API:
 | Temporal | Date of birth, Age, Dates in context |
 | Location | Address, Coordinates, Postcode |
 
-**Total recognisers active: 28**
+The `GET /api/v3/entities` route lists entity names exposed by the primary API. Actual recognition coverage varies by route and language; treat this list as capability intent, not a guarantee of detection.
 
 ---
 
@@ -548,31 +500,19 @@ Or per-request via API:
 
 ### DPDP Act 2023 (Digital Personal Data Protection Act)
 
-Ciphera is built specifically for compliance with India's DPDP Act 2023:
-
-- **Section 4** — Processing of personal data only for lawful purposes. Ciphera processes data only for the explicit purpose of redaction, with no secondary use.
-- **Section 6** — Consent-based processing. All redaction is initiated by the data principal (the user).
-- **Section 8** — Accuracy and storage limitation. No data is stored after session completion.
-- **Section 17** — Data localisation. All processing happens on the user's infrastructure.
+Ciphera is not certified as DPDP-compliant. The operator must establish lawful purpose, notice/consent where applicable, retention, deletion, processor controls, incident handling, and any required localisation for the selected deployment. The application currently sends files to its configured backend and may use optional external services.
 
 ### GDPR (General Data Protection Regulation)
 
-- **Article 25** — Privacy by design and default. Ciphera's architecture makes data exposure the exception, not the norm.
-- **Article 17** — Right to erasure. Session data is destroyed on session end. No recovery path exists.
-- **Article 32** — Security of processing. Local inference eliminates transmission-layer risk.
+Ciphera is not certified or represented as GDPR-compliant. Data-controller and processor obligations, lawful basis, retention, deletion, and security controls must be assessed for the deployment. Documents are sent to the configured backend; optional external providers may receive data.
 
 ### ISO 27001
 
-Ciphera's architecture supports ISO 27001 compliance programmes:
-
-- Access control via API key management
-- Audit trail for all processing sessions
-- Data minimisation by design
-- Incident logging via session history
+Ciphera has not been audited or certified against ISO 27001. Its current controls do not replace an information security management system or an independent audit.
 
 ### Audit Logs
 
-Every session generates an immutable audit record containing:
+Audit fields depend on the route and feature. The example below is illustrative only; it is not an API schema or evidence that every field is captured or immutable:
 
 ```json
 {
@@ -584,12 +524,11 @@ Every session generates an immutable audit record containing:
   "pipeline_version": "3.0.0",
   "confidence_threshold": 0.80,
   "processing_ms": 1243,
-  "data_transmitted": 0,
   "integrity_hash": "sha256:9d2c..."
 }
 ```
 
-Audit logs are stored locally in SQLite and exportable as PDF or CSV per DPDP/GDPR audit requirements.
+Audit and report features currently use separate SQLite persistence in parts of the application. They are not a complete immutable ledger and do not by themselves satisfy regulatory audit requirements.
 
 ---
 
@@ -598,32 +537,32 @@ Audit logs are stored locally in SQLite and exportable as PDF or CSV per DPDP/GD
 ### Frontend
 | Technology | Version | Purpose |
 |---|---|---|
-| Next.js | 15 | React framework, App Router |
-| React | 19 | UI library |
-| TypeScript | 5 | Type safety |
-| Tailwind CSS | 3 | Styling |
+| Next.js | 16.2.2 | React framework, App Router |
+| React | 19.2.4 | UI library |
+| TypeScript | 5.x | Type checking |
+| Tailwind CSS | 4.x | Styling |
 
 ### Backend
 | Technology | Version | Purpose |
 |---|---|---|
-| FastAPI | 0.110+ | REST API framework |
-| Python | 3.10+ | Runtime |
-| Presidio Analyzer | 2.2+ | NLP-based PII detection |
-| spaCy | 3.7+ | Named entity recognition |
-| en_core_web_lg | 3.7+ | Transformer language model |
-| Tesseract OCR | 5.0+ | Image/PDF text extraction |
-| PyMuPDF (fitz) | 1.23+ | PDF processing |
-| SQLAlchemy | 2.0+ | ORM |
-| Alembic | 1.13+ | Database migrations |
+| FastAPI | 0.115.0 | REST API framework |
+| Python | 3.11 | Runtime in the backend image |
+| Presidio Analyzer | 2.2.354 | PII analysis framework |
+| spaCy | 3.7.4 | NLP runtime |
+| en_core_web_lg | 3.7.1 | English NLP model |
+| Tesseract OCR | OS package | Image/PDF text extraction; version depends on base image |
+| PyMuPDF | 1.24.9 | PDF processing |
+| SQLAlchemy | 2.0.35 | Primary ORM persistence path |
+| Alembic | 1.13.3 | Primary ORM migrations |
 
 ### Infrastructure
 | Technology | Purpose |
 |---|---|
-| Docker | Containerisation |
-| Docker Compose | Multi-service orchestration |
-| PostgreSQL | Production database |
-| SQLite | Development / embedded database |
-| Nginx | Reverse proxy (production) |
+| Docker Compose | Local stack for frontend, API, worker, PostgreSQL, and Redis |
+| PostgreSQL 15 | Primary SQLAlchemy database in Compose; Supabase migration is not complete |
+| SQLite | Default primary ORM database and separate active feature stores |
+| Redis 7 | Celery broker and result backend |
+| Local / S3-compatible storage | Document storage options; local storage is the default |
 
 ---
 
@@ -645,40 +584,41 @@ Ciphera is open source. Contributions are welcome — especially for:
 git checkout -b feat/your-feature-name
 
 # Make your changes
-# Run tests
-cd backend && pytest
-cd frontend && npm run test
+# Backend tests (install the full backend requirements first)
+cd backend && python -m pytest tests -q
+
+# Frontend static checks (there is no npm test script yet)
+cd frontend && npm ci && npm run lint && npx tsc --noEmit
 
 # Submit a pull request
 ```
 
-**Coding standards:**
-- Backend: Black formatter, type hints required on all functions
-- Frontend: ESLint + Prettier, TypeScript strict mode
-- All new PII recognisers must include test cases with real format examples
+**Coding standards:** Follow [CONTRIBUTING.md](CONTRIBUTING.md). Use synthetic test fixtures rather than real personal data. Detection changes need positive and negative cases plus regression evidence.
 
 ---
 
 ## Roadmap
 
-- [x] **v3.1** — Hindi/Devanagari document support
-- [ ] **v3.2** — Browser extension for inline redaction
-- [ ] **v3.3** — CLI tool for pipeline integration
-- [x] **v3.4** — Webhook support for batch completion events
-- [ ] **v4.0** — On-device LLM for contextual PII detection
+The checkmarks below mean implementation work exists in the codebase; they do not indicate production readiness. Current release blockers and their verification gates are tracked in the [production remediation roadmap](docs/PRODUCTION_REMEDIATION_ROADMAP.md).
+
+- [x] **v3 feature work present** — bilingual analysis, accounts, organizations, API keys, signed reports, and webhooks; several features still have security or persistence gaps
+- [ ] **v3 launch gate** — close the P0 security, release verification, resource-limit, dependency, and deployment findings
+- [ ] **v3 data platform** — consolidate feature stores and complete the PostgreSQL/Supabase migration with verified tenant isolation
+- [ ] **v3 operations** — establish CI release gates, observability, backup/restore, and production load evidence
+- [ ] **Future product work** — CLI, browser extension, and additional on-device inference after launch blockers are closed
 
 ---
 
 
 <div align="center">
 
-*No data transmitted externally. Runs entirely on your infrastructure.*
-*Audit log closed. Zero bytes retained.*
+*Browser requests and uploaded documents are sent to the configured backend.*
+*Storage and retention depend on deployment configuration and cleanup controls.*
 
 ---
 
 ```
-> SESSION TERMINATED · 0 BYTES RETAINED · AUDIT LOG CLOSED
+> REVIEW DATA FLOWS · STORAGE · RETENTION
 ```
 
 </div>

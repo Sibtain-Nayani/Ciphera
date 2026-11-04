@@ -1,4 +1,4 @@
-import { api, apiFetch } from './api';
+import { apiFetch } from './api';
 
 export interface BoundingBox {
     x0: number;
@@ -36,27 +36,15 @@ export class V3ApiClient {
     /**
      * Upload a document for backend canonicalization and ml detection.
      */
-    static async uploadDocument(file: File, orgId: string = "default-org"): Promise<UploadResponse> {
+    static async uploadDocument(file: File, orgId?: string): Promise<UploadResponse> {
         const formData = new FormData();
         formData.append('file', file);
-        
-        // Use native fetch instead of apiFetch to avoid overriding Content-Type 
-        // to application/json, since FormData needs multipart/form-data.
-        const { getAccessToken, refreshTokens } = await import('@/lib/auth');
-        let token = getAccessToken();
-        let headers: Record<string, string> = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
-        const url = api(`/api/v3/documents/upload?org_id=${orgId}`);
-        let res = await fetch(url, { method: 'POST', body: formData, headers });
-        
-        if (res.status === 401) {
-            const ok = await refreshTokens();
-            if (ok) {
-                token = getAccessToken();
-                headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-                res = await fetch(url, { method: 'POST', body: formData, headers });
-            }
-        }
+        const uploadPath = '/api/v3/documents/upload';
+        const uploadPathWithOrg = orgId
+            ? `${uploadPath}?org_id=${encodeURIComponent(orgId)}`
+            : uploadPath;
+        const res = await apiFetch(uploadPathWithOrg, { method: 'POST', body: formData });
 
         if (!res.ok) {
             throw new Error(`Upload failed: ${res.statusText}`);
@@ -119,20 +107,7 @@ export class V3ApiClient {
      * Download redacted file.
      */
     static async downloadRedacted(jobId: string, fileName: string): Promise<void> {
-        const { getAccessToken, refreshTokens } = await import('@/lib/auth');
-        let token = getAccessToken();
-        let headers: Record<string, string> = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-        
-        const url = api(`/api/v3/documents/redact/jobs/${jobId}/download`);
-        let res = await fetch(url, { headers });
-        if (res.status === 401) {
-            const ok = await refreshTokens();
-            if (ok) {
-                token = getAccessToken();
-                headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-                res = await fetch(url, { headers });
-            }
-        }
+        const res = await apiFetch(`/api/v3/documents/redact/jobs/${jobId}/download`);
         if (!res.ok) throw new Error("Failed to download redacted file");
         
         const blob = await res.blob();

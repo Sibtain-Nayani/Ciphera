@@ -11,6 +11,10 @@
 
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
+// All API clients share this promise so simultaneous 401 responses rotate a
+// refresh credential once instead of racing one another.
+let refreshInFlight: Promise<boolean> | null = null;
+
 // 7 days in seconds
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -47,6 +51,12 @@ function setAuthCookie() {
 function clearAuthCookie() {
     document.cookie = 'ciphera_authed=; path=/; max-age=0; SameSite=Lax';
     document.cookie = 'ciphera_guest=; path=/; max-age=0; SameSite=Lax';
+}
+
+function notifyAuthExpired() {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ciphera:auth-expired'));
+    }
 }
 
 export function setGuestCookie() {
@@ -164,20 +174,72 @@ export async function registerApi(
 }
 
 export async function refreshTokens(): Promise<boolean> {
+    if (refreshInFlight) return refreshInFlight;
+
     const refresh = getRefreshToken();
-    if (!refresh) return false;
+    if (!refresh) {
+        if (getAccessToken() || getStoredUser()) {
+            clearTokens();
+            notifyAuthExpired();
+        }
+        return false;
+    }
+    const userId = getStoredUser()?.user_id ?? null;
+
+    const runRefresh = async (): Promise<boolean> => {
+        // Other tabs can rotate the same localStorage token. Web Locks makes
+        // them wait; after acquiring the lock, reuse the new credentials if
+        // the same user already completed the rotation.
+        const latestRefresh = getRefreshToken();
+        if (latestRefresh !== refresh) {
+            return Boolean(
+                getAccessToken() && userId && getStoredUser()?.user_id === userId
+            );
+        }
+
+        try {
+            const res = await fetch(`${API}/api/v3/auth/refresh`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ refresh_token: refresh }),
+            });
+            if (!res.ok) {
+                // A different account may have logged in while this request was
+                // in flight; never clear that newer account's credentials.
+                if (getRefreshToken() === refresh) {
+                    clearTokens();
+                    notifyAuthExpired();
+                }
+                return false;
+            }
+
+            const data: AuthTokens = await res.json();
+            if (getRefreshToken() !== refresh) return false;
+            saveTokens(data);
+            setAuthCookie();
+            return true;
+        } catch {
+            if (getRefreshToken() === refresh) {
+                clearTokens();
+                notifyAuthExpired();
+            }
+            return false;
+        }
+    };
+
+    const operation: Promise<boolean> = (async () => {
+        if (typeof navigator !== 'undefined' && navigator.locks) {
+            return navigator.locks.request('ciphera-auth-refresh', runRefresh);
+        }
+        return runRefresh();
+    })();
+
+    refreshInFlight = operation;
     try {
-        const res = await fetch(`${API}/api/v3/auth/refresh`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ refresh_token: refresh }),
-        });
-        if (!res.ok) { clearTokens(); return false; }
-        const data: AuthTokens = await res.json();
-        saveTokens(data);
-        setAuthCookie();
-        return true;
-    } catch { clearTokens(); return false; }
+        return await operation;
+    } finally {
+        if (refreshInFlight === operation) refreshInFlight = null;
+    }
 }
 
 export async function logoutApi(): Promise<void> {
@@ -198,24 +260,29 @@ export async function authFetch(
     url: string,
     options: RequestInit = {}
 ): Promise<Response> {
-    const token = getAccessToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers || {}),
+    const fullUrl = url.startsWith('http') ? url : `${API}${url}`;
+    const apiOrigin = new URL(API).origin;
+    const requestOrigin = new URL(fullUrl, API).origin;
+    const userId = getStoredUser()?.user_id ?? null;
+    const send = () => {
+        const headers = new Headers(options.headers);
+        const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+        if (!headers.has('Content-Type') && !isFormData) {
+            headers.set('Content-Type', 'application/json');
+        }
+        const token = requestOrigin === apiOrigin ? getAccessToken() : null;
+        if (token) headers.set('Authorization', `Bearer ${token}`);
+        return fetch(fullUrl, { ...options, headers });
     };
 
-    const fullUrl = url.startsWith('http') ? url : `${API}${url}`;
-    let res = await fetch(fullUrl, { ...options, headers });
+    let res = await send();
 
-    if (res.status === 401) {
+    if (res.status === 401 && requestOrigin === apiOrigin) {
+        // Never retry a request made for one account with another account's token.
+        if (!userId || getStoredUser()?.user_id !== userId) return res;
         const ok = await refreshTokens();
-        if (ok) {
-            const newToken = getAccessToken();
-            res = await fetch(fullUrl, {
-                ...options,
-                headers: { ...headers, Authorization: `Bearer ${newToken}` },
-            });
+        if (ok && getStoredUser()?.user_id === userId) {
+            res = await send();
         }
     }
     return res;

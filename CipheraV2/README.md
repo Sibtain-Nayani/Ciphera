@@ -1,3 +1,5 @@
+> **Archived prototype.** This README belongs to the historical v2 frontend. Active development is in `v3/`; this project must not be used as a v3 runtime dependency. See the repository root README for current setup and status.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

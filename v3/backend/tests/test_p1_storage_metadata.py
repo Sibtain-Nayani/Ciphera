@@ -4,13 +4,17 @@ import fitz
 import uuid
 import tempfile
 import os
+import hashlib
+from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from main import app
 from app.core.database import SessionLocal
-from app.models.identity import User, Organization, OrganizationMember
+from app.models.identity import User, Organization, OrganizationMember, Session as AuthSession
+from app.core.config import settings
 from app.models.document import Document, RedactionJob, JobStatus
-from feature15_auth import create_access_token
+from app.api.auth import create_access_token
 from app.tasks.redaction_tasks import process_redaction
+from app.services.release_gate import canonical_sha256
 from unittest.mock import patch
 
 client = TestClient(app)
@@ -30,14 +34,25 @@ def p1_storage_env():
     membership = OrganizationMember(user_id=user_id, org_id=org_id, role="admin")
     db.add(membership)
     db.commit()
-    
-    token = create_access_token(user_id, f"{user_id}@p1.test", org_id, "admin")
+
+    auth_session = AuthSession(
+        user_id=user_id,
+        refresh_token_hash=hashlib.sha256(uuid.uuid4().hex.encode()).hexdigest(),
+        signing_key_version=settings.auth_key_version,
+        expires_at=datetime.utcnow() + timedelta(days=1),
+    )
+    db.add(auth_session)
+    db.commit()
+    token = create_access_token(
+        user_id, f"{user_id}@p1.test", org_id, "user", session_id=auth_session.id
+    )
     
     yield {"token": token, "org_id": org_id, "user_id": user_id}
     
     db = SessionLocal()
     db.query(RedactionJob).filter(RedactionJob.id.like("p1_job%")).delete()
     db.query(Document).filter(Document.id.like("p1_doc%")).delete()
+    db.query(AuthSession).filter(AuthSession.user_id == user_id).delete()
     db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
     db.query(Organization).filter(Organization.id == org_id).delete()
     db.query(User).filter(User.id == user_id).delete()
@@ -58,6 +73,10 @@ def test_successful_job_sets_result_storage_key_and_clears_error_message(p1_stor
     doc.save(temp_pdf.name)
     doc.close()
     temp_pdf.close()
+    with open(temp_pdf.name, "rb") as source_file:
+        source_hash = hashlib.sha256(source_file.read()).hexdigest()
+    policy = {"mode": "balanced", "version": "test-balanced-v1"}
+    entities = []
     
     db = SessionLocal()
     doc_id = f"p1_doc_{uuid.uuid4().hex[:6]}"
@@ -65,12 +84,18 @@ def test_successful_job_sets_result_storage_key_and_clears_error_message(p1_stor
     
     doc_record = Document(
         id=doc_id, org_id=org_id, uploaded_by=user_id,
-        filename="harmless.pdf", file_type="application/pdf", storage_key=temp_pdf.name
+        filename="harmless.pdf", file_type="application/pdf", storage_key=temp_pdf.name,
+        source_sha256=source_hash,
+        canonical_representation={"metadata": {"redaction_policy": policy}},
+        detected_entities=entities,
     )
     db.add(doc_record)
     
     job_record = RedactionJob(
-        id=job_id, document_id=doc_id, status=JobStatus.QUEUED
+        id=job_id, document_id=doc_id, status=JobStatus.QUEUED,
+        policy_config=policy, policy_version=policy["version"], policy_sha256=canonical_sha256(policy),
+        source_storage_key=temp_pdf.name, source_sha256=source_hash,
+        entities_snapshot=entities, entities_sha256=canonical_sha256(entities),
     )
     db.add(job_record)
     db.commit()
@@ -87,6 +112,7 @@ def test_successful_job_sets_result_storage_key_and_clears_error_message(p1_stor
     assert saved_job.status == JobStatus.COMPLETED
     assert saved_job.result_storage_key is not None
     assert saved_job.result_storage_key == res_dict["result_path"]
+    assert saved_job.result_sha256 is not None
     assert saved_job.error_message is None
     db.close()
     
@@ -103,6 +129,7 @@ def test_successful_job_sets_result_storage_key_and_clears_error_message(p1_stor
     dl_res = client.get(f"/api/v3/documents/redact/jobs/{job_id}/download", headers={"Authorization": f"Bearer {token}"})
     assert dl_res.status_code == 200
     assert dl_res.headers["content-type"] == "application/pdf"
+    assert hashlib.sha256(dl_res.content).hexdigest() == saved_job.result_sha256
     
     if os.path.exists(temp_pdf.name):
         os.remove(temp_pdf.name)
@@ -119,12 +146,21 @@ def test_failed_job_leaves_result_storage_key_none(p1_storage_env):
     
     doc_record = Document(
         id=doc_id, org_id=org_id, uploaded_by=user_id,
-        filename="invalid.pdf", file_type="application/pdf", storage_key="/nonexistent/path.pdf"
+        filename="invalid.pdf", file_type="application/pdf", storage_key="/nonexistent/path.pdf",
+        source_sha256=hashlib.sha256(b"nonexistent source").hexdigest(),
+        canonical_representation={"metadata": {"redaction_policy": {"mode": "balanced", "version": "test-balanced-v1"}}},
+        detected_entities=[],
     )
     db.add(doc_record)
     
     job_record = RedactionJob(
-        id=job_id, document_id=doc_id, status=JobStatus.QUEUED
+        id=job_id, document_id=doc_id, status=JobStatus.QUEUED,
+        policy_config={"mode": "balanced", "version": "test-balanced-v1"},
+        policy_version="test-balanced-v1",
+        policy_sha256=canonical_sha256({"mode": "balanced", "version": "test-balanced-v1"}),
+        source_storage_key="/nonexistent/path.pdf",
+        source_sha256=hashlib.sha256(b"nonexistent source").hexdigest(),
+        entities_snapshot=[], entities_sha256=canonical_sha256([]),
     )
     db.add(job_record)
     db.commit()
@@ -136,6 +172,7 @@ def test_failed_job_leaves_result_storage_key_none(p1_storage_env):
     failed_job = db.query(RedactionJob).filter(RedactionJob.id == job_id).first()
     assert failed_job.status == JobStatus.FAILED
     assert failed_job.result_storage_key is None
+    assert failed_job.result_sha256 is None
     assert failed_job.error_message is not None
     db.close()
     
@@ -147,16 +184,11 @@ def test_failed_job_leaves_result_storage_key_none(p1_storage_env):
     assert job_data["has_artifact"] is False
     assert job_data["error_message"] is not None
 
-def test_legacy_job_fallback_in_download_endpoint(p1_storage_env):
-    """Older completed jobs having result in error_message and None in result_storage_key must still download cleanly."""
+def test_legacy_job_without_release_snapshot_is_blocked(p1_storage_env):
+    """Older completed jobs without source/entity/policy snapshots cannot be released."""
     token = p1_storage_env["token"]
     user_id = p1_storage_env["user_id"]
     org_id = p1_storage_env["org_id"]
-    
-    # Create dummy artifact file on disk
-    temp_pdf = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-    temp_pdf.write(b"%PDF-1.4 dummy valid bytes")
-    temp_pdf.close()
     
     db = SessionLocal()
     doc_id = f"p1_doc_{uuid.uuid4().hex[:6]}"
@@ -164,7 +196,7 @@ def test_legacy_job_fallback_in_download_endpoint(p1_storage_env):
     
     doc_record = Document(
         id=doc_id, org_id=org_id, uploaded_by=user_id,
-        filename="legacy.pdf", file_type="application/pdf", storage_key=temp_pdf.name
+        filename="legacy.pdf", file_type="application/pdf", storage_key="uploads/legacy.pdf"
     )
     db.add(doc_record)
     
@@ -172,15 +204,12 @@ def test_legacy_job_fallback_in_download_endpoint(p1_storage_env):
     job_record = RedactionJob(
         id=job_id, document_id=doc_id, status=JobStatus.COMPLETED,
         result_storage_key=None,
-        error_message=temp_pdf.name
+        error_message="legacy path only",
     )
     db.add(job_record)
     db.commit()
     db.close()
     
     dl_res = client.get(f"/api/v3/documents/redact/jobs/{job_id}/download", headers={"Authorization": f"Bearer {token}"})
-    assert dl_res.status_code == 200
-    assert dl_res.content == b"%PDF-1.4 dummy valid bytes"
-    
-    if os.path.exists(temp_pdf.name):
-        os.remove(temp_pdf.name)
+    assert dl_res.status_code == 409
+    assert "snapshot" in dl_res.json()["detail"].lower()
